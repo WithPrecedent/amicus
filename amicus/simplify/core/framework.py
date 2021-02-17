@@ -18,7 +18,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Settings(amicus.Configuration):
+class Settings(amicus.Settings):
     """Loads and stores configuration settings for a amicus project.
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 

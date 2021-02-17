@@ -27,12 +27,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import more_itertools
 import amicus
 
-from . import quirks
-
-
 
 @dataclasses.dataclass
-class Component(Core, amicus.quirks.Element, abc.ABC):
+class Component(amicus.quirks.Core, amicus.quirks.Element, abc.ABC):
     """Base class for parts of a amicus Workflow.
     
     Args:
@@ -43,8 +40,9 @@ class Component(Core, amicus.quirks.Element, abc.ABC):
             None. 
                 
     Attributes:
-        bases (ClassVar[Cores]): library that stores amicus base classes 
-            and allows runtime access and instancing of those stored subclasses.
+        bases (ClassVar[amicus.types.Library]): library that stores amicus base 
+            classes and allows runtime access and instancing of those stored 
+            subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 
@@ -117,7 +115,7 @@ class Component(Core, amicus.quirks.Element, abc.ABC):
 
 
 @dataclasses.dataclass
-class Stage(Core, amicus.quirks.Needy, abc.ABC):
+class Stage(amicus.quirks.Core, amicus.quirks.Needy, abc.ABC):
     """Creates a amicus object.
     
     Args:
@@ -126,8 +124,9 @@ class Stage(Core, amicus.quirks.Needy, abc.ABC):
             empty list.     
                 
     Attributes:
-        bases (ClassVar[Cores]): library that stores amicus base classes 
-            and allows runtime access and instancing of those stored subclasses.
+        bases (ClassVar[amicus.types.Library]): library that stores amicus base 
+            classes and allows runtime access and instancing of those stored 
+            subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 

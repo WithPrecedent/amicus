@@ -27,8 +27,8 @@ class Model(amicus.project.Step):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.

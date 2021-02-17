@@ -30,15 +30,15 @@ class Project(amicus.quirks.Core, amicus.Validator,
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration 
+            amicus instance needs settings from a Settings 
             instance, 'name' should match the appropriate section name in a 
-            Configuration instance. Defaults to None. 
+            Settings instance. Defaults to None. 
         settings (Union[base.Settings, Type[base.Settings], pathlib.Path, str, 
             Mapping[str, Mapping[str, Any]]]): a Settings-compatible subclass or 
             instance, a str or pathlib.Path containing the file path where a 
-            file of a supported file type with settings for a Configuration 
+            file of a supported file type with settings for a Settings 
             instance is located, or a 2-level mapping containing settings. 
-            Defaults to the default Configuration instance.
+            Defaults to the default Settings instance.
         filer (Union[base.Filer, Type[base.Filer], pathlib.Path, str]): a 
             Clerk-compatible class or a str or pathlib.Path containing the full 
             path of where the root folder should be located for file input and 

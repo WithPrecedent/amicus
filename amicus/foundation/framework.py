@@ -5,7 +5,7 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Configuration (Lexicon): stores configuration settings after either loading 
+    Settings (Lexicon): stores configuration settings after either loading 
         them from disk or by the passed arguments.    
     Clerk (object): interface for amicus file management classes and methods.
          
@@ -16,26 +16,28 @@ import configparser
 import dataclasses
 import importlib
 import importlib.util
-import more_itertools
 import json
 import pathlib
-import toml
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
+
+import more_itertools
+import toml
+
 import amicus
 
 
 @dataclasses.dataclass
-class Configuration(amicus.Lexicon):
+class Settings(amicus.types.Lexicon):
     """Loads and stores configuration settings.
 
-    To create Configuration instance, a user can pass a:
+    To create Settings instance, a user can pass a:
         1) file path to a compatible file type;
         2) string containing a a file path to a compatible file type;
                                 or,
         3) 2-level nested dict.
 
-    If 'contents' is imported from a file, Configuration creates a dict and can 
+    If 'contents' is imported from a file, Settings creates a dict and can 
     convert the dict values to appropriate datatypes. Currently, supported file 
     types are: ini, json, toml, and python.
 
@@ -45,7 +47,7 @@ class Configuration(amicus.Lexicon):
     if the source file is a python module (assuming the user has properly set
     the types of the stored python dict).
 
-    Because Configuration uses ConfigParser for .ini files, by default it stores 
+    Because Settings uses ConfigParser for .ini files, by default it stores 
     a 2-level dict. The desire for accessibility and simplicity amicusted this 
     limitation. A greater number of levels can be achieved by having separate
     sections with names corresponding to the strings in the values of items in 
@@ -55,20 +57,22 @@ class Configuration(amicus.Lexicon):
         contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
             dict, a str file path to a file with settings, or a pathlib Path to
             a file with settings. Defaults to en empty dict.
-        infer_types (bool]): whether values in 'contents' are converted to other 
-            datatypes (True) or left alone (False). If 'contents' was imported 
-            from an .ini file, a False value will leave all values as strings. 
-            Defaults to True.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty dict.
         defaults (Mapping[str, Mapping[str]]): any default options that should
             be used when a user does not provide the corresponding options in 
             their configuration settings. Defaults to an empty dict.
+        infer_types (bool): whether values in 'contents' are converted to other 
+            datatypes (True) or left alone (False). If 'contents' was imported 
+            from an .ini file, all values will be strings. Defaults to True.
 
     """
-    contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
-        dataclasses.field(default_factory = dict))
-    infer_types: bool = True
+    contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+        default_factory = dict)
+    default: Any = dataclasses.field(default_factory = dict)
     defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = dict)
+    infer_types: bool = True
 
     """ Initialization Methods """
 
@@ -79,8 +83,6 @@ class Configuration(amicus.Lexicon):
             super().__post_init__()
         except AttributeError:
             pass
-        # Validates passed 'contents' on class initialization.
-        self.contents = self.validate(contents = self.contents)
         # Infers types for values in 'contents', if the 'infer_types' option is 
         # selected.
         if self.infer_types:
@@ -88,47 +90,183 @@ class Configuration(amicus.Lexicon):
         # Adds default settings as backup settings to 'contents'.
         self.contents = self._add_defaults(contents = self.contents)
 
-    """ Public Methods """
+    """ Class Methods """
 
-    def validate(self, contents: Union[Mapping[Any, Any], str, 
-                                       pathlib.Path]) -> Mapping[Any, Any]:
-        """Validates 'contents' or converts 'contents' to the proper type.
-
-        Args:
-            contents (Union[str, pathlib.Path, Mapping[Any, Any]]): a dict, a
-                str file path to a file with settings, or a pathlib Path to a 
-                file with settings.
+    @classmethod
+    def create(cls, **kwargs) -> Settings:
+        """Calls corresponding creation class method to instance a subclass.
 
         Raises:
-            TypeError: if 'contents' is neither a str, dict, or Path.
+            TypeError: If there is no corresponding method.
 
         Returns:
-            Mapping[Any, Any]: 'contents' in its proper form.
+            Needy: instance of a Needy subclass.
+            
+        """
+        if 'file_path' in kwargs:
+            return cls.from_file_path(**kwargs)
+        elif 'dictionary' in kwargs:
+            if (isinstance(kwargs['dictionary'], Mapping) 
+                    and all(isinstance(v, Mapping) 
+                            for v in kwargs['dictionary'].values())):
+                return cls.from_dictionary(**kwargs)
+            else:
+                raise TypeError(f'dictionary must be nested dict type')
+        else:
+            raise TypeError(
+                f'create method requires a str, pathlib.Path, or dict type')   
+
+    @classmethod
+    def from_dictionary(cls, 
+        dictionary: Mapping[str, Mapping[str, Any]], 
+        **kwargs) -> Settings:
+        """[summary]
+
+        Args:
+            path (Union[str, pathlib.Path]): [description]
+
+        Returns:
+            Settings: [description]
+            
+        """        
+        return cls(contents = dictionary, **kwargs)
+    
+    @classmethod
+    def from_file_path(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Settings:
+        """[summary]
+
+        Args:
+            path (Union[str, pathlib.Path]): [description]
+
+        Returns:
+            Settings: [description]
+            
+        """        
+        extension = str(pathlib.Path(file_path).suffix)[1:]
+        load_method = getattr(cls, f'from_{extension}')
+        return load_method(file_path = file_path, **kwargs)
+    
+    @classmethod
+    def from_ini(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Settings:
+        """Returns settings dictionary from an .ini file.
+
+        Args:
+            file_path (str): path to configparser-compatible .ini file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
 
         """
-        if isinstance(contents, Mapping):
-            return contents
-        elif isinstance(contents, (str, pathlib.Path)):
-            extension = str(pathlib.Path(contents).suffix)[1:]
-            load_method = getattr(self, f'_load_from_{extension}')
-            return load_method(file_path = contents)
-        elif contents is None:
-            return {}
-        else:
-            raise TypeError('contents must be a dict, Path, str, or None type')
+        if 'infer_types' not in kwargs:
+            kwargs['infer_types'] = True
+        try:
+            contents = configparser.ConfigParser(dict_type = dict)
+            contents.optionxform = lambda option: option
+            contents.read(str(file_path))
+            return cls(contents = dict(contents._sections), **kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
 
-    def add(self, section: str, contents: Mapping[Any, Any]) -> None:
+    @classmethod
+    def from_json(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Settings:
+        """Returns settings dictionary from an .json file.
+
+        Args:
+            file_path (str): path to configparser-compatible .json file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        if 'infer_types' not in kwargs:
+            kwargs['infer_types'] = True
+        try:
+            with open(pathlib.Path(file_path)) as settings_file:
+                contents = json.load(settings_file)
+            return cls(contents = contents, **kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    @classmethod
+    def from_py(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Settings:
+        """Returns a settings dictionary from a .py file.
+
+        Args:
+            file_path (str): path to python module with '__dict__' dict
+                defined.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a
+                file.
+
+        """
+        if 'infer_types' not in kwargs:
+            kwargs['infer_types'] = False
+        try:
+            file_path = pathlib.Path(file_path)
+            import_path = importlib.util.spec_from_file_location(
+                file_path.name,
+                file_path)
+            import_module = importlib.util.module_from_spec(import_path)
+            import_path.loader.exec_module(import_module)
+            return cls(contents = import_module.configuration, **kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+
+    @classmethod
+    def from_toml(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Settings:
+        """Returns settings dictionary from a .toml file.
+
+        Args:
+            file_path (str): path to configparser-compatible .toml file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        if 'infer_types' not in kwargs:
+            kwargs['infer_types'] = True
+        try:
+            return cls(contents = toml.load(file_path), **kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+   
+    """ Public Methods """
+
+    def add(self, section: str, contents: Mapping[str, Any]) -> None:
         """Adds 'settings' to 'contents'.
 
         Args:
             section (str): name of section to add 'contents' to.
-            contents (Mapping[Any, Any]): a dict to store in 'section'.
+            contents (Mapping[str, Any]): a dict to store in 'section'.
 
         """
         try:
-            self[section].update(self.validate(contents = contents))
+            self[section].update(contents)
         except KeyError:
-            self[section] = self.validate(contents = contents)
+            self[section] = contents
         return self
 
     def inject(self, instance: object,
@@ -158,115 +296,27 @@ class Configuration(amicus.Lexicon):
         for section in sections:
             try:
                 for key, value in self.contents[section].items():
-                    instance = self._inject(
-                        instance = instance,
-                        attribute = key,
-                        value = value,
-                        overwrite = overwrite)
+                    if (not hasattr(instance, key)
+                            or not getattr(instance, key)
+                            or overwrite):
+                        setattr(instance, key, value)
             except KeyError:
                 pass
         return instance
 
     """ Private Methods """
 
-    def _load_from_ini(self, file_path: str) -> Mapping[Any, Any]:
-        """Returns settings dictionary from an .ini file.
-
-        Args:
-            file_path (str): path to configparser-compatible .ini file.
-
-        Returns:
-            Mapping[Any, Any] of contents.
-
-        Raises:
-            FileNotFoundError: if the file_path does not correspond to a file.
-
-        """
-        try:
-            contents = configparser.ConfigParser(dict_type = dict)
-            contents.optionxform = lambda option: option
-            contents.read(str(file_path))
-            return dict(contents._sections)
-        except FileNotFoundError:
-            raise FileNotFoundError(f'settings file {file_path} not found')
-
-    def _load_from_json(self, file_path: str) -> Mapping[Any, Any]:
-        """Returns settings dictionary from an .json file.
-
-        Args:
-            file_path (str): path to configparser-compatible .json file.
-
-        Returns:
-            Mapping[Any, Any] of contents.
-
-        Raises:
-            FileNotFoundError: if the file_path does not correspond to a file.
-
-        """
-        try:
-            with open(pathlib.Path(file_path)) as settings_file:
-                settings = json.load(settings_file)
-            return settings
-        except FileNotFoundError:
-            raise FileNotFoundError(f'settings file {file_path} not found')
-
-    def _load_from_py(self, file_path: str) -> Mapping[Any, Any]:
-        """Returns a settings dictionary from a .py file.
-
-        Args:
-            file_path (str): path to python module with '__dict__' dict
-                defined.
-
-        Returns:
-            Mapping[Any, Any] of contents.
-
-        Raises:
-            FileNotFoundError: if the file_path does not correspond to a
-                file.
-
-        """
-        # Disables type conversion if the source is a python file.
-        self.infer_types = False
-        try:
-            file_path = pathlib.Path(file_path)
-            import_path = importlib.util.spec_from_file_location(
-                file_path.name,
-                file_path)
-            import_module = importlib.util.module_from_spec(import_path)
-            import_path.loader.exec_module(import_module)
-            return import_module.settings
-        except FileNotFoundError:
-            raise FileNotFoundError(f'settings file {file_path} not found')
-
-    def _load_from_toml(self, file_path: str) -> Mapping[Any, Any]:
-        """Returns settings dictionary from a .toml file.
-
-        Args:
-            file_path (str): path to configparser-compatible .toml file.
-
-        Returns:
-            Mapping[Any, Any] of contents.
-
-        Raises:
-            FileNotFoundError: if the file_path does not correspond to a file.
-
-        """
-        try:
-            return toml.load(file_path)
-        except FileNotFoundError:
-            raise FileNotFoundError(f'settings file {file_path} not found')
-
     def _infer_types(self,
-            contents: Mapping[Any, Mapping[Any, Any]]) -> Mapping[
-                str, Mapping[Any, Any]]:
+        contents: Mapping[str, Mapping[str, Any]]) -> Mapping[
+            str, Mapping[str, Any]]:
         """Converts stored values to appropriate datatypes.
 
         Args:
-            contents (Mapping[Any, Mapping[Any, Any]]): a nested contents dict
+            contents (Mapping[str, Mapping[str, Any]]): a nested contents dict
                 to review.
 
         Returns:
-            Mapping[Any, Mapping[Any, Any]]: with the nested values converted to 
+            Mapping[str, Mapping[str, Any]]: with the nested values converted to 
                 the appropriate datatypes.
 
         """
@@ -281,7 +331,9 @@ class Configuration(amicus.Lexicon):
                 new_contents[key] = amicus.tools.typify(value)
         return new_contents
 
-    def _add_defaults(self, contents: Mapping[str, Mapping[str, Any]]) -> (
+    @classmethod
+    def _add_defaults(self, 
+        contents: Mapping[str, Mapping[str, Any]]) -> (
             Mapping[str, Mapping[str, Any]]):
         """Creates a backup set of mappings for amicus settings lookup.
 
@@ -297,28 +349,6 @@ class Configuration(amicus.Lexicon):
         new_contents = self.defaults
         new_contents.update(contents)
         return new_contents
-
-    def _inject(self, instance: object, attribute: str, value: Any, 
-                overwrite: bool) -> object:
-        """Adds attribute to 'instance' based on conditions.
-
-        Args:
-            instance (object): amicus class instance to be modified.
-            attribute (str): name of attribute to inject.
-            value (Any): value to assign to attribute.
-            overwrite (bool]): whether to overwrite a local attribute
-                in 'instance' if there are values stored in that attribute.
-                Defaults to False.
-
-        Returns:
-            object: with attribute possibly injected.
-
-        """
-        if (not hasattr(instance, attribute)
-                or not getattr(instance, attribute)
-                or overwrite):
-            setattr(instance, attribute, value)
-        return instance
 
     """ Dunder Methods """
 
@@ -344,21 +374,6 @@ class Configuration(amicus.Lexicon):
                     'key must be a str and value must be a dict type')
         return self
 
-    def __missing__(self, key: str) -> Dict:
-        """Automatically creates a nested dict if 'key' is missing.
-        
-        This method implements autovivification.
-        
-        Args:
-            key (str): name of key sought in this instance.
-            
-        Returns:
-            Dict: a new, nested empty dict at 'key'.
-        
-        """
-        value = self[key] = {}
-        return value
-
 
 @dataclasses.dataclass
 class Clerk(object):
@@ -369,11 +384,10 @@ class Clerk(object):
     amicus, pandas, and numpy objects.
 
     Args:
-        settings (Configuration): a Configuration instance, 
-            preferably with a section named 'filer' or 'files' with file-
-            management related settings. If 'settings' does not have file 
-            configuration options or if 'settings' is None, internal defaults 
-            will be used. Defaults to None.
+        settings (Settings): a Settings instance, preferably with a section 
+            named 'filer' or 'files' with file-management related settings. If 
+            'settings' does not have file configuration options or if 'settings' 
+            is None, internal defaults will be used. Defaults to None.
         root_folder (Union[str, pathlib.Path]): the complete path from which the 
             other paths and folders used by Clerk are ordinarily derived 
             (unless you decide to use full paths for all other options). 
@@ -386,12 +400,11 @@ class Clerk(object):
             name or a complete path if the 'output_folder' is not off of
             'root_folder'. Defaults to 'output'.
 
-
     ToDo:
         Refactor and simplify with accompanying classes.
 
     """
-    settings: Configuration = None
+    settings: Settings = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -402,8 +415,9 @@ class Clerk(object):
         """Initializes class instance attributes."""
         # Attempots to Inject attributes from 'settings'.
         try:
-            self.settings.inject(instance = self, additional = ['files', 
-                                                                'filer'])
+            self.settings.inject(
+                instance = self, 
+                additional = ['files', 'filer'])
         except (AttributeError, TypeError):
             pass
         # Validates core folder paths and writes them to disk.
@@ -425,9 +439,9 @@ class Clerk(object):
     """ Public Methods """
     
     def validate(self, 
-            path: Union[str, pathlib.Path],
-            test: bool = True,
-            create: bool = True) -> pathlib.Path:
+        path: Union[str, pathlib.Path],
+        test: bool = True,
+        create: bool = True) -> pathlib.Path:
         """Turns 'file_path' into a pathlib.Path.
 
         Args:
@@ -671,11 +685,11 @@ class Clerk(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self, 
-                                settings: Configuration) -> Mapping[Any, Any]:
+                                settings: Settings) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
-            settings (Configuration): an instance with a section named 'files' which
+            settings (Settings): an instance with a section named 'files' which
                 contains default parameters for file transfers.
 
         Returns:
@@ -993,8 +1007,8 @@ class FileFormat(object):
     Args:
         name (str): designates the name of the class instance used
             for internal referencing throughout amicus. If the class instance
-            needs settings from the shared Configuration instance, 'name' should
-            match the appropriate section name in that Configuration instance. When
+            needs settings from the shared Settings instance, 'name' should
+            match the appropriate section name in that Settings instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between amicus
             classes. Defaults to None or __class__.__name__.lower().

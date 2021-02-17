@@ -128,7 +128,7 @@ class Catalog(Catalog):
 
 
 @dataclasses.dataclass
-class Settings(amicus.quirks.Core, amicus.Configuration):
+class Settings(amicus.quirks.Core, amicus.Settings):
     """Loads and stores configuration settings for a Project.
 
     Args:
@@ -222,8 +222,8 @@ class Manager(amicus.quirks.Core, amicus.quirks.Element):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None. 
         workflow (amicus.Structure): a workflow of a project subpart derived 
             from 'outline'. Defaults to None.
@@ -304,8 +304,8 @@ class Component(amicus.quirks.Core, amicus.quirks.Element, abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
         contents (Any): stored item(s) for use by a Component subclass instance.
         iterations (Union[int, str]): number of times the 'implement' method 

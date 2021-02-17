@@ -29,9 +29,9 @@ class Outline(base.Stage):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration 
+            amicus instance needs settings from a Settings 
             instance, 'name' should match the appropriate section name in a 
-            Configuration instance. Defaults to None. 
+            Settings instance. Defaults to None. 
         structure (str): the name matching the type of workflow to be used in a
             project. Defaults to None.
         components (Dict[str, List]): a dictionary with keys that are names of

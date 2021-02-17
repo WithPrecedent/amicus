@@ -32,7 +32,6 @@ Contents:
     Needy (Quirk):
 
 ToDo:
-    Add in Validator mixins.
     Fix ProxyMixin as explained in its docs.
 
 """
@@ -106,7 +105,7 @@ class Core(abc.ABC):
             direct Core subclass (Core is in its '__bases__') is instanced. 
                       
     Namespaces: 
-        bases, subclasses, instances, borrow, instance, and __init_subclass__.
+        bases, subclasses, instances, select, instance, and __init_subclass__.
     
     """
     bases: ClassVar[amicus.types.Library] = amicus.types.Library()
@@ -224,8 +223,8 @@ class Element(Quirk):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None. 
 
     Namespaces: library, bases, name, __post_init__, and _get_name
@@ -390,119 +389,6 @@ class Needy(Quirk):
                         f'method of {cls.__name__}')
         return kwargs
 
- 
-# @dataclasses.dataclass
-# class Registrar(Quirk):
-#     """Registry interface for core amicus classes.
-    
-#     A Registrar automatically registers all concrete (non-abstract) subclasses
-#     using the 'registry' class attribute which must be provided by the class 
-#     using this quirk.
-
-#     Namespaces: 'registry', 'register', 'acquire'
-
-#     Args:
-#         registry (ClassVar[Mapping[str, Type]]):
-    
-#     """
-#     registry: ClassVar[Mapping[str, Type]] = amicus.Catalog()
-
-#     """ Initialization Methods """
-    
-#     def __init_subclass__(cls, **kwargs):
-#         """Adds 'cls' to 'registry' if it is a concrete class."""
-#         super().__init_subclass__(**kwargs)
-#         if not abc.ABC in cls.__bases__:
-#             cls.register()
-        
-#     """ Class Methods """
-
-#     @classmethod
-#     def register(cls) -> None:
-#         """Registers a subclass in a Catalog.
-        
-#         The default 'register' method uses the snake-case name of the class as
-#         the key for the stored subclass.
-        
-#         """
-#         key = amicus.tools.snakify(cls.__name__)
-#         cls.registry[key] = cls
-#         return cls
-
-#     @classmethod
-#     def acquire(cls, key: str) -> Any:
-#         """Returns the stored class matching 'key'.
-
-#         Args:
-#             key (str): name of stored class to returned, as defined by the
-#                 'register' method.
-
-#         Returns:
-#             Any: stored subclass.
-            
-#         """
-#         return cls.registry.select(key = key)
-    
-    
-# @dataclasses.dataclass
-# class Librarian(Quirk):
-#     """Store interface for core amicus classes.
-    
-#     Librarian automatically registers all subclass instances using the 'deposit' 
-#     method which stores the subclass instances in 'store'.
-    
-#     To use this quirk, the '__post_init__' method must be called.
-    
-#     """
-#     store: ClassVar[Mapping[str, object]] = amicus.Catalog()
-
-#     """ Initialization Methods """
-
-#     def __post_init__(self) -> None:
-#         """Initializes class instance attributes."""
-#         # Calls parent and/or mixin initialization method(s).
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass
-#         # Stores subclass in Store.
-#         self.deposit()
-
-#     """ Public Methods """
-
-#     def deposit(self) -> None:
-#         """Stores a subclass instance in a Catalog.
-        
-#         The 'deposit' method with use the 'name' attribute of an instance, if
-#         it exists. Otherwise, it will use the snake-case '__name__' or 
-#         '__class_name__' of the instance.
-        
-#         """
-#         try:
-#             self.store[self.name] = self
-#         except (AttributeError, TypeError):
-#             try:
-#                 self.store[amicus.tools.snakify(self.__name__)] = self
-#             except (AttributeError, TypeError):
-#                 self.store[amicus.tools.snakify(
-#                     self.__class__.__name__)] = self 
-#         return self
-    
-#     """ Class Methods """
-
-#     @classmethod
-#     def borrow(cls, key: str) -> object:
-#         """Returns the stored class matching 'key'.
-
-#         Args:
-#             key (str): name of stored subclass instance to be returned, as 
-#                 defined by the 'deposit' method.
-
-#         Returns:
-#             object: stored subclass isntance.
-            
-#         """
-#         return copy.deepcopy(cls.store.select(key))
 
 
 # @dataclasses.dataclass
