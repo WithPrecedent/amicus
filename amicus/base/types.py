@@ -873,28 +873,28 @@ class Catalog(Lexicon):
             always_return_list = self.always_return_list,
             **kwargs)
 
-    def instance(self, 
-        key: Union[Any, Sequence[Any]], **kwargs) -> Union[Any, Sequence[Any]]:
-        """Returns instance(s) of (a) stored class(es).
+    # def instance(self, 
+    #     key: Union[Any, Sequence[Any]], **kwargs) -> Union[Any, Sequence[Any]]:
+    #     """Returns instance(s) of (a) stored class(es).
         
-        This method acts as a factory for instancing stored classes.
+    #     This method acts as a factory for instancing stored classes.
         
-        Args:
-            key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
-            kwargs: arguments to pass to the selected item(s) when instanced.
+    #     Args:
+    #         key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
+    #         kwargs: arguments to pass to the selected item(s) when instanced.
                     
-        Returns:
-            Union[Any, Sequence[Any]]: stored value(s).
+    #     Returns:
+    #         Union[Any, Sequence[Any]]: stored value(s).
             
-        """
-        items = self[key]
-        if isinstance(items, Sequence) and not isinstance(items, str):
-            instances = []
-            for item in items:
-                instances.append(item(**kwargs))
-        else:
-            instances = items(**kwargs)
-        return instances
+    #     """
+    #     items = self[key]
+    #     if isinstance(items, Sequence) and not isinstance(items, str):
+    #         instances = []
+    #         for item in items:
+    #             instances.append(item(**kwargs))
+    #     else:
+    #         instances = items(**kwargs)
+    #     return instances
                    
     def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
         """Returns a new instance with a subset of 'contents'.
@@ -1020,12 +1020,12 @@ class Library(Lexicon):
     
     """ Public Methods """
     
-    def deposit(self, name: str, item: Union[Type, object]) -> None:
+    def deposit(self, name: str, item: Any) -> None:
         """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
         
         Args:
             name (str): key to use to store 'item'.
-            item (Union[Type, object]): item to store in 'contents'.
+            item (Any): item to store in 'contents'.
             
         Raises:
             ValueError: if 'name' matches an existing key in 'contents'.

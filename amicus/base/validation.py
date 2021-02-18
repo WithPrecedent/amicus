@@ -165,8 +165,8 @@ class Converter(abc.ABC):
             object: [description]
             
         """ 
-        if hasattr(instance, 'bases') and instance.bases is not None:
-            base = getattr(instance.bases, self.base)
+        if hasattr(instance, 'keystones') and instance.keystones is not None:
+            base = getattr(instance.keystones, self.base)
             kwargs = {k: self._kwargify(v, instance, item) 
                       for k, v in self.parameters.items()}
             if item is None:
@@ -187,7 +187,7 @@ class Converter(abc.ABC):
                 raise TypeError(f'{item} could not be validated or converted')
         else:
             raise AttributeError(
-                f'Cannot validate or convert {item} without bases and base')
+                f'Cannot validate or convert {item} without keystones and base')
         return validated
 
     """ Private Methods """

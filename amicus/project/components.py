@@ -178,7 +178,7 @@ class Worker(base.Component):
         """        
         worker = super().from_outline(name = name, outline = outline, **kwargs)
         if hasattr(worker, 'workflow'):
-            worker.workflow = cls.bases.stage.library.borrow(
+            worker.workflow = cls.keystones.stage.library.borrow(
                 names = 'workflow')()
             if worker.parallel:
                 method = cls._create_parallel

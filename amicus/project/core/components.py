@@ -179,7 +179,7 @@ class SimpleProcess(base.Component, abc.ABC):
             False.
 
     Attributes:
-        bases (ClassVar[Keystones]): library that stores amicus base classes 
+        keystones (ClassVar[Keystones]): library that stores amicus base classes 
             and allows runtime access and instancing of those stored subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
             concrete subclasses and allows runtime access and instancing of 
@@ -372,7 +372,7 @@ class Worker(SimpleProcess):
         """        
         worker = super().from_outline(name = name, outline = outline, **kwargs)
         if hasattr(worker, 'workflow'):
-            worker.workflow = cls.bases.stage.library.borrow(
+            worker.workflow = cls.keystones.stage.library.borrow(
                 names = 'workflow')()
             if worker.parallel:
                 method = cls._create_parallel

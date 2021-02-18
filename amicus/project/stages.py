@@ -121,7 +121,7 @@ class Outline(base.Stage):
         outline.designs[name] = design
         outline.initialization[name] = {}
         outline.attributes[name] = {}
-        component = cls.bases.component.library.borrow(names = [name, design])
+        component = cls.keystones.component.library.borrow(names = [name, design])
         parameters = tuple(i for i in list(component.__annotations__.keys()) 
                            if i not in ['name', 'contents'])
         for key, value in section.items():
@@ -129,7 +129,7 @@ class Outline(base.Stage):
             prefix = key[:-len(suffix) - 1]
             if suffix in ['design', 'workflow']:
                 pass
-            elif suffix in cls.bases.component.library.suffixes:
+            elif suffix in cls.keystones.component.library.suffixes:
                 outline.designs.update(dict.fromkeys(value, suffix[:-1]))
                 outline.components[prefix] = value 
             elif suffix in parameters:
@@ -341,7 +341,7 @@ class Workflow(base.Stage, amicus.Graph):
         """
         workflow.append(node = name)
         design = outline.designs[name]
-        component = cls.bases.component.library.borrow(names = [name, design])
+        component = cls.keystones.component.library.borrow(names = [name, design])
         instance = component.from_outline(name = name, outline = outline)
         workflow.components[name] = instance
         return workflow

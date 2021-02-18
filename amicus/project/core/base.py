@@ -37,7 +37,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
             None. 
                 
     Attributes:
-        bases (ClassVar[amicus.types.Library]): library that stores amicus base 
+        keystones (ClassVar[amicus.types.Library]): library that stores amicus base 
             classes and allows runtime access and instancing of those stored 
             subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
@@ -121,7 +121,7 @@ class Stage(amicus.quirks.Keystone, amicus.quirks.Needy, abc.ABC):
             empty list.     
                 
     Attributes:
-        bases (ClassVar[amicus.types.Library]): library that stores amicus base 
+        keystones (ClassVar[amicus.types.Library]): library that stores amicus base 
             classes and allows runtime access and instancing of those stored 
             subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 

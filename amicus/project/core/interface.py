@@ -64,15 +64,15 @@ class Project(quirks.Keystone, amicus.Project):
             None, an instance will still execute its workflow, but it won't
             apply it to any external data. Defaults to None.  
         states (ClassVar[Sequence[Union[str, project.Stage]]]): a list of Stages 
-            or strings corresponding to keys in 'bases.stage.library'. Defaults 
+            or strings corresponding to keys in 'keystones.stage.library'. Defaults 
             to a list containing 'outline', 'workflow', and 'summary'.
         validations (ClassVar[Sequence[str]]): a list of attributes that need 
             validating. Defaults to a list of attributes in the dataclass field.
     
     Attributes:
-        bases (ClassVar[amicus.types.Lexicon]): a class attribute containing
+        keystones (ClassVar[amicus.types.Lexicon]): a class attribute containing
             a dictionary of base classes with libraries of subclasses of those 
-            bases classes. Changing this attribute will entirely replace the 
+            keystones classes. Changing this attribute will entirely replace the 
             existing links between this instance and all other base classes.
         
     """

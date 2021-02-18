@@ -83,14 +83,14 @@ class Keystone(abc.ABC):
     key.
     
     Any direct subclass will automatically store itself in the class attribute 
-    'bases' using the snakecase name of the class as the key.
+    'keystones' using the snakecase name of the class as the key.
     
     Any instance of a subclass will be stored in the class attribute 'instances'
     as long as '__post_init__' is called (either by a 'super()' call or if the
     instance is a dataclass and '__post_init__' is not overridden).
     
     Args:
-        bases (ClassVar[amicus.types.Library]): library that stores direct 
+        keystones (ClassVar[amicus.types.Library]): library that stores direct 
             subclasses (those with Base in their '__bases__' attribute) and 
             allows runtime access and instancing of those stored subclasses.
     
@@ -98,17 +98,19 @@ class Keystone(abc.ABC):
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
-            a direct Keystone subclass (Keystone is in its '__bases__') is instanced.
+            a direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced.
         instances (ClassVar[amicus.types.Catalog]): library that stores
             subclass instances and allows runtime access of those stored 
             subclass instances. 'instances' is automatically created when a 
-            direct Keystone subclass (Keystone is in its '__bases__') is instanced. 
+            direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced. 
                       
     Namespaces: 
-        bases, subclasses, instances, select, instance, and __init_subclass__.
+        keystones, subclasses, instances, select, instance, __init_subclass__
     
     """
-    bases: ClassVar[amicus.types.Library] = amicus.types.Library()
+    keystones: ClassVar[amicus.types.Library] = amicus.types.Library()
     
     """ Initialization Methods """
     
@@ -117,13 +119,13 @@ class Keystone(abc.ABC):
         super().__init_subclass__(**kwargs)
         # Creates a snakecase key of the class name.
         key = amicus.tools.snakify(cls.__name__)
-        # Adds class to 'bases' if it is a base class.
+        # Adds class to 'keystones' if it is a base class.
         if Keystone in cls.__bases__:
             # Creates libraries on this class base for storing subclasses.
             cls.subclasses = amicus.types.Catalog()
             cls.instances = amicus.types.Catalog()
-            # Adds this class to 'bases' using 'key'.
-            cls.bases.register(name = key, item = cls)
+            # Adds this class to 'keystones' using 'key'.
+            cls.keystones.register(name = key, item = cls)
         # Adds concrete subclasses to 'library' using 'key'.
         if not abc.ABC in cls.__bases__:
             cls.subclasses[key] = cls
@@ -227,7 +229,7 @@ class Element(Quirk):
             'name' should match the appropriate section name in a Settings 
             instance. Defaults to None. 
 
-    Namespaces: library, bases, name, __post_init__, and _get_name
+    Namespaces: library, keystones, name, __post_init__, and _get_name
 
     """
     name: str = None

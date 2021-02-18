@@ -62,15 +62,15 @@ class Project(amicus.quirks.Keystone, amicus.Validator,
             apply it to any external data. Defaults to None.  
         states (ClassVar[Sequence[Union[str, amicus.project.Stage]]]): a
             list of Stages or strings corresponding to keys in 
-            'bases.stage.library'. Defaults to a list containing 'outline',
+            'keystones.stage.library'. Defaults to a list containing 'outline',
             'workflow', and 'summary'.
         validations (ClassVar[Sequence[str]]): a list of attributes that need 
             validating. Defaults to a list of attributes in the dataclass field.
     
     Attributes:
-        bases (ClassVar[amicus.types.Lexicon]): a class attribute containing
+        keystones (ClassVar[amicus.types.Lexicon]): a class attribute containing
             a dictionary of base classes with libraries of subclasses of those 
-            bases classes. This attribute is inherited from 
+            keystones classes. This attribute is inherited from 
             'amicus.base.Quirks'. Changing this attribute will entirely
             replace the existing links between this instance and all other base
             classes.
@@ -124,12 +124,12 @@ class Project(amicus.quirks.Keystone, amicus.Validator,
         """
         for item in self.stages:
             if isinstance(item, str):
-                stage = self.bases.stage.library.borrow(names = item)
-            elif inspect.isclass(item) and issubclass(item, self.bases.stage):
+                stage = self.keystones.stage.library.borrow(names = item)
+            elif inspect.isclass(item) and issubclass(item, self.keystones.stage):
                 stage = item
             else:
                 raise TypeError(
-                    f'Items in stages must be str or {self.bases.stage} '
+                    f'Items in stages must be str or {self.keystones.stage} '
                     f'subclasses (not instances)')
             kwargs = stage.needify(instance = self)
             setattr(self, item, stage.create(**kwargs))

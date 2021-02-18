@@ -97,12 +97,12 @@ class Catalog(Catalog):
             Type: stored class with selected quirks added.
             
         """
-        bases = []
+        keystones = []
         if quirks is not None:
-            bases.extend(more_itertools.always_iterable(
+            keystones.extend(more_itertools.always_iterable(
                 amicus.quirks.Quirk.library.borrow(names = quirks)))
-        bases.append(self.borrow(names = name))
-        return dataclasses.dataclass(type(name, tuple(bases), {}))
+        keystones.append(self.borrow(names = name))
+        return dataclasses.dataclass(type(name, tuple(keystones), {}))
     
     def instance(self, name: str, quirks: Union[str, Sequence[str]] = None, 
                  **kwargs) -> object:
@@ -277,7 +277,7 @@ class Manager(amicus.quirks.Keystone, amicus.quirks.Element):
         if name in outline.designs:
             names.append(outline.design[name])
         manager = cls.library.borrow(names = names)
-        structure = cls.bases.stage.library.borrow(names = 'workflow')
+        structure = cls.keystones.stage.library.borrow(names = 'workflow')
         workflow = structure.create(outline = outline, name = name)
         return manager(name = name, workflow = workflow, **kwargs)          
 
@@ -348,7 +348,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
         if (isinstance(source, str)
                 or (isinstance(source, Sequence) and all(source, str))):
             return cls.from_name(name = source, **kwargs)
-        elif isinstance(source, cls.bases.Stage):
+        elif isinstance(source, cls.keystones.Stage):
             return 
   
     @classmethod
