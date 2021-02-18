@@ -84,7 +84,7 @@ class Step(base.Component):
                           
 @dataclasses.dataclass
 class Technique(base.Component):
-    """Core class for primitive objects in a amicus composite object.
+    """Keystone class for primitive objects in a amicus composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
     to allow for runtime alterations.
@@ -132,7 +132,7 @@ class Technique(base.Component):
                   
 @dataclasses.dataclass
 class Worker(base.Component):
-    """Core class for parts of a amicus Workflow.
+    """Keystone class for parts of a amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 

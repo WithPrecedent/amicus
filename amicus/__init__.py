@@ -65,18 +65,16 @@ the lazy importation system used throughout amicus.
 
 """
 importables: Dict[str, str] = {
-    'core': 'core',
+    'base': 'base',
     'project': 'project',
     'utilities': 'utilities',
     'decorators': 'utilities.decorators',
     'memory': 'utilities.memory',
     'tools': 'utilities.tools',
     'quirks': 'base.quirks',
-    'structures': 'base.structures',
-    'filing': 'base.filing',
-    'framework': 'base.framework',
-    'quirks': 'base.quirks',
     'types': 'base.types',
+    'framework': 'base.framework',
+    'structures': 'base.structures',
     'Proxy': 'base.types.Proxy',
     'Bunch': 'base.types.Bunch',
     'Progression': 'base.types.Progression',

@@ -7,8 +7,8 @@
 """
 import os
 import sys
-sys.path.insert(0, os.path.join('..', 'simplify'))
-sys.path.insert(0, os.path.join('..', '..', 'simplify'))
+sys.path.insert(0, os.path.join('..', 'amicus'))
+sys.path.insert(0, os.path.join('..', '..', 'amicus'))
 
 import pathlib
 
@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 import sklearn.datasets
 
-from simplify import Project
+from amicus import Project
 
 
 # Loads cancer data and converts from numpy arrays to a pandas DataFrame.

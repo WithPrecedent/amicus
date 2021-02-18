@@ -5,7 +5,6 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents: 
-    Manager (Element, Validator):
     Project (Workflow, Element): access point and interface for creating and 
         implementing amicus projects.
 
@@ -23,7 +22,7 @@ from . import base
 
 
 @dataclasses.dataclass
-class Project(amicus.quirks.Core, amicus.Validator, 
+class Project(amicus.quirks.Keystone, amicus.Validator, 
               amicus.types.Lexicon):
     """Directs construction and execution of a amicus project.
     

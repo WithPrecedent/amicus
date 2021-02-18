@@ -128,7 +128,7 @@ class Catalog(Catalog):
 
 
 @dataclasses.dataclass
-class Settings(amicus.quirks.Core, amicus.Settings):
+class Settings(amicus.quirks.Keystone, amicus.Settings):
     """Loads and stores configuration settings for a Project.
 
     Args:
@@ -173,12 +173,12 @@ class Settings(amicus.quirks.Core, amicus.Settings):
 
 
 @dataclasses.dataclass
-class Filer(amicus.quirks.Core, amicus.Clerk):
+class Filer(amicus.quirks.Keystone, amicus.Clerk):
     pass  
 
 
 @dataclasses.dataclass
-class Stage(amicus.quirks.Core, amicus.quirks.Needy, abc.ABC):
+class Stage(amicus.quirks.Keystone, amicus.quirks.Needy, abc.ABC):
     """Creates a amicus object.
 
     Args:
@@ -216,7 +216,7 @@ class Stage(amicus.quirks.Core, amicus.quirks.Needy, abc.ABC):
      
             
 @dataclasses.dataclass
-class Manager(amicus.quirks.Core, amicus.quirks.Element):
+class Manager(amicus.quirks.Keystone, amicus.quirks.Element):
     """Manages a distinct portion of a amicus project workflow.
 
     Args:
@@ -298,8 +298,8 @@ class Manager(amicus.quirks.Core, amicus.quirks.Element):
                 
   
 @dataclasses.dataclass
-class Component(amicus.quirks.Core, amicus.quirks.Element, abc.ABC):
-    """Core class for parts of a amicus Workflow.
+class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
+    """Keystone class for parts of a amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
