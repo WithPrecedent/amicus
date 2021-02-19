@@ -1,5 +1,5 @@
 """
-analyst.steps
+analyst.categorize:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0) 
@@ -7,18 +7,19 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
 
 """
+from __future__ import annotations
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
-import numpy as np
-import pandas as pd
-import sklearn
+import amicus
+
+from . import base
 import amicus
 
 
 @dataclasses.dataclass
-class Mix(amicus.project.Step):
+class Categorize(amicus.project.Step):
     """Wrapper for a Technique.
 
     An instance will try to return attributes from 'contents' if the attribute 
@@ -26,9 +27,9 @@ class Mix(amicus.project.Step):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
@@ -42,10 +43,29 @@ class Mix(amicus.project.Step):
             meant to be at the end of a parallel workflow structure. Defaults to 
             True.
                                                 
-    """    
-    name: str = 'mix'
+    """
+    name: str = 'encode'
     contents: amicus.project.Technique = None
-    iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
     parallel: ClassVar[bool] = True
     
+
+'automatic': Tool(
+    name = 'automatic',
+    module = 'amicus.analyst.algorithms',
+    algorithm = 'auto_categorize',
+    default = {'threshold': 10}),
+'binary': Tool(
+    name = 'binary',
+    module = 'sklearn.preprocessing',
+    algorithm = 'Binarizer',
+    default = {'threshold': 0.5}),
+'bins': Tool(
+    name = 'bins',
+    module = 'sklearn.preprocessing',
+    algorithm = 'KBinsDiscretizer',
+    default = {
+        'strategy': 'uniform',
+        'n_bins': 5},
+    selected = True,
+    required = {'encode': 'onehot'})},

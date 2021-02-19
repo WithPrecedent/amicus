@@ -10,14 +10,14 @@ base python classes to make it easier for users to know which object they are
 accessing when using either 'contents' or 'data'.
 
 Contents:
-    Proxy (collections.abc.Container): basic wrapper for a stored static or
-        iterable item. Dunder methods attempt to intelligently apply access
-        methods to either the wrapper or the wrapped item.
+    Proxy (Container): basic wrapper for a stored static or iterable item. 
+        Dunder methods attempt to intelligently apply access methods to either 
+        the wrapper or the wrapped item.
     Bunch (Iterable, ABC): abstract base class for amicus iterables. All 
         subclasses must have an 'add' method as well as store their contents in 
         the 'contents' attribute.
-    Progression (MutableSequence, Bunch): amicus drop-in replacement for 
-        list with additional functionality.
+    Progression (MutableSequence, Bunch): amicus drop-in replacement for list 
+        with additional functionality.
     Hybrid (Progression): iterable with both dict and list interfaces and 
         methods that stores items with a 'name' attribute.
     Lexicon (MutableMapping, Bunch): amicus's drop-in replacement for 
@@ -25,8 +25,10 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
+    Quirk (ABC): base class for all amicus quirks (described above). Its 
+        'quirks' class attribute stores all subclasses.
     Library (Lexicon): a dict that adds dot notation access for first level keys
-        and includes a 'deposit' method which returns an error if the user
+        and includes a 'deposit' method which returns an error if the user 
         passes a key that already exists in the stored dict.
 
 """
@@ -38,6 +40,8 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
                     Optional, Sequence, Tuple, Type, Union)
 
 import more_itertools
+
+import amicus
 
 
 @dataclasses.dataclass
@@ -195,7 +199,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
         
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__name__} iterable')
     
     """ Dunder Methods """
 
@@ -230,7 +234,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Progression(Bunch, collections.abc.MutableSequence):
+class Progression(collections.abc.MutableSequence, Bunch):
     """Basic amicus list replacement.
     
     A Progression differs from an ordinary python list only in ways inherited
@@ -298,6 +302,7 @@ class Progression(Bunch, collections.abc.MutableSequence):
 
         """
         self.contents[key] = value
+        return self
 
     def __delitem__(self, key: Union[Any, int]) -> None:
         """Deletes item at 'key' index in 'contents'.
@@ -403,7 +408,7 @@ class Hybrid(Progression):
         """
         subset = more_itertools.always_iterable(subset)
         contents = [c for c in self.contents if not c.name in subset]
-        return self.__class__(contents = contents)  
+        return self.__class__(contents = contents, **kwargs)  
            
     def extend(self, item: Any) -> None:
         """Extends 'items' to 'contents'.
@@ -997,17 +1002,15 @@ class Catalog(Lexicon):
 
 
 @dataclasses.dataclass
-class Library(Lexicon):
-    """Stores items with first-level dot notation access.
+class Library(amicus.types.Lexicon):
+    """Dictionary with first-level dot notation access.
     
     A Library inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Library differs from a Lexicon in 2 significant ways:
+    A Library differs from a Lexicon in 1 significant way:
         1) It adds on dot access for first level keys. Ordinary dict access
             methods are still available, inherited from Lexicon.
-        2) It has a 'deposit' method which returns an error if the passed key
-            already exists in the stored dict.
     
     Args:
         contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
@@ -1018,25 +1021,6 @@ class Library(Lexicon):
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
     
-    """ Public Methods """
-    
-    def deposit(self, name: str, item: Any) -> None:
-        """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
-        
-        Args:
-            name (str): key to use to store 'item'.
-            item (Any): item to store in 'contents'.
-            
-        Raises:
-            ValueError: if 'name' matches an existing key in 'contents'.
-            
-        """
-        if name in dir(self):
-            raise ValueError(f'{name} is already in {self.__class__.__name__}')
-        else:
-            self[name] = item
-        return self
-
     """ Dunder Methods """
     
     def __getattr__(self, key: str) -> Any:
@@ -1082,3 +1066,24 @@ class Library(Lexicon):
             del self[key]
         except KeyError as key_error:
             raise AttributeError(key_error)
+
+       
+@dataclasses.dataclass
+class Quirk(abc.ABC):
+    """Base class for amicus quirks (mixin-approximations).
+    
+    Namespaces: __init_subclass__
+    
+    """
+    quirks: ClassVar[Catalog] = Catalog()
+    
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'quirks' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        # Adds concrete quirks to 'quirks' using 'key'.
+        if not abc.ABC in cls.__bases__:
+            # Creates a snakecase key of the class name.
+            key = amicus.tools.snakify(cls.__name__)
+            cls.quirks[key] = cls

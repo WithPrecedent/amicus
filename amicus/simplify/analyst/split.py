@@ -1,5 +1,5 @@
 """
-analyst.steps
+analyst.split
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0) 
@@ -17,11 +17,8 @@ from . import base
 import amicus
 
 
-encoders = amicus.types.Catalog()
-
-
 @dataclasses.dataclass
-class Encode(amicus.project.Step):
+class Split(amicus.project.Step):
     """Wrapper for a Technique.
 
     An instance will try to return attributes from 'contents' if the attribute 
@@ -29,42 +26,38 @@ class Encode(amicus.project.Step):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
         parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
             when the 'implement' method is called. Defaults to an empty dict.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be at the end of a parallel workflow structure. Defaults to 
             True.
                                                 
-    """
-    name: str = 'encode'
+    """    
+    name: str = 'split'
     contents: amicus.project.Technique = None
     parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
     parallel: ClassVar[bool] = True
-    
-    
+
+
 @dataclasses.dataclass
-class CategoryEncoder(amicus.quirks.SklearnTransformer, 
-                      amicus.project.Technique):
-    """Wrapper for an encoder from category-encoders.
+class SklearnSplitter(amicus.project.Technique):
+    """Wrapper for a scikit-learn data splitter.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
+        module (str): name of module where 'contents' is located.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
@@ -79,9 +72,10 @@ class CategoryEncoder(amicus.quirks.SklearnTransformer,
     name: str = None
     contents: Union[Callable, Type, object, str] = None
     iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
+    parameters: Union[Mapping[str, Any], 
+                      base.Parameters] = base.Parameters()
     module: str = None
-    parallel: ClassVar[bool] = False 
+    parallel: ClassVar[bool] = False
 
     """ Public Methods """
     
@@ -100,43 +94,49 @@ class CategoryEncoder(amicus.quirks.SklearnTransformer,
         except AttributeError:
             pass
         self.contents = self.contents(**self.parameters)
-        data = project.data
-        data.x_train = self.contents.fit[data.x_train, data.y_train]
-        data.x_train = self.contents.transform(data.x_train)
-        if data.x_test is not None:
-            data.x_test = self.contents.transform(data.x_test)
-        if data.x_validate is not None:
-            data.x_validate = self.contents.transform(data.x_validate)
-        project.data = data
+        project.data.splits = tuple(self.contents.split(project.data.x))
+        project.data.split()
         return project
-                      
 
-category_encoders = {
-    'backward': 'BackwardDifferenceEncoder',
-    'base_n': 'BaseNEncoder',
-    'binary': 'BinaryEncoder',
-    'cat_boost': 'CatBoostEncoder',
-    'count': 'CountEncoder',
-    'glmm': 'GLMMEncoder',
-    'hashing': 'HashingEncoder',
-    'helmert': 'HelmertEncoder',
-    'james_stein': 'JamesSteinEncoder',
-    'leave_one_out': 'LeaveOneOutEncoder',
-    'm_estimate': 'MEstimateEncoder',
-    'one_hot': 'OneHotEncoder',
-    'ordinal': 'OrdinalEncoder',
-    'sum': 'SumEncoder',
-    'polynomial': 'PolynomialEncoder',
-    'target': 'TargetEncoder',
-    'weight_of_evidence': 'WOEEncoder'}
-
-
-for encoder, algorithm in category_encoders:
-    kwargs = {
-        'name': encoder, 
-        'contents': algorithm,
-        'module': 'category_encoders',
-        'parameters': base.Parameters(
-            name = f'{encoder}_encode',
-            runtime = {'cols': 'data.categoricals'})}
-    encoders[f'{encoder}_encode'] = CategoryEncoder(**kwargs)
+splitters = amicus.types.Catalog(
+    contents = {
+        'train_test_split': SklearnSplitter(
+            name = 'train test',
+            contents = 'ShuffleSplit',
+            parameters = base.Parameters(
+                name = 'train_test',
+                default = {'n_splits': 1, 'test_size': 0.33, 'shuffle': True}, 
+                runtime = {'random_state': 'seed'}),
+            module = 'sklearn.model_selection'),
+        'kfold_split': SklearnSplitter(
+            name = 'kfold',
+            contents = 'Kfold',
+            parameters = base.Parameters(
+                name = 'kfold',
+                default = {'n_splits': 5, 'shuffle': True},  
+                runtime = {'random_state': 'seed'}),
+            module = 'sklearn.model_selection'),
+        'stratified_kfold_split': SklearnSplitter(
+            name = 'stratified kfold',
+            contents = 'Stratified_KFold',
+            parameters = base.Parameters(
+                name = 'stratified_kfold',
+                default = {'n_splits': 5, 'shuffle': True},  
+                runtime = {'random_state': 'seed'}),
+            module = 'sklearn.model_selection'),
+        'group_kfold_split': SklearnSplitter(
+            name = 'group kfold',
+            contents = 'GroupKFold',
+            parameters = base.Parameters(
+                name = 'group_kfold',
+                default = {'n_splits': 5, 'shuffle': True},  
+                runtime = {'random_state': 'seed'}),
+            module = 'sklearn.model_selection'),
+        'time_series_split': SklearnSplitter(
+            name = 'time series split',
+            contents = 'Group_KFold',
+            parameters = base.Parameters(
+                name = 'time_series_split',
+                default = {'n_splits': 5, 'shuffle': True},  
+                runtime = {'random_state': 'seed'}),
+            module = 'sklearn.model_selection')})

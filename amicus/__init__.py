@@ -81,7 +81,7 @@ importables: Dict[str, str] = {
     'Hybrid': 'base.types.Hybrid',
     'Lexicon': 'base.types.Lexicon',
     'Catalog': 'base.types.Catalog',
-    'Settings': 'base.framework.Settings',
+    'Configuration': 'base.framework.Configuration',
     'Clerk': 'base.framework.Clerk',
     'Validator': 'base.validation.Validator',
     'Converter': 'base.validation.Converter',

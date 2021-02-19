@@ -43,9 +43,9 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             values are amicus proxy datatypes. Defaults to an empty
             dictionary.
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
 
     """
@@ -83,7 +83,7 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             datatypes: Mapping[str, str] = lambda: {},
             prefixes: Mapping[str, str] = lambda: {},
             name: str = None,
-            settings: base.Settings = None,
+            settings: base.Configuration = None,
             filer: base.Filer = None) -> Dataset:
         """Creates an Dataset instance.
 
@@ -925,7 +925,7 @@ class DataStates(object):
 
 @dataclasses.dataclass
 class DataState(object):
-    """A single state in data processing for a amicus project.
+    """A single state in data processing for an amicus project.
 
     Args:
         train_set (Optional[Tuple[str, str]]): names of attributes in a

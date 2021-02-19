@@ -25,16 +25,16 @@ from amicus.utilities import decorators
 
 @dataclasses.dataclass
 class Analyst(amicus.project.Worker):
-    """Base class for primitive objects in a amicus composite object.
+    """Base class for primitive objects in an amicus composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
     to allow for runtime alterations.
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Any): stored item for use by a Component subclass instance.
         workflow (amicus.project.Workflow): a workflow of a project subpart 
@@ -160,7 +160,7 @@ class Report(amicus.base.SimpleSummary):
 #         step (Optional[str]): name of step when the class instance is to be
 #             applied. Defaults to None.
 #         module (Optional[str]): name of module where object to use is located
-#             (can either be a amicus or non-amicus module). Defaults to
+#             (can either be an amicus or non-amicus module). Defaults to
 #             'amicus.core'.
 #         algorithm (Optional[object]): process object which executes the primary
 #             method of a class instance. Defaults to None.

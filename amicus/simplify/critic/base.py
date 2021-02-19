@@ -23,9 +23,9 @@ class Critic(base.SimpleManager):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a SimpleSettings
+            amicus instance needs settings from a SimpleConfiguration
             instance, 'name' should match the appropriate section name in a 
-            SimpleSettings instance. Defaults to None. 
+            SimpleConfiguration instance. Defaults to None. 
         workflow (base.SimpleWorkflow): a workflow of a project subpart derived 
             from 'outline'. Defaults to None.
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
@@ -256,7 +256,7 @@ class Evaluator(Technique):
             None or __class__.__name__.lower() if super().__post_init__ is
             called.
         module (Optional[str]): name of module where object to use is located
-            (can either be a amicus or non-amicus module). Defaults to
+            (can either be an amicus or non-amicus module). Defaults to
             'amicus.core'.
         algorithm (Optional[object]): process object which executes the primary
             method of a class instance. Defaults to None.
@@ -415,7 +415,7 @@ class Critic(Worker):
             coordination between amicus classes. 'name' is used instead of
             __class__.__name__ to make such subclassing easier.
         module (Optional[str]): name of module where object to use is located
-            (can either be a amicus or non-amicus module). Defaults to
+            (can either be an amicus or non-amicus module). Defaults to
             'amicus.core'.
         book (Optional[str]): name of Book object in 'module' to load. Defaults
             to 'Book'.

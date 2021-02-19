@@ -33,7 +33,7 @@ the modules and other items listed in values. 'importables' is necessary for
 the lazy importation system used throughout amicus.
 """
 importables: Dict[str, str] = {
-    'Settings': 'base.Settings',
+    'Configuration': 'base.Configuration',
     'Filer': 'base.Filer',
     'Workflow': 'base.Workflow',
     'Component': 'base.Component',

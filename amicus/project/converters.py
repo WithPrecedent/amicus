@@ -20,8 +20,8 @@ import amicus
 
 
 @dataclasses.dataclass
-class SettingsConverter(amicus.Converter):
-    """Type converter for Settings.
+class ConfigurationConverter(amicus.Converter):
+    """Type converter for Configuration.
 
     Args:
         base (str): 

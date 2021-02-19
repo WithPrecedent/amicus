@@ -1,16 +1,11 @@
 """
-base: core classes for a amicus data science project
+base: core classes for an amicus data science project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    SimpleSettings (amicus.project.Settings):
-    SimpleFiler (amicus.project.Filer):
-    SimpleManager (amicus.project.Manager):
-    SimpleComponent (amicus.project.Component):
-    SimpleAlgorithm
-    SimpleCriteria
+
     
 """
 from __future__ import annotations
@@ -27,19 +22,19 @@ import amicus
 
 @dataclasses.dataclass
 class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
-    """Base class for parts of a amicus Workflow.
+    """Base class for parts of an amicus Workflow.
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
                 
     Attributes:
-        keystones (ClassVar[amicus.types.Library]): library that stores amicus base 
-            classes and allows runtime access and instancing of those stored 
-            subclasses.
+        keystones (ClassVar[amicus.types.Library]): library that stores amicus 
+            base classes and allows runtime access and instancing of those 
+            stored subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): library that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 
@@ -53,8 +48,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
     """ Required Subclass Methods """
     
     @abc.abstractmethod
-    def execute(self, project: amicus.Project, 
-                **kwargs) -> amicus.Project:
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
         Args:
             project (amicus.Project): [description]
@@ -65,8 +59,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
         return project
 
     @abc.abstractmethod
-    def implement(self, project: amicus.Project, 
-                  **kwargs) -> amicus.Project:
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
         Args:
             project (amicus.Project): [description]
@@ -113,7 +106,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
 
 @dataclasses.dataclass
 class Stage(amicus.quirks.Keystone, amicus.quirks.Needy, abc.ABC):
-    """Creates a amicus object.
+    """Creates an amicus object.
     
     Args:
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 

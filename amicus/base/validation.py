@@ -8,7 +8,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
     Validator
     Converter
-    SettingsConverter
+    ConfigurationConverter
     ClerkConverter
 
 ToDo:
@@ -35,11 +35,11 @@ class Validator(amicus.quirks.Quirk):
             Each item in 'validations' should have a corresponding method named 
             f'_validate_{name}' or match a key in 'converters'. Defaults to an 
             empty list. 
-        converters (amicus.Catalog):
+        converters (amicus.types.Catalog):
                
     """
     validations: ClassVar[Sequence[str]] = []
-    converters: ClassVar[amicus.Catalog] = amicus.Catalog()
+    converters: ClassVar[amicus.types.Catalog] = amicus.types.Catalog()
 
     """ Public Methods """
 

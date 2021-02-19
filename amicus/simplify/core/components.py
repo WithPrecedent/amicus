@@ -23,10 +23,10 @@ from . import stages
 
 @dataclasses.dataclass    
 class Parameters(amicus.types.Lexicon):
-    """Creates and stores parameters for a amicus component.
+    """Creates and stores parameters for an amicus component.
     
     Parameters allows parameters to be drawn from several different sources, 
-    including those which only become apparent during execution of a amicus
+    including those which only become apparent during execution of an amicus
     project.
     
     Parameters can be unpacked with '**', which will turn the 'contents' 
@@ -34,17 +34,17 @@ class Parameters(amicus.types.Lexicon):
     replacement for a dict that would ordinarily be used for accumulating 
     keyword arguments.
     
-    If a amicus class uses a Parameters instance, the 'finalize' method should
+    If an amicus class uses a Parameters instance, the 'finalize' method should
     be called before that instance's 'implement' method in order for each of the
     parameter types to be incorporated.
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
-        contents (Mapping[str, Any]): keyword parameters for use by a amicus
+        contents (Mapping[str, Any]): keyword parameters for use by an amicus
             classes' 'implement' method. The 'finalize' method should be called
             for 'contents' to be fully populated from all sources. Defaults to
             an empty dict.
@@ -59,12 +59,12 @@ class Parameters(amicus.types.Lexicon):
             in 'contents' of 'project' passed to the 'finalize' method. Defaults
             to an emtpy dict.
         required (Sequence[str]): parameters that must be passed when the 
-            'implement' method of a amicus class is called.
+            'implement' method of an amicus class is called.
         selected (Sequence[str]): an exclusive list of parameters that are 
             allowed. If 'selected' is empty, all possible parameters are 
             allowed. However, if any are listed, all other parameters that are
             included are removed. This is can be useful when including 
-            parameters in a Settings instance for an entire step, only some of
+            parameters in a Configuration instance for an entire step, only some of
             which might apply to certain techniques. Defaults to an empty dict.
 
     """
@@ -154,13 +154,13 @@ class Parameters(amicus.types.Lexicon):
 
 @dataclasses.dataclass
 class SimpleProcess(base.Component, abc.ABC):
-    """Base class for parts of a amicus Workflow.
+    """Base class for parts of an amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -251,9 +251,9 @@ class Step(SimpleProcess):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -282,13 +282,13 @@ class Step(SimpleProcess):
     
 @dataclasses.dataclass
 class Technique(amicus.quirks.Loader, SimpleProcess):
-    """Primitive object for executing algorithms in a amicus workflow.
+    """Primitive object for executing algorithms in an amicus workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -303,7 +303,7 @@ class Technique(amicus.quirks.Loader, SimpleProcess):
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
         module (str): name of module where 'contents' is located if 'contents'
-            is a string. It can either be a amicus or external module, as
+            is a string. It can either be an amicus or external module, as
             long as it is available to the python environment. Defaults to None.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be part of a parallel workflow structure. Defaults to 
@@ -320,13 +320,13 @@ class Technique(amicus.quirks.Loader, SimpleProcess):
               
 @dataclasses.dataclass
 class Worker(SimpleProcess):
-    """An iterable in a amicus workflow that maintains its own workflow.
+    """An iterable in an amicus workflow that maintains its own workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -463,9 +463,9 @@ class Pipeline(Worker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -503,9 +503,9 @@ class ParallelWorker(Worker, abc.ABC):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -600,9 +600,9 @@ class Contest(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -655,9 +655,9 @@ class Study(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -709,9 +709,9 @@ class Survey(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 

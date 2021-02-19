@@ -44,7 +44,7 @@ class Metric(Technique):
         step (Optional[str]): name of step when the class instance is to be
             applied. Defaults to None.
         module (Optional[str]): name of module where object to use is located
-            (can either be a amicus or non-amicus module). Defaults to
+            (can either be an amicus or non-amicus module). Defaults to
             'amicus.core'.
         algorithm (Optional[object]): process object which executes the primary
             method of a class instance. Defaults to None.

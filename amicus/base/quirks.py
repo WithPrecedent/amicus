@@ -20,8 +20,6 @@ alternate classes for use in amicus, these quirks show how to survive static
 type-checkers and other internal checks made by amicus.
 
 Contents:
-    Quirk (ABC): base class for all amicus quirks (described above). Its 
-        'library' class attribute stores all subclasses.
     Keystone (Quirk, ABC): base class to be used for all subclasses that wish 
         to use amicus's automatic subclass registration system.
     Element (Quirk, ABC): quirk that automatically assigns a 'name' attribute if 
@@ -36,10 +34,8 @@ ToDo:
 
 """
 from __future__ import annotations
-import abc
-import copy
 import dataclasses
-import inspect
+import importlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
 
@@ -47,175 +43,9 @@ import more_itertools
 
 import amicus
        
-    
-@dataclasses.dataclass
-class Quirk(abc.ABC):
-    """Keystone class for amicus quirks (mixin-approximations).
-    
-    Args:
-        library (ClassVar[amicus.Catalog]): related Catalog instance that 
-            will store concrete subclasses and allow runtime construction and 
-            instancing of those stored subclasses.
-    
-    Namespaces: library, __init_subclass__
-    
-    """
-    library: ClassVar[amicus.Catalog] = amicus.Catalog()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to 'library' if it is a concrete class."""
-        super().__init_subclass__(**kwargs)
-        # Adds concrete subclasses to 'library' using 'key'.
-        if not abc.ABC in cls.__bases__:
-            # Creates a snakecase key of the class name.
-            key = amicus.tools.snakify(cls.__name__)
-            cls.library[key] = cls
-
 
 @dataclasses.dataclass
-class Keystone(abc.ABC):
-    """Base mixin for automatic registration of subclasses and instances. 
-    
-    Any concrete (non-abstract) subclass will automatically store itself in the 
-    class attribute 'subclasses' using the snakecase name of the class as the 
-    key.
-    
-    Any direct subclass will automatically store itself in the class attribute 
-    'keystones' using the snakecase name of the class as the key.
-    
-    Any instance of a subclass will be stored in the class attribute 'instances'
-    as long as '__post_init__' is called (either by a 'super()' call or if the
-    instance is a dataclass and '__post_init__' is not overridden).
-    
-    Args:
-        keystones (ClassVar[amicus.types.Library]): library that stores direct 
-            subclasses (those with Base in their '__bases__' attribute) and 
-            allows runtime access and instancing of those stored subclasses.
-    
-    Attributes:
-        subclasses (ClassVar[amicus.types.Catalog]): library that stores 
-            concrete subclasses and allows runtime access and instancing of 
-            those stored subclasses. 'subclasses' is automatically created when 
-            a direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced.
-        instances (ClassVar[amicus.types.Catalog]): library that stores
-            subclass instances and allows runtime access of those stored 
-            subclass instances. 'instances' is automatically created when a 
-            direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced. 
-                      
-    Namespaces: 
-        keystones, subclasses, instances, select, instance, __init_subclass__
-    
-    """
-    keystones: ClassVar[amicus.types.Library] = amicus.types.Library()
-    
-    """ Initialization Methods """
-    
-    def __init_subclass__(cls, **kwargs):
-        """Adds 'cls' to appropriate class libraries."""
-        super().__init_subclass__(**kwargs)
-        # Creates a snakecase key of the class name.
-        key = amicus.tools.snakify(cls.__name__)
-        # Adds class to 'keystones' if it is a base class.
-        if Keystone in cls.__bases__:
-            # Creates libraries on this class base for storing subclasses.
-            cls.subclasses = amicus.types.Catalog()
-            cls.instances = amicus.types.Catalog()
-            # Adds this class to 'keystones' using 'key'.
-            cls.keystones.register(name = key, item = cls)
-        # Adds concrete subclasses to 'library' using 'key'.
-        if not abc.ABC in cls.__bases__:
-            cls.subclasses[key] = cls
-
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        try:
-            key = self.name
-        except AttributeError:
-            key = amicus.tools.snakify(self.__class__.__name__)
-        self.instances[key] = self
- 
-    """ Public Class Methods """
-    
-    @classmethod
-    def select(cls, name: Union[str, Sequence[str]]) -> Type[Keystone]:
-        """Returns matching subclass from 'subclasses.
-        
-        Args:
-            name (Union[str, Sequence[str]]): name of item in 'subclasses' to
-                return
-            
-        Raises:
-            KeyError: if no match is found for 'name' in 'subclasses'.
-            
-        Returns:
-            Type[Keystone]: stored Keystone subclass.
-            
-        """
-        item = None
-        for key in more_itertools.always_iterable(name):
-            try:
-                item = cls.subclasses[key]
-                break
-            except KeyError:
-                pass
-        if item is None:
-            raise KeyError(f'No matching item for {str(name)} was found') 
-        else:
-            return item
-    
-    @classmethod
-    def instance(cls, name: Union[str, Sequence[str]], **kwargs) -> Keystone:
-        """Returns match from 'instances' or 'subclasses'.
-        
-        The method prioritizes 'instances' before 'subclasses'. If a match is
-        found in 'subclasses', 'kwargs' are passed to instance the matching
-        subclass. If a match is found in 'instances', the 'kwargs' are manually
-        added as attributes to the matching instance.
-        
-        Args:
-            name (Union[str, Sequence[str]]): name of item in 'instances' or 
-                'subclasses' to return.
-            
-        Raises:
-            KeyError: if no match is found for 'name' in 'instances' or 
-                'subclasses'.
-            
-        Returns:
-            Keystone: stored Keystone subclass instance.
-            
-        """
-        item = None
-        for key in more_itertools.always_iterable(name):
-            for library in ['instances', 'subclasses']:
-                try:
-                    item = getattr(cls, library)[key]
-                    break
-                except KeyError:
-                    pass
-            if item is not None:
-                break
-        if item is None:
-            raise KeyError(f'No matching item for {str(name)} was found') 
-        elif inspect.isclass(item):
-            return cls(name = name, **kwargs)
-        else:
-            instance = copy.deepcopy(item)
-            for key, value in kwargs.items():
-                setattr(instance, key, value)
-            return instance
-
-    
-@dataclasses.dataclass
-class Element(Quirk):
+class Element(amicus.types.Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -224,9 +54,9 @@ class Element(Quirk):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None. 
 
     Namespaces: library, keystones, name, __post_init__, and _get_name
@@ -263,7 +93,7 @@ class Element(Quirk):
 
 
 @dataclasses.dataclass
-class Importer(Quirk):
+class Importer(amicus.types.Quirk):
     """Faciliates lazy importing from modules.
 
     Subclasses with attributes storing strings containing import paths 
@@ -282,7 +112,7 @@ class Importer(Quirk):
     """ Public Methods """
 
     def importify(self, path: str, instance: bool = False, 
-             **kwargs) -> Union[object, Type]:
+        **kwargs) -> Union[object, Type]:
         """Returns object named by 'key'.
 
         Args:
@@ -295,7 +125,10 @@ class Importer(Quirk):
         """
         item = path.split('.')[-1]
         module = path[:-len(item) - 1]
-        imported = amicus.tools.importify(module = module, key = item)
+        try:
+            imported = getattr(importlib.import_module(module), item)
+        except (ImportError, AttributeError):
+            raise ImportError(f'failed to load {item} in {module}')
         if kwargs or instance:
             return imported(**kwargs)
         else:
@@ -319,13 +152,16 @@ class Importer(Quirk):
         """
         value = super().__getattribute__(name)
         if (isinstance(value, str) and '.' in value):
-            value = self.importify(path = value)
-            super().__setattr__(name, value)
+            try:
+                value = self.importify(path = value)
+                super().__setattr__(name, value)
+            except ImportError:
+                pass
         return value
 
 
 @dataclasses.dataclass
-class Needy(Quirk):
+class Needy(amicus.types.Quirk):
     """Provides internal creation and automatic parameterization.
     
     Args:

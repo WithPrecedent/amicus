@@ -15,10 +15,10 @@ import numpy as np
 import pandas as pd
 import sklearn
 import amicus
-    
+
 
 @dataclasses.dataclass
-class Sample(amicus.project.Step):
+class Mix(amicus.project.Step):
     """Wrapper for a Technique.
 
     An instance will try to return attributes from 'contents' if the attribute 
@@ -26,9 +26,9 @@ class Sample(amicus.project.Step):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
@@ -43,9 +43,30 @@ class Sample(amicus.project.Step):
             True.
                                                 
     """    
-    name: str = 'sample'
+    name: str = 'mix'
     contents: amicus.project.Technique = None
     iterations: Union[int, str] = 1
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
-    
+
+
+'polynomial': Tool(
+    name = 'polynomial_mixer',
+    module = 'sklearn.preprocessing',
+    algorithm = 'PolynomialFeatures',
+    default = {
+        'degree': 2,
+        'interaction_only': True,
+        'include_bias': True}),
+'quotient': Tool(
+    name = 'quotient',
+    module = None,
+    algorithm = 'QuotientFeatures'),
+'sum': Tool(
+    name = 'sum',
+    module = None,
+    algorithm = 'SumFeatures'),
+'difference': Tool(
+    name = 'difference',
+    module = None,
+    algorithm = 'DifferenceFeatures')},  

@@ -29,9 +29,9 @@ class Outline(base.Stage):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings 
+            amicus instance needs settings from a Configuration 
             instance, 'name' should match the appropriate section name in a 
-            Settings instance. Defaults to None. 
+            Configuration instance. Defaults to None. 
         structure (str): the name matching the type of workflow to be used in a
             project. Defaults to None.
         components (Dict[str, List]): a dictionary with keys that are names of
@@ -72,12 +72,12 @@ class Outline(base.Stage):
     """ Public Class Methods """
     
     @classmethod   
-    def from_settings(cls, settings: base.Settings, 
+    def from_settings(cls, settings: base.Configuration, 
                       name: str = None) -> Outline:
         """[summary]
 
         Args:
-            source (base.Settings): [description]
+            source (base.Configuration): [description]
 
         Returns:
             Outline: [description]
@@ -104,13 +104,13 @@ class Outline(base.Stage):
     """ Private Class Methods """
     
     @classmethod
-    def _parse_section(cls, name: str, settings: base.Settings, 
+    def _parse_section(cls, name: str, settings: base.Configuration, 
                        outline: Outline) -> Outline:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (base.Settings): [description]
+            settings (base.Configuration): [description]
             outline (Outline): [description]
 
         Returns:
@@ -141,12 +141,12 @@ class Outline(base.Stage):
         return outline   
 
     @classmethod
-    def _get_design(cls, name: str, settings: base.Settings) -> str:
+    def _get_design(cls, name: str, settings: base.Configuration) -> str:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (base.Settings):
+            settings (base.Configuration):
 
         Raises:
             KeyError: [description]
@@ -170,7 +170,7 @@ class Outline(base.Stage):
         return design    
 
     @classmethod
-    def _get_structure(cls, name: str, settings: base.Settings) -> str:
+    def _get_structure(cls, name: str, settings: base.Configuration) -> str:
         """[summary]
 
         Args:
@@ -200,12 +200,12 @@ class Outline(base.Stage):
 
     @classmethod
     def _add_runtime_parameters(cls, outline: Outline, 
-                                settings: base.Settings) -> Outline:
+                                settings: base.Configuration) -> Outline:
         """[summary]
 
         Args:
             outline (Outline): [description]
-            settings (base.Settings): [description]
+            settings (base.Configuration): [description]
 
         Returns:
             Outline: [description]
@@ -233,7 +233,7 @@ class Workflow(base.Stage, amicus.Graph):
             is connected to. Defaults to an empty dict.
         default (Any): default value to use when a key is missing and a new
             one is automatically corrected. Defaults to an empty list.
-        components (amicus.Catalog): stores Component instances that 
+        components (amicus.types.Catalog): stores Component instances that 
             correspond to nodes in 'contents'. Defaults to an empty Catalog.
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
             another instance for some method within a subclass. Defaults to 
@@ -242,7 +242,7 @@ class Workflow(base.Stage, amicus.Graph):
     """
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
-    components: amicus.Catalog = amicus.Catalog()
+    components: amicus.types.Catalog = amicus.types.Catalog()
     needs: ClassVar[Union[Sequence[str], str]] = ['outline', 'name']
 
     """ Public Class Methods """

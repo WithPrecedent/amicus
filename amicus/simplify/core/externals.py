@@ -22,14 +22,14 @@ from . import stages
 
 
 @dataclasses.dataclass
-class SklearnModel(components.Technique):
+class SklearnModel(amicus.quirks.Quirk):
     """Wrapper for a scikit-learn model (an algorithm that doesn't transform).
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -44,7 +44,7 @@ class SklearnModel(components.Technique):
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
         module (str): name of module where 'contents' is located if 'contents'
-            is a string. It can either be a amicus or external module, as
+            is a string. It can either be an amicus or external module, as
             long as it is available to the python environment. Defaults to None.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be part of a parallel workflow structure. Defaults to 
@@ -80,14 +80,14 @@ class SklearnModel(components.Technique):
 
 
 @dataclasses.dataclass
-class SklearnSplitter(components.Technique):
+class SklearnSplitter(amicus.quirks.Quirk):
     """Wrapper for a scikit-learn data splitter.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -102,7 +102,7 @@ class SklearnSplitter(components.Technique):
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
         module (str): name of module where 'contents' is located if 'contents'
-            is a string. It can either be a amicus or external module, as
+            is a string. It can either be an amicus or external module, as
             long as it is available to the python environment. Defaults to None.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be part of a parallel workflow structure. Defaults to 
@@ -139,14 +139,14 @@ class SklearnSplitter(components.Technique):
     
     
 @dataclasses.dataclass
-class SklearnTransformer(components.Technique):
+class SklearnTransformer(amicus.quirks.Quirk):
     """Wrapper for a scikit-learn transformer.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a amicus 
-            instance needs options from a Settings instance, 'name' should match 
-            the appropriate section name in a Settings instance. Defaults to 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs options from a Configuration instance, 'name' should match 
+            the appropriate section name in a Configuration instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -161,7 +161,7 @@ class SklearnTransformer(components.Technique):
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
         module (str): name of module where 'contents' is located if 'contents'
-            is a string. It can either be a amicus or external module, as
+            is a string. It can either be an amicus or external module, as
             long as it is available to the python environment. Defaults to None.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be part of a parallel workflow structure. Defaults to 
@@ -176,8 +176,20 @@ class SklearnTransformer(components.Technique):
     parallel: ClassVar[bool] = False  
     
     """ Public Methods """
+
+    def adjust_parameters(self, project: amicus.Project) -> None:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        return self
     
-    def implement(self, project: amicus.Project) -> amicus.Project:
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
@@ -188,9 +200,11 @@ class SklearnTransformer(components.Technique):
             
         """
         try:
-            self.parameters = self.parameters.finalize(project = project)
+            self.contents.parameters = self.contents.parameters.finalize(
+                project = project)
         except AttributeError:
             pass
+        self.adjust_parameters(project = project)    
         self.contents = self.contents(**self.parameters)
         data = project.data
         data.x_train = self.contents.fit[data.x_train]

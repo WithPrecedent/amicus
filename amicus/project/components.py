@@ -42,9 +42,9 @@ class Step(base.Component):
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
@@ -84,16 +84,16 @@ class Step(base.Component):
                           
 @dataclasses.dataclass
 class Technique(base.Component):
-    """Keystone class for primitive objects in a amicus composite object.
+    """Keystone class for primitive objects in an amicus composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
     to allow for runtime alterations.
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Any): stored item for use by a Component subclass instance.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -132,13 +132,13 @@ class Technique(base.Component):
                   
 @dataclasses.dataclass
 class Worker(base.Component):
-    """Keystone class for parts of a amicus Workflow.
+    """Keystone class for parts of an amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Any): stored item(s) for use by a Component subclass instance.
         workflow (amicus.Structure): a workflow of a project subpart derived 
@@ -269,9 +269,9 @@ class Pipeline(Worker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -301,9 +301,9 @@ class ParallelWorker(Worker, abc.ABC):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -391,9 +391,9 @@ class Contest(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -439,9 +439,9 @@ class Study(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -486,9 +486,9 @@ class Survey(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 

@@ -36,7 +36,7 @@ class Structure(amicus.Bunch, abc.ABC):
     """
     contents: Iterable = None
 
-    """ Required Subclass Properties """
+    """ Properties """
            
     @property
     def endpoints(self) -> List[str]:
@@ -91,7 +91,7 @@ class Structure(amicus.Bunch, abc.ABC):
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.name} structure')
 
-    """ Required Subclass Class Methods """
+    """ Class Methods """
     
     @classmethod
     def create(cls, *kwargs) -> Structure:
@@ -103,7 +103,7 @@ class Structure(amicus.Bunch, abc.ABC):
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.name} structure')
  
-    """ Required Subclass Methods """
+    """ Public Methods """
     
     def add(self, nodes: Any, **kwargs) -> None:
         """Adds 'nodes' to the stored data structure.

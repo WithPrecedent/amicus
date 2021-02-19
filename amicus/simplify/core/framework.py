@@ -18,8 +18,8 @@ import amicus
 
 
 @dataclasses.dataclass
-class Settings(amicus.Settings):
-    """Loads and stores configuration settings for a amicus project.
+class Configuration(amicus.Configuration):
+    """Loads and stores configuration settings for an amicus project.
     Args:
         contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
             dict, a str file path to a file with settings, or a pathlib Path to
@@ -33,7 +33,7 @@ class Settings(amicus.Settings):
             their configuration settings. Defaults to a dict with 'general', 
             'files', and 'amicus' sections listed.
         skip (Sequence[str]): names of suffixes to skip when constructing nodes
-            for a amicus project. Defaults to a list with 'general', 'files',
+            for an amicus project. Defaults to a list with 'general', 'files',
             'amicus', and 'parameters'. 
                           
     """

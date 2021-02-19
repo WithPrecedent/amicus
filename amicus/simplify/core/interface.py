@@ -31,15 +31,15 @@ class Project(quirks.Keystone, amicus.Project):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a SimpleSettings instance, 
-            'name' should match the appropriate section name in a SimpleSettings 
+            amicus instance needs settings from a SimpleConfiguration instance, 
+            'name' should match the appropriate section name in a SimpleConfiguration 
             instance. Defaults to None. 
-        settings (Union[SimpleSimpleSettings, Type[SimpleSimpleSettings], 
+        settings (Union[SimpleSimpleConfiguration, Type[SimpleSimpleConfiguration], 
             pathlib.Path, str, Mapping[str, Mapping[str, Any]]]): a 
-            Settings-compatible subclass or instance, a str or pathlib.Path 
+            Configuration-compatible subclass or instance, a str or pathlib.Path 
             containing the file path where a file of a supported file type with
-            settings for a SimpleSettings instance is located, or a 2-level 
-            mapping containing settings. Defaults to the default SimpleSettings 
+            settings for a SimpleConfiguration instance is located, or a 2-level 
+            mapping containing settings. Defaults to the default SimpleConfiguration 
             instance.
         filer (Union[SimpleSimpleFiler, Type[SimpleSimpleFiler], pathlib.Path, 
             str]): a SimpleFiler-compatible class or a str or pathlib.Path 
@@ -47,7 +47,7 @@ class Project(quirks.Keystone, amicus.Project):
             for file input and output. A 'filer' must contain all file path and 
             import/export methods for use throughout amicus. Defaults to the 
             default SimpleFiler instance. 
-        identification (str): a unique identification name for a amicus
+        identification (str): a unique identification name for an amicus
             Project. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
@@ -77,8 +77,8 @@ class Project(quirks.Keystone, amicus.Project):
         
     """
     name: str = None
-    settings: Union[base.SimpleSettings, 
-                    Type[base.SimpleSettings], 
+    settings: Union[base.SimpleConfiguration, 
+                    Type[base.SimpleConfiguration], 
                     Mapping[str, Mapping[str, Any]],
                     pathlib.Path, 
                     str] = None
