@@ -19,6 +19,7 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import inspect
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Set, Tuple, Type, Union)
@@ -29,7 +30,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Settings(amicus.quirks.Keystone, amicus.options.Configuration):
+class Settings(amicus.framework.Keystone, amicus.options.Configuration):
     """Loads and stores configuration settings for a Project.
 
     Args:
@@ -148,11 +149,11 @@ class Parameters(amicus.types.Lexicon):
     """ Public Methods """
 
     def finalize(self, project: amicus.Project, **kwargs) -> None:
-        """[summary]
+        """Combines and selects final parameters into 'contents'.
 
         Args:
-            name (str):
-            project (amicus.Project):
+            project (amicus.Project): instance from which runtime and settings 
+                parameters can be derived.
             
         """
         # Uses kwargs or 'default' parameters as a starting base.
@@ -178,10 +179,11 @@ class Parameters(amicus.types.Lexicon):
     """ Private Methods """
     
     def _add_runtime(self, project: amicus.Project, **kwargs) -> None:
-        """[summary]
+        """Adds runtime parameters to 'contents'.
 
         Args:
-            project (amicus.Project):
+            project (amicus.Project): instance from which runtime parameters can 
+                be derived.
             
         """    
         for parameter, attribute in self.runtime.items():
@@ -196,15 +198,14 @@ class Parameters(amicus.types.Lexicon):
             self.contents = {k: self.contents[k] for k in self.selected}
         return self
      
-    def _get_from_settings(self, settings: Mapping[str, Any]) -> Dict[str, Any]: 
-        """[summary]
+    def _get_from_settings(self, settings: Settings) -> Dict[str, Any]: 
+        """Returns any applicable parameters from 'settings'.
 
         Args:
-            name (str): [description]
-            settings (Mapping[str, Any]): [description]
+            settings (Settings): instance with possible parameters.
 
         Returns:
-            Dict[str, Any]: [description]
+            Dict[str, Any]: any applicable settings parameters or an empty dict.
             
         """
         try:
@@ -223,7 +224,7 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
+class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
     """Keystone class for parts of an amicus Workflow.
 
     Args:
@@ -270,73 +271,123 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
     
     @property
     def suffixes(self) -> Tuple[str]:
-        """
+        """Returns all Component names with an 's' added to the end.
+        
+        Returns:
+            Tuple[str]: all Component names with an 's' added in order to create
+                simple plurals.
+                
         """
         return tuple(key + 's' for key in self.subclasses.keys())
     
     """ Public Class Methods """
-    
+
     @classmethod
-    def create(cls, source: str, **kwargs) -> Component:
-        """[summary]
-
+    def create(cls, **kwargs) -> Component:
+        """Returns instance of first match of 'name' in stored catalogs.
+        
+        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        passed names in the order they are listed.
+        
         Args:
-            source (str): [description]
-
+            name (Union[str, Sequence[str]]): [description]
+            
         Raises:
-            NotImplementedError: [description]
-
+            KeyError: [description]
+            
         Returns:
             Component: [description]
             
-        """
-        if (isinstance(source, str)
-                or (isinstance(source, Sequence) and all(source, str))):
-            return cls.from_name(name = source, **kwargs)
-        elif isinstance(source, cls.keystones.Stage):
-            return 
+        """        
+        if 'name' in kwargs:
+            if 'outline' in kwargs:
+                return cls.from_outline(kwargs)
+            else:
+                return cls.from_name(kwargs)
+        else:
+            raise ValueError('create method requires name keyword parameter')
+            
+    @classmethod
+    def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
+        """Returns instance of first match of 'name' in stored catalogs.
+        
+        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        passed names in the order they are listed.
+        
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+            
+        Raises:
+            KeyError: [description]
+            
+        Returns:
+            Component: [description]
+            
+        """        
+        keys = more_itertools.always_iterable(name)
+        for key in keys:
+            for library in ['instances', 'subclasses']:
+                item = None
+                try:
+                    item = getattr(cls, library)[key]
+                    break
+                except KeyError:
+                    pass
+            if item is not None:
+                break
+        if item is None:
+            raise KeyError(f'No matching item for {str(name)} was found') 
+        elif inspect.isclass(item):
+            return cls(name = name, **kwargs)
+        else:
+            instance = copy.deepcopy(item)
+            for key, value in kwargs.items():
+                setattr(instance, key, value)
+            return instance
   
     @classmethod
-    def from_outline(cls, name: str, outline: amicus.project.Outline, 
-                     **kwargs) -> Component:
+    def from_outline(cls, name: str, outline: Outline, **kwargs) -> Component:
         """[summary]
 
         Args:
             name (str): [description]
             section (str): [description]
-            outline (amicus.project.Outline): [description]
+            outline (Outline): [description]
 
         Returns:
             Component: [description]
+            
         """              
         if name in outline.initialization:
             parameters = outline.initialization[name]
             parameters.update(kwargs)
         else:
             parameters = kwargs
-        component = cls.library.borrow(names = [name, outline.designs[name]])
-        instance = component(name = name, **parameters)
-        return instance
+        if name in outline.designs:
+            names = [name, outline.designs[name]]
+        else:
+            names = name
+        return cls.from_name(name = names, **parameters)
 
     """ Public Methods """
     
-    def execute(self, data: Any, **kwargs) -> Any:
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
-            data (Any): [description]
+            project (amicus.Project): [description]
 
         Returns:
-            Any: [description]
+            amicus.Project: [description]
             
         """ 
         if self.iterations in ['infinite']:
             while True:
-                data = self.implement(data = data, **kwargs)
+                project = self.implement(project = project, **kwargs)
         else:
             for iteration in range(self.iterations):
-                data = self.implement(data = data, **kwargs)
-        return data
+                project = self.implement(project = project, **kwargs)
+        return project
 
     def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
@@ -349,6 +400,8 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
             
         """
         if self.parameters:
+            if isinstance(self.parameters, Parameters):
+                self.parameters.finalize(project = project)
             parameters = self.parameters
             parameters.update(kwargs)
         else:
@@ -375,7 +428,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
 
 
 @dataclasses.dataclass
-class Stage(amicus.quirks.Keystone, amicus.quirks.Needy, abc.ABC):
+class Stage(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
     """Creates an amicus object.
     
     Args:
@@ -464,23 +517,28 @@ class Outline(Stage):
             try:
                 name = component_keys[0]
             except IndexError:
-                raise ValueError('No sections in settings indicate how to '
-                                 'construct a project outline')
+                raise ValueError(
+                    'No sections in settings indicate how to construct a ' 
+                    'project outline')
         structure = cls._get_structure(name = name, settings = settings) 
         outline = cls(name = name, structure = structure)      
         for section in component_keys:
-            outline = cls._parse_section(name = section, 
-                                         settings = settings,
-                                         outline = outline)
-        outline = cls._add_runtime_parameters(outline = outline, 
-                                              settings = settings)
+            outline = cls._parse_section(
+                name = section, 
+                settings = settings,
+                outline = outline)
+        outline = cls._add_runtime_parameters(
+            outline = outline, 
+            settings = settings)
         return outline 
     
     """ Private Class Methods """
     
     @classmethod
-    def _parse_section(cls, name: str, settings: base.Settings, 
-                       outline: Outline) -> Outline:
+    def _parse_section(cls, 
+        name: str, 
+        settings: Settings, 
+        outline: Outline) -> Outline:
         """[summary]
 
         Args:
@@ -496,7 +554,7 @@ class Outline(Stage):
         outline.designs[name] = design
         outline.initialization[name] = {}
         outline.attributes[name] = {}
-        component = cls.keystones.component.subclasses.borrow(names = [name, design])
+        component = cls.keystones.component.create(name = [name, design])
         parameters = tuple(i for i in list(component.__annotations__.keys()) 
                            if i not in ['name', 'contents'])
         for key, value in section.items():
@@ -504,7 +562,7 @@ class Outline(Stage):
             prefix = key[:-len(suffix) - 1]
             if suffix in ['design', 'workflow']:
                 pass
-            elif suffix in cls.keystones.component.library.suffixes:
+            elif suffix in cls.keystones.component.suffixes:
                 outline.designs.update(dict.fromkeys(value, suffix[:-1]))
                 outline.components[prefix] = value 
             elif suffix in parameters:
@@ -516,7 +574,7 @@ class Outline(Stage):
         return outline   
 
     @classmethod
-    def _get_design(cls, name: str, settings: base.Settings) -> str:
+    def _get_design(cls, name: str, settings: Settings) -> str:
         """[summary]
 
         Args:
@@ -545,7 +603,7 @@ class Outline(Stage):
         return design    
 
     @classmethod
-    def _get_structure(cls, name: str, settings: base.Settings) -> str:
+    def _get_structure(cls, name: str, settings: Settings) -> str:
         """[summary]
 
         Args:
@@ -574,8 +632,9 @@ class Outline(Stage):
         return structure  
 
     @classmethod
-    def _add_runtime_parameters(cls, outline: Outline, 
-                                settings: base.Settings) -> Outline:
+    def _add_runtime_parameters(cls, 
+        outline: Outline, 
+        settings: Settings) -> Outline:
         """[summary]
 
         Args:
@@ -620,7 +679,7 @@ class Workflow(amicus.structures.Graph, Stage):
     components: amicus.types.Catalog = amicus.types.Catalog()
     needs: ClassVar[Union[Sequence[str], str]] = ['outline', 'name']
 
-    """ Public Class Methods """
+    """ Class Methods """
             
     @classmethod
     def from_outline(cls, outline: Outline, name: str) -> Workflow:
@@ -635,15 +694,39 @@ class Workflow(amicus.structures.Graph, Stage):
             
         """        
         workflow = cls()
-        workflow = cls._add_component(name = name,
-                                      outline = outline,
-                                      workflow = workflow)
+        workflow = cls._add_component(
+            name = name,
+            outline = outline,
+            workflow = workflow)
         for component in outline.components[name]:
-            workflow = cls._add_component(name = component,
-                                          outline = outline,
-                                          workflow = workflow)
+            workflow = cls._add_component(
+                name = component,
+                outline = outline,
+                workflow = workflow)
         return workflow
-                             
+    
+    @classmethod
+    def _add_component(cls, 
+        name: str, 
+        outline: Outline, 
+        workflow: Workflow) -> Workflow:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            details (Details): [description]
+            workflow (Workflow): [description]
+
+        Returns:
+            Workflow: [description]
+            
+        """
+        workflow.append(node = name)
+        workflow.components[name] = cls.keystones.component.from_outline(
+            name = name, 
+            outline = outline)
+        return workflow
+                              
     """ Public Methods """
     
     def combine(self, workflow: Workflow) -> None:
@@ -663,67 +746,45 @@ class Workflow(amicus.structures.Graph, Stage):
             raise ValueError('Cannot combine Workflows with the same nodes')
         else:
             self.components.update(workflow.components)
-        super().combine(structure = workflow)
+        super().combine(workflow = workflow)
         return self
    
-    def execute(self, data: Any, copy_components: bool = True, **kwargs) -> Any:
-        """Iterates over 'contents', using 'components'.
-        
-        Args:
-            
-        Returns:
-            
-        """
-        for path in iter(self):
-            data = self.execute_path(data = data, 
-                                     path = path, 
-                                     copy_components = copy_components, 
-                                     **kwargs)  
-        return data
-
-    def execute_path(self, data: Any, path: Sequence[str], 
-                     copy_components: bool = True, **kwargs) -> Any:
-        """Iterates over 'contents', using 'components'.
-        
-        Args:
-            
-        Returns:
-            
-        """
-        for node in more_itertools.always_iterable(path):
-            if copy_components:
-                component = copy.deepcopy(self.components[node])
-            else:
-                component = self.components[node]
-            data = component.execute(data = data, **kwargs)    
-        return data
-            
-    """ Private Class Methods """
-    
-    @classmethod
-    def _add_component(cls, name: str, outline: Outline,
-                       workflow: Workflow) -> Workflow:
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
-            name (str): [description]
-            details (Details): [description]
-            workflow (Workflow): [description]
+            project (amicus.Project): [description]
 
         Returns:
-            Workflow: [description]
+            amicus.Project: [description]
             
-        """
-        workflow.append(node = name)
-        design = outline.designs[name]
-        component = cls.keystones.component.library.borrow(names = [name, design])
-        instance = component.from_outline(name = name, outline = outline)
-        workflow.components[name] = instance
-        return workflow
-  
+        """        
+        for path in iter(self):
+            project = self.execute_path(project = project, path = path, **kwargs)  
+        return project
+
+    def execute_path(self, 
+        project: amicus.Project, 
+        path: Sequence[str], 
+        **kwargs) -> amicus.Project:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+            path (Sequence[str]): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """        
+        for node in more_itertools.always_iterable(path):
+            component = self.components[node]
+            project = component.execute(project = project, **kwargs)    
+        return project
+            
 
 @dataclasses.dataclass
-class Summary(amicus.quirks.Keystone, amicus.quirks.Needy, amicus.types.Lexicon):
+class Summary(amicus.types.Lexicon, Stage):
     """Collects and stores results of executing a Workflow.
     
     Args:
@@ -746,8 +807,9 @@ class Summary(amicus.quirks.Keystone, amicus.quirks.Needy, amicus.types.Lexicon)
     """ Public Methods """
     
     @classmethod
-    def from_workflow(cls, workflow: Workflow, data: Any = None,
-                      copy_data: bool = True, **kwargs) -> amicus.Project:
+    def from_workflow(cls, 
+        workflow: Workflow, data: Any = None,
+        copy_data: bool = True, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
@@ -764,7 +826,7 @@ class Summary(amicus.quirks.Keystone, amicus.quirks.Needy, amicus.types.Lexicon)
                 to_use = copy.deepcopy(data)
             else:
                 to_use = data
-            summary.contents[key] = workflow.execute_path(data = to_use,
+            summary.contents[key] = workflow.execute(data = to_use,
                                                           path = path,
                                                           **kwargs)
         return summary

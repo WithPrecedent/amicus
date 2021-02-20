@@ -48,18 +48,18 @@ class Library(amicus.types.Lexicon):
         5) It is designed to hold Keystone classes.
     
     Args:
-        contents (Mapping[str, amicus.quirks.Keystone]]): stored dictionary of
+        contents (Mapping[str, amicus.framework.Keystone]]): stored dictionary of
             Keystone classes. Defaults to an empty dict.
         default (Any): default value to return when the 'get' method is used.
               
     """
-    contents: Mapping[str, amicus.quirks.Keystone] = dataclasses.field(
+    contents: Mapping[str, amicus.framework.Keystone] = dataclasses.field(
         default_factory = dict)
     default: Any = None
     
     """ Public Methods """
 
-    def borrow(self, name: Union[str, Sequence[str]]) -> amicus.quirks.Keystone:
+    def borrow(self, name: Union[str, Sequence[str]]) -> amicus.framework.Keystone:
         """Returns a stored subclass unchanged.
         
         Args:
@@ -78,12 +78,12 @@ class Library(amicus.types.Lexicon):
                 pass
         return match
         
-    def deposit(self, name: str, item: amicus.quirks.Keystone) -> None:
+    def deposit(self, name: str, item: amicus.framework.Keystone) -> None:
         """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
         
         Args:
             name (str): key to use to store 'item'.
-            item (amicus.quirks.Keystone): item to store in 'contents'.
+            item (amicus.framework.Keystone): item to store in 'contents'.
             
         Raises:
             ValueError: if 'name' matches an existing key in 'contents'.

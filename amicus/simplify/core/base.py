@@ -21,7 +21,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
+class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
     """Base class for parts of an amicus Workflow.
     
     Args:
@@ -105,7 +105,7 @@ class Component(amicus.quirks.Keystone, amicus.quirks.Element, abc.ABC):
 
 
 @dataclasses.dataclass
-class Stage(amicus.quirks.Keystone, amicus.quirks.Needy, abc.ABC):
+class Stage(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
     """Creates an amicus object.
     
     Args:
