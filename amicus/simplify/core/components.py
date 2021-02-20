@@ -21,137 +21,6 @@ from . import base
 from . import stages
 
 
-@dataclasses.dataclass    
-class Parameters(amicus.types.Lexicon):
-    """Creates and stores parameters for an amicus component.
-    
-    Parameters allows parameters to be drawn from several different sources, 
-    including those which only become apparent during execution of an amicus
-    project.
-    
-    Parameters can be unpacked with '**', which will turn the 'contents' 
-    attribute an ordinary set of kwargs. In this way, it can serve as a drop-in
-    replacement for a dict that would ordinarily be used for accumulating 
-    keyword arguments.
-    
-    If an amicus class uses a Parameters instance, the 'finalize' method should
-    be called before that instance's 'implement' method in order for each of the
-    parameter types to be incorporated.
-    
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs options from a Configuration instance, 'name' should match 
-            the appropriate section name in a Configuration instance. Defaults to 
-            None. 
-        contents (Mapping[str, Any]): keyword parameters for use by an amicus
-            classes' 'implement' method. The 'finalize' method should be called
-            for 'contents' to be fully populated from all sources. Defaults to
-            an empty dict.
-        default (Mapping[str, Any]): default parameters to use if none are 
-            provided through an argument or settings. 'default' will also be
-            used if any parameters are listed in 'required', in which case the
-            parameters will be drawn from 'default' if they are not otherwise
-            provided. Defaults to an empty dict.
-        runtime (Mapping[str, str]): parameters that can only be determined at
-            runtime due to dynamic action of amicus. The keys should be the
-            names of the parameters and the values should be attributes or items
-            in 'contents' of 'project' passed to the 'finalize' method. Defaults
-            to an emtpy dict.
-        required (Sequence[str]): parameters that must be passed when the 
-            'implement' method of an amicus class is called.
-        selected (Sequence[str]): an exclusive list of parameters that are 
-            allowed. If 'selected' is empty, all possible parameters are 
-            allowed. However, if any are listed, all other parameters that are
-            included are removed. This is can be useful when including 
-            parameters in a Configuration instance for an entire step, only some of
-            which might apply to certain techniques. Defaults to an empty dict.
-
-    """
-    name: str = None
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    default: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    runtime: Mapping[str, str] = dataclasses.field(default_factory = dict)
-    required: Sequence[str] = dataclasses.field(default_factory = list)
-    selected: Sequence[str] = dataclasses.field(default_factory = list)
-      
-    """ Public Methods """
-
-    def finalize(self, project: amicus.Project, **kwargs) -> None:
-        """[summary]
-
-        Args:
-            name (str):
-            project (amicus.Project):
-            
-        """
-        # Uses kwargs or 'default' parameters as a starting base.
-        self.contents = kwargs if kwargs else self.default
-        # Adds any parameters from 'settings'.
-        try:
-            self.contents.update(self._get_from_settings(
-                settings = project.settings))
-        except AttributeError:
-            pass
-        # Adds any required parameters.
-        for item in self.required:
-            if item not in self.contents:
-                self.contents[item] = self.default[item]
-        # Adds any runtime parameters.
-        if self.runtime:
-            self.add_runtime(project = project) 
-            # Limits parameters to those selected.
-            if self.selected:
-                self.contents = {k: self.contents[k] for k in self.selected}
-        return self
-
-    """ Private Methods """
-    
-    def _add_runtime(self, project: amicus.Project, **kwargs) -> None:
-        """[summary]
-
-        Args:
-            project (amicus.Project):
-            
-        """    
-        for parameter, attribute in self.runtime.items():
-            try:
-                self.contents[parameter] = getattr(project, attribute)
-            except AttributeError:
-                try:
-                    self.contents[parameter] = project.contents[attribute]
-                except (KeyError, AttributeError):
-                    pass
-        if self.selected:
-            self.contents = {k: self.contents[k] for k in self.selected}
-        return self
-     
-    def _get_from_settings(self, settings: Mapping[str, Any]) -> Dict[str, Any]: 
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (Mapping[str, Any]): [description]
-
-        Returns:
-            Dict[str, Any]: [description]
-            
-        """
-        try:
-            parameters = settings[f'{self.name}_parameters']
-        except KeyError:
-            suffix = self.name.split('_')[-1]
-            prefix = self.name[:-len(suffix) - 1]
-            try:
-                parameters = settings[f'{prefix}_parameters']
-            except KeyError:
-                try:
-                    parameters = settings[f'{suffix}_parameters']
-                except KeyError:
-                    parameters = {}
-        return parameters
-
-
 @dataclasses.dataclass
 class SimpleProcess(base.Component, abc.ABC):
     """Base class for parts of an amicus Workflow.
@@ -181,10 +50,10 @@ class SimpleProcess(base.Component, abc.ABC):
     Attributes:
         keystones (ClassVar[Keystones]): library that stores amicus base classes 
             and allows runtime access and instancing of those stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): library that stores 
+        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 
-        instances (ClassVar[amicus.types.Catalog]): library that stores
+        instances (ClassVar[amicus.types.Catalog]): catalog that stores
             subclass instances and allows runtime access of those stored 
             subclass instances.
                 

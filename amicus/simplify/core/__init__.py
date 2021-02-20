@@ -9,7 +9,7 @@ Contents:
 """
 
 from .quirks import *
-from .framework import *
+from .options import *
 from .base import *
 from .components import *
 from .externals import *

@@ -23,20 +23,8 @@ __author__ = 'Corey Rayburn Yung'
 
 
 import importlib
-import logging
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Tuple, Type, Union)
-
-
-"""Initializes the amicus logger."""
-
-logger = logging.getLogger('amicus')
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.WARNING)
-file_handler = logging.FileHandler('amicus.log')
-file_handler.setLevel(logging.DEBUG)
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
 
 """ 
 amicus imports are designed to allow key classes and functions to have first or 
@@ -73,7 +61,7 @@ importables: Dict[str, str] = {
     'tools': 'utilities.tools',
     'quirks': 'base.quirks',
     'types': 'base.types',
-    'framework': 'base.framework',
+    'options': 'base.options',
     'structures': 'base.structures',
     'Proxy': 'base.types.Proxy',
     'Bunch': 'base.types.Bunch',
@@ -81,8 +69,8 @@ importables: Dict[str, str] = {
     'Hybrid': 'base.types.Hybrid',
     'Lexicon': 'base.types.Lexicon',
     'Catalog': 'base.types.Catalog',
-    'Configuration': 'base.framework.Configuration',
-    'Clerk': 'base.framework.Clerk',
+    'Configuration': 'base.options.Configuration',
+    'Clerk': 'base.options.Clerk',
     'Validator': 'base.validation.Validator',
     'Converter': 'base.validation.Converter',
     'Structure': 'base.structures.Structure',

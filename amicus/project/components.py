@@ -5,10 +5,9 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Worker
-    Manager
     Step
     Technique
+    Worker
     Pipeline
     Contest
     Study
@@ -25,27 +24,27 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 import more_itertools
 
 import amicus
-from . import base
+from . import core
 
 
 @dataclasses.dataclass
-class Step(base.Component):
+class Step(core.Component):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement
     all possible technique instances that could be used. This is often useful 
-    when using parallel Worklow instances which test a variety of strategies 
-    with similar or identical parameters and/or methods.
+    when creating branching, parallel workflows which test a variety of 
+    strategies with similar or identical parameters and/or methods.
 
-    A Step instance will try to return attributes from Technique if the
+    A Step instance will try to return attributes from Technique if the 
     attribute is not found in the Step instance. 
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
         iterations (Union[int, str]): number of times the 'implement' method 
@@ -62,7 +61,7 @@ class Step(base.Component):
     name: str = None
     contents: Technique = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = True
                     
     """ Properties """
@@ -83,7 +82,7 @@ class Step(base.Component):
  
                           
 @dataclasses.dataclass
-class Technique(base.Component):
+class Technique(core.Component):
     """Keystone class for primitive objects in an amicus composite object.
     
     The 'contents' and 'parameters' attributes are combined at the last moment
@@ -91,10 +90,10 @@ class Technique(base.Component):
     
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Any): stored item for use by a Component subclass instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -110,7 +109,7 @@ class Technique(base.Component):
     name: str = None
     contents: Callable = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
     
     """ Properties """
@@ -131,15 +130,15 @@ class Technique(base.Component):
 
                   
 @dataclasses.dataclass
-class Worker(base.Component):
+class Worker(core.Component):
     """Keystone class for parts of an amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Any): stored item(s) for use by a Component subclass instance.
         workflow (amicus.Structure): a workflow of a project subpart derived 
             from 'outline'. Defaults to None.
@@ -158,7 +157,7 @@ class Worker(base.Component):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
     
     """ Public Class Methods """
@@ -237,7 +236,7 @@ class Worker(base.Component):
         return worker
 
     @classmethod
-    def _depth_first(cls, name: str, outline: base.Stage) -> List:
+    def _depth_first(cls, name: str, outline: core.Stage) -> List:
         """
 
         Args:
@@ -269,10 +268,10 @@ class Pipeline(Worker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -289,7 +288,7 @@ class Pipeline(Worker):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
     
 
@@ -301,10 +300,10 @@ class ParallelWorker(Worker, abc.ABC):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -321,7 +320,7 @@ class ParallelWorker(Worker, abc.ABC):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
     parallel: ClassVar[bool] = True
 
@@ -391,10 +390,10 @@ class Contest(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -411,7 +410,7 @@ class Contest(ParallelWorker):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
     parallel: ClassVar[bool] = True
 
@@ -439,10 +438,10 @@ class Study(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -459,7 +458,7 @@ class Study(ParallelWorker):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
     parallel: ClassVar[bool] = True
 
@@ -486,10 +485,10 @@ class Survey(ParallelWorker):
         
     Args:
         name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
         contents (Callable): stored item used by the 'implement' method.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
@@ -506,7 +505,7 @@ class Survey(ParallelWorker):
     contents: Any = None
     workflow: amicus.Structure = None
     iterations: Union[int, str] = 1
-    parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = True
 
     """ Public Methods """

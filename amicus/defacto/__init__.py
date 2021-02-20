@@ -38,7 +38,7 @@ importables: Dict[str, str] = {
     'memory': 'utilities.memory',
     'tools': 'utilities.tools',
     'quirks': 'core.quirks',
-    'framework': 'core.framework',
+    'options': 'core.options',
     'base': 'core.base',
     'components': 'core.components',
     'externals': 'core.externals',
