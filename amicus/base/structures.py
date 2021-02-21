@@ -4,13 +4,23 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
+amicus structures are primarily designed to be the backbones of workflows. So,
+the provided subclasses assume that all edges in a composite structure are
+unweighted and directed. However, the architecture of Structure and Node can
+support weighted edges and undirected composite structures as well.
+
 Contents:
+    Node (Element, Proxy):
+    SimpleNode (Node):
+    SmartNode (Node):
     Structure (Keystone, ABC): base class for all amicus composite structures.
     Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
 
 To Do:
-    Add Tree structure.
-    Add Pipeline structure?
+    Add Tree structure using an amicus Hybrid
+    Add Pipeline structure using an amicus Hybrid?
+    Add Network structure that is an undirected Graph with potentially weighted
+        edges.
     
 """
 from __future__ import annotations
@@ -27,8 +37,87 @@ import amicus
 
 
 @dataclasses.dataclass
+class Node(amicus.quirks.Element, amicus.types.Proxy):
+    """Vertex for any amicus composite Structure.
+    
+    Node acts a basic wrapper for any item stored in an amicus Structure. An
+    amicus Structure does not require Node instances to be stored. Rather, they
+    are offered as a convenient type which is also used internally in amicus.
+    
+    By inheriting from Proxy, a Node will act as a pass-through class for access
+    methods seeking attributes not in a Node instance but rather stored in 
+    'contents'.
+    
+    Args:
+        contents (Any): any stored item(s). Defaults to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
+            Defaults to None. 
+
+    """
+    contents: Any = None
+    name: str = None
+
+   
+@dataclasses.dataclass
+class SimpleNode(Node):
+    """Vertex that is unaware of nodes that it is connected to.
+    
+    SimpleNodes use less memory and embody the principle of loose coupling, 
+    relying on a Structure to determine all connections and relationships.
+    
+    Args:
+        contents (Any): any stored item(s). Defaults to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
+            Defaults to None. 
+
+    """
+    contents: Any = None
+    name: str = None
+    
+    
+@dataclasses.dataclass
+class SmartNode(Node):
+    """Vertex that is aware of nodes that it is connected to.
+    
+    SmartNodes take more memory, include methods to coordinate with adjoining
+    nodes, and allow for decentralization of connections and relationships.
+    
+    Args:
+        contents (Any): any stored item(s). Defaults to None.
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
+            Defaults to None. 
+
+    """
+    contents: Any = None
+    name: str = None
+    parents: Sequence[Node] = dataclasses.field(default_factory = list)
+    children: Sequence[Node] = dataclasses.field(default_factory = list)
+    
+     
+@dataclasses.dataclass
 class Structure(amicus.Bunch, abc.ABC):
     """Abstract base class for iterable amicus data structures.
+    
+    Structure includes many methods and properties that should ordinarily be
+    implemented by subclasses. However, rather than using 'abc.abstractmethod'
+    and other 'abc' decoraters, these listed methods and properties simply 
+    return a NotImplementedError if a subclass does not incldue them. This
+    allows users the flexibility to decide which methods and properties that
+    they wish to incorporate. However, all subclasses provided in amicus have
+    implementation of all of the listed methods and properties.
+    
+    Structure also includes two dunder methods that allow '+' and '+=' to be 
+    used to combine two amicus structures. However, for these duner methods to
+    work, the subclass must include its own 'combine' method.
     
     Args:
         contents (Iterable): stored iterable. Defaults to None.
@@ -49,7 +138,8 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
            
     @property             
     def nodes(self) -> List[str]:
@@ -62,7 +152,8 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
         
     @property
     def paths(self) -> List[List[str]]:
@@ -76,7 +167,8 @@ class Structure(amicus.Bunch, abc.ABC):
                 
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
            
     @property
     def roots(self) -> List[str]:
@@ -89,7 +181,8 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
 
     """ Class Methods """
     
@@ -101,21 +194,23 @@ class Structure(amicus.Bunch, abc.ABC):
                 
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
  
     """ Public Methods """
     
     def add(self, nodes: Any, **kwargs) -> None:
         """Adds 'nodes' to the stored data structure.
         
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
         
         Args:
             nodes (Any): item(s) to add to 'contents'.
             
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
 
     def append(self, 
         node: str,
@@ -123,7 +218,7 @@ class Structure(amicus.Bunch, abc.ABC):
         **kwargs) -> None:
         """Appends 'node' to the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
         
         Args:
             node (str): item to add to 'contents'.
@@ -134,7 +229,8 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """ 
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
     
     def branchify(self, 
         nodes: Sequence[Sequence[str]],
@@ -142,7 +238,7 @@ class Structure(amicus.Bunch, abc.ABC):
         **kwargs) -> None:
         """Adds parallel paths to the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
 
         Args:
             nodes (Sequence[Sequence[str]]): a list of list of nodes which
@@ -155,26 +251,28 @@ class Structure(amicus.Bunch, abc.ABC):
                 
         """ 
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')   
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
 
     def combine(self, structure: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
         
         Args:
             structure (Structure): a second Structure to combine with this one.
             
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
 
     def extend(self, 
         nodes: Sequence[str],
         start: Union[str, Sequence[str]] = None) -> None:
         """Adds 'nodes' to the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
 
         Args:
             nodes (Sequence[str]): names of items to add.
@@ -185,12 +283,13 @@ class Structure(amicus.Bunch, abc.ABC):
                 
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
          
     def search(self, start: str = None, depth_first: bool = True) -> List[str]:
         """Returns a path through the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
 
         Args:
             start (str): node to start the path from. If None, it is assigned to
@@ -203,8 +302,32 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """        
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.name} structure')
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
 
+    """ Private Method """
+    
+    def _namify(self, node: Any) -> str:
+        """[summary]
+
+        Args:
+            node (Any): [description]
+
+        Returns:
+            str: [description]
+            
+        """        
+        if isinstance(node, str):
+            return str
+        else:
+            try:
+                return node.name
+            except AttributeError:
+                try:
+                    return amicus.tools.snakify(node.__name__)
+                except AttributeError:
+                    return amicus.tools.snakify(node.__class__.__name__)
+                
     """ Dunder Methods """
 
     def __add__(self, other: Structure) -> None:
@@ -218,7 +341,7 @@ class Structure(amicus.Bunch, abc.ABC):
             other (Structure): a second Structure to combine with this one.
             
         """
-        self.combine(graph = other)        
+        self.combine(structure = other)        
         return self
 
     def __iadd__(self, other: Any) -> None:
@@ -232,12 +355,12 @@ class Structure(amicus.Bunch, abc.ABC):
             other (Structure): a second Structure to combine with this one.
             
         """
-        self.combine(graph = other)        
+        self.combine(structure = other)        
         return self
 
 
 @dataclasses.dataclass
-class Graph(amicus.Lexicon, Structure):
+class Graph(amicus.types.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG) as an adjacency list.
 
     Despite being called an adjacency "list," the typical and most efficient
@@ -460,7 +583,7 @@ class Graph(amicus.Lexicon, Structure):
         start: Union[str, Sequence[str]] = None) -> None:
         """Appends 'node' to the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
         
         Args:
             node (str): item to add to 'contents'.
@@ -485,7 +608,7 @@ class Graph(amicus.Lexicon, Structure):
         start: Union[str, Sequence[str]] = None) -> None:
         """Adds parallel paths to the stored data structure.
 
-        Subclasses must provide their own methods.
+        Subclasses should ordinarily provide their own methods.
 
         Args:
             nodes (Sequence[Sequence[str]]): a list of list of nodes which
@@ -751,3 +874,36 @@ class Graph(amicus.Lexicon, Structure):
                     else:
                         all_permutations.extend(paths)
         return all_permutations
+
+
+# @dataclasses.dataclass
+# class Tree(amicus.types.Hybrid, Structure):
+#     """Stores a general tree structure using an amicus Hybrid.
+    
+#     Args:
+#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
+#             dict is passed, the keys will be ignored and only the values will be 
+#             added to 'contents'. If a single item is passed, it will be placed 
+#             in a list. Defaults to an empty list.
+#         default (Any): default value to return when the 'get' method is used.
+            
+#     """
+#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
+#     default: Any = None
+
+
+# @dataclasses.dataclass
+# class Pipeline(amicus.types.Hybrid, Structure):
+#     """Stores a pipeline structure using an amicus Hybrid.
+    
+#     Args:
+#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
+#             dict is passed, the keys will be ignored and only the values will be 
+#             added to 'contents'. If a single item is passed, it will be placed 
+#             in a list. Defaults to an empty list.
+#         default (Any): default value to return when the 'get' method is used.
+            
+#     """
+#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
+#     default: Any = None
+    

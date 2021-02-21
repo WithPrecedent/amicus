@@ -369,6 +369,7 @@ class Hybrid(Progression):
             dict is passed, the keys will be ignored and only the values will be 
             added to 'contents'. If a single item is passed, it will be placed 
             in a list. Defaults to an empty list.
+        default (Any): default value to return when the 'get' method is used.
             
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)

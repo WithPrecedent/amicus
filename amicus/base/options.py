@@ -59,7 +59,7 @@ class Configuration(amicus.types.Lexicon):
             a file with settings. Defaults to en empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty dict.
-        standard (Mapping[str, Mapping[str]]): any default options that should
+        standard (Mapping[str, Mapping[str]]): any standard options that should
             be used when a user does not provide the corresponding options in 
             their configuration settings. Defaults to an empty dict.
         infer_types (bool): whether values in 'contents' are converted to other 

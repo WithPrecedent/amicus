@@ -6,13 +6,15 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 
 Contents:
-    Library
-    Keystone
-    Validator
-    Converter
+    Keystone (Quirk, ABC):
+    create_keystone (FunctionType):
+    Validator (Quirk):
+    Converter (ABC):
 
 ToDo:
-    Support complex types like List[List[str]]
+    Validator support for complex types like List[List[str]]
+    Add deannotation ability to Validator to automatically determine needed
+        converters
     
 """
 from __future__ import annotations
@@ -21,47 +23,12 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union, get_args, 
-                    get_origin)
+                    Optional, Sequence, Tuple, Type, Union)
+# from typing import get_args, get_origin
 
 import more_itertools
 
 import amicus
-
-
-@dataclasses.dataclass
-class Registry(amicus.types.Library):
-    """Stores Keystones with first-level dot notation access.
-    
-    A Registry inherits the differences between a Library and Lexicon and an 
-    ordinary python dict.
-
-    A Registry differs from a Library in 2 significant ways:
-        1) It has a 'suffixes' property which returns simple plurals (adding an
-            's') to each key in 'contents'.
-        2) It is designed to hold Keystone classes.
-    
-    Args:
-        contents (Mapping[str, Keystone]]): stored dictionary of Keystone 
-            subclasses. Defaults to an empty dict.
-        default (Any): default value to return when the 'get' method is used.
-              
-    """
-    contents: Mapping[str, Keystone] = dataclasses.field(default_factory = dict)
-    default: Any = None
-
-    """ Properties """
-    
-    @property
-    def suffixes(self) -> Tuple[str]:
-        """Returns all Keystone names with an 's' added to the end.
-        
-        Returns:
-            Tuple[str]: all Keystone names with an 's' added in order to create
-                simple plurals.
-                
-        """
-        return tuple(key + 's' for key in self.contents.keys())
 
 
 @dataclasses.dataclass
@@ -80,10 +47,9 @@ class Keystone(amicus.types.Quirk, abc.ABC):
     instance is a dataclass and '__post_init__' is not overridden).
     
     Args:
-        keystones (ClassVar[amicus.framework.Library]): library that stores 
-            direct subclasses (those with Keystone in their '__bases__' 
-            attribute) and allows runtime access and instancing of those stored 
-            subclasses.
+        keystones (ClassVar[amicus.types.Library]): library that stores direct
+            subclasses (those with Keystone in their '__bases__' attribute) and 
+            allows runtime access and instancing of those stored subclasses.
     
     Attributes:
         subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
@@ -101,7 +67,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         keystones, subclasses, instances, select, instance, __init_subclass__
     
     """
-    keystones: ClassVar[amicus.framework.Library] = amicus.framework.Library()
+    keystones: ClassVar[amicus.types.Library] = amicus.types.Library()
     
     """ Initialization Methods """
     
@@ -133,7 +99,20 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         except AttributeError:
             key = amicus.tools.snakify(self.__class__.__name__)
         self.instances[key] = self
- 
+
+    """ Properties """
+    
+    @property
+    def suffixes(self) -> Tuple[str]:
+        """Returns all subclass names with an 's' added to the end.
+        
+        Returns:
+            Tuple[str]: all subclass names with an 's' added in order to create
+                simple plurals.
+                
+        """
+        return tuple(key + 's' for key in self.subclasses.keys())
+
     """ Public Class Methods """
     
     @classmethod
@@ -205,82 +184,52 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             return instance
 
 
+def create_keystone(
+        keystone: Union[str, Keystone] = object, 
+        name: str = None, 
+        quirks: Union[
+            str, 
+            amicus.types.Quirk, 
+            Sequence[str],
+            Sequence[amicus.types.Quirk]] = None) -> Keystone:
+    """[summary]
 
-@dataclasses.dataclass
-class Workshop(object):
+    Args:
+        keystone (Union[str, Keystone], optional): [description]. Defaults to 
+            object.
+        name (str, optional): [description]. Defaults to None.
+        quirks (Union[ str, amicus.types.Quirk, Sequence[str], 
+            Sequence[amicus.types.Quirk]], optional): Defaults to None.
+
+    Raises:
+        ValueError: [description]
+        TypeError:
+        
+    Returns:
+        Keystone: [description]
+        
     """
-    """
-    bases: Library = Library()
-    quirks: Library = Quirk.quirks
-
-    """ Public Methods """
-    
-    def create_bases(self) -> None:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        quirks = self._get_settings_quirks()
-        for key, value in self.manager.project.bases.items():
-            self.contents[key] = self.create_class(
-                name = key, 
-                base = value, 
-                quirks = quirks)
-        return self
-            
-    def create_class(self, name: str, base: Callable, 
-                     quirks: Sequence[sourdough.Quirk]) -> Callable:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            base (Callable): [description]
-            quirks (Sequence[sourdough.Quirk])
-
-        Returns:
-            Callable: [description]
-            
-        """
-        if quirks:
-            bases = quirks.append(base)
-            new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
-            # Recursively adds quirks to items in the 'registry' of 'base'.
-            if hasattr(base, 'registry'):
-                newregistry = {}
-                for key, value in base.registry.items():
-                    newregistry[key] = self.create_class(
-                        name = key,
-                        base = value,
-                        quirks = quirks)
-                new_base.registry = newregistry
+    bases = []
+    for quirk in more_itertools.always_iterable(quirks):
+        if isinstance(quirk, str):
+            bases.append(amicus.types.Quirk.quirks[quirk])
+        elif isinstance(quirk, amicus.types.Quirk):
+            bases.append(quirk)
         else:
-            new_base = base
-        return new_base
-             
-    """ Private Methods """
-    
-    def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
-        """[summary]
-
-        Returns:
-            Sequence[sourdough.Quirk]: [description]
-            
-        """
-        settings_keys = {
-            'verbose': 'talker', 
-            'early_validation': 'validator', 
-            'conserve_memory': 'conserver'}
-        quirks = []
-        for key, value in settings_keys.items():
-            try:
-                if self.manager.project.settings['general'][key]:
-                    quirks.append(sourdough.Quirk.options[value])
-            except KeyError:
-                pass
-        return quirks
-
- 
+            raise TypeError('All quirks must be str or Quirk type')
+    if keystone is not object and name is None:
+        raise ValueError('name must not be None is keystone is object')
+    elif isinstance(keystone, str):
+        bases.append(Keystone.keystones[keystone])
+    elif isinstance(keystone, Keystone):
+        bases.append(keystone)
+    else:
+        raise TypeError('keystone must be a str, Keystone type, or object')
+    creation = dataclasses.dataclass(type(name, tuple(bases), {}))
+    if keystone is object:
+        Keystone.keystones[name] = creation
+    return creation
+        
 
 @dataclasses.dataclass
 class Validator(amicus.types.Quirk):
@@ -298,27 +247,6 @@ class Validator(amicus.types.Quirk):
     converters: ClassVar[amicus.types.Catalog] = amicus.types.Catalog()
 
     """ Public Methods """
-
-    def initialize_converter(self, name: str,
-            converter: Union[str, Converter, Type[Converter]]) -> Converter:
-        """[summary]
-
-        Args:
-            converter (Union[Converter, Type[Converter]]): [description]
-
-        Returns:
-            Converter: [description]
-        """
-        if isinstance(converter, str):
-            try:
-                converter = self.converters[name]
-            except KeyError:
-                raise KeyError(
-                    f'No local or stored type validator exists for {name}')
-        if not isinstance(converter, Converter):
-            converter = converter()
-            self.converters[name] = converter  
-        return converter     
 
     def validate(self, validations: Sequence[str] = None) -> None:
         """Validates or converts stored attributes.
@@ -339,7 +267,7 @@ class Validator(amicus.types.Quirk):
                 kwargs = {name: getattr(self, name)}
                 validated = getattr(self, f'_validate_{name}')(**kwargs)
             else:
-                converter = self.initialize_converter(
+                converter = self._initialize_converter(
                     name = name, 
                     converter = name)
                 try:
@@ -372,7 +300,30 @@ class Validator(amicus.types.Quirk):
 #             self.stores = origin
 #             accepts = get_args(annotation)
 #         return accepts
-           
+
+    """ Private Methods """
+    
+    def _initialize_converter(self, name: str,
+            converter: Union[str, Converter, Type[Converter]]) -> Converter:
+        """[summary]
+
+        Args:
+            converter (Union[Converter, Type[Converter]]): [description]
+
+        Returns:
+            Converter: [description]
+        """
+        if isinstance(converter, str):
+            try:
+                converter = self.converters[name]
+            except KeyError:
+                raise KeyError(
+                    f'No local or stored type validator exists for {name}')
+        if not isinstance(converter, Converter):
+            converter = converter()
+            self.converters[name] = converter  
+        return converter              
+
 
 @dataclasses.dataclass
 class Converter(abc.ABC):
@@ -422,8 +373,9 @@ class Converter(abc.ABC):
         """ 
         if hasattr(instance, 'keystones') and instance.keystones is not None:
             base = getattr(instance.keystones, self.base)
-            kwargs = {k: self._kwargify(v, instance, item) 
-                      for k, v in self.parameters.items()}
+            kwargs = {
+                k: self._kwargify(v, instance, item) 
+                for k, v in self.parameters.items()}
             if item is None:
                 validated = base(**kwargs)
             elif isinstance(item, base):
@@ -442,7 +394,7 @@ class Converter(abc.ABC):
                 raise TypeError(f'{item} could not be validated or converted')
         else:
             raise AttributeError(
-                f'Cannot validate or convert {item} without keystones and base')
+                f'Cannot validate or convert {item} without keystones')
         return validated
 
     """ Private Methods """
@@ -465,125 +417,3 @@ class Converter(abc.ABC):
             return item
         else:
             return getattr(instance, attribute)
-
-
-# @dataclasses.dataclass
-# class Mapify(Validator):
-#     """Type validator and converter for Mappings.
-
-#     Attributes:
-#         accepts (Tuple[Any]): type(s) accepted by the parent class either as an 
-#             individual item, in a Mapping, or in a Sequence.
-#         stores (Any): a single type stored by the parent class. Set to dict.
-            
-#     """    
-
-#     """ Initialization Methods """
-    
-#     def __post_init__(self):
-#         """Registers an instance with 'contents'."""
-#         # Calls initialization method of other inherited classes.
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass
-#         self.stores = dict
-    
-#     """ Public Methods """
-    
-#     def convert(self, contents: Any) -> (Mapping[str, Any]):
-#         """Converts 'contents' to a Mapping type.
-        
-#         Args:
-#             contents (Any): an object containing item(s) with 'name' attributes.
-                
-#         Returns:
-#             Mapping[str, Any]: converted 'contents'.
-            
-#         """
-#         contents = self.verify(contents = contents)
-#         converted = {}
-#         if isinstance(contents, Mapping):
-#             converted = contents
-#         elif (isinstance(contents, Sequence) 
-#                 and not isinstance(contents, str)
-#                 and all(hasattr(i, 'name') for i in contents)):
-#             for item in contents:
-#                 try:
-#                     converted[item.name] = item
-#                 except AttributeError:
-#                     converted[item.get_name()] = item
-#         return converted
-    
-
-# @dataclasses.dataclass    
-# class Sequencify(Validator):
-#     """Type validator and converter for Sequences.
-    
-#     Args:
-#         accepts (Union[Sequence[Any], Any]): type(s) accepted by the parent 
-#             class either as an individual item, in a Mapping, or in a Sequence.
-#             Defaults to amicus.quirks.Element.
-#         stores (Any): a single type accepted by the parent class. Defaults to 
-#             list.
-            
-#     """        
-
-#     """ Initialization Methods """
-    
-#     def __post_init__(self):
-#         """Registers an instance with 'contents'."""
-#         # Calls initialization method of other inherited classes.
-#         try:
-#             super().__post_init__()
-#         except AttributeError:
-#             pass
-#         self.stores = list
-    
-#     """ Public Methods """
-       
-#     def convert(self, 
-#             contents: Any) -> (
-#                 Sequence[amicus.quirks.Element]):
-#         """Converts 'contents' to a Sequence type.
-        
-#         Args:
-#             contents (Any): an object containing one or 
-#                 more Element subclasses or Element subclass instances.
-        
-#         Raises:
-#             TypeError: if 'contents' is not an Any.
-                
-#         Returns:
-#             Sequence[Element]: converted 'contents'.
-            
-#         """
-#         converted = self.stores()
-#         if isinstance(contents, Mapping):
-#             converted = converted.extend(contents.values())
-#         elif isinstance(contents, Sequence):
-#             converted = contents
-#         elif isinstance(contents, amicus.quirks.Element):
-#             converted = converted.append(contents)
-#         return converted  
-
-#     def verify(self, contents: Any) -> Any:
-#         """Verifies that 'contents' is one of the types in 'accepts'.
-        
-#         Args:
-#             contents (Any): item(s) to be type validated.
-            
-#         Raises:
-#             TypeError: if 'contents' is not one of the types in 'accepts'.
-            
-#         Returns:
-#             Any: original contents if there is no TypeError.
-        
-#         """
-#         if all(isinstance(c, self.accepts) for c in contents):
-#             return contents
-#         else:
-#             raise TypeError(
-#                 f'contents must be or contain one of the following types: ' 
-#                 f'{self.accepts}')        
-
