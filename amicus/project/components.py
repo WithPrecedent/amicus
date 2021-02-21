@@ -160,7 +160,7 @@ class Worker(core.Component):
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
     
-    """ Public Class Methods """
+    """ Class Methods """
 
     @classmethod
     def from_outline(cls, name: str,
@@ -185,8 +185,6 @@ class Worker(core.Component):
                 method = cls._create_serial
             worker = method(worker = worker, outline = outline)
         return worker
-                  
-    """ Private Class Methods """ 
 
     @classmethod                
     def _create_parallel(cls, worker: Worker,
@@ -324,64 +322,7 @@ class ParallelWorker(Worker, abc.ABC):
     criteria: Callable = None
     parallel: ClassVar[bool] = True
 
-    """ Public Methods """
-    
-    def implement(self, data: Any, **kwargs) -> Any:
-        """[summary]
 
-        Args:
-            data (Any): [description]
-
-        Returns:
-            Any: [description]
-            
-        """        
-        if hasattr(data, 'parallelize') and data.parallelize:
-            method = self._implement_in_parallel
-        else:
-            method = self._implement_in_serial
-        return method(data = data, **kwargs)
-
-    """ Private Methods """
-   
-    def _implement_in_parallel(self, data: Any, **kwargs) -> Any:
-        """Applies 'implementation' to 'project' using multiple cores.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        multiprocessing.set_start_method('spawn')
-        with multiprocessing.Pool() as pool:
-            data = pool.starmap(self._implement_in_serial, data, **kwargs)
-        return data 
-
-    def _implement_in_serial(self, data: Any, **kwargs) -> Any:
-        """Applies 'implementation' to 'project' using multiple cores.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        for path in self.workflow.permutations:
-            data = self._implement_path(data = data, path = path, **kwargs)
-        return data
-    
-    def _implement_path(self, data: Any, path: List[str], **kwargs) -> Any:  
-        for node in path:
-            component = self.workflow.components[node]
-            data = component.execute(data = data, **kwargs)
-        return data
-    
-       
 @dataclasses.dataclass
 class Contest(ParallelWorker):
     """Resolves a parallel workflow by selecting the best option.
@@ -416,17 +357,17 @@ class Contest(ParallelWorker):
 
     """ Public Methods """
     
-    def implement(self, data: Any, **kwargs) -> Any:
+    def resolve(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
-            data (Any): [description]
+            project (amicus.Project): [description]
 
         Returns:
-            Any: [description]
-        """
-                
-        return data   
+            amicus.Project: [description]
+            
+        """                
+        return project 
  
     
 @dataclasses.dataclass
@@ -464,16 +405,17 @@ class Study(ParallelWorker):
 
     """ Public Methods """
     
-    def implement(self, data: Any, **kwargs) -> Any:
+    def resolve(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
-            data (Any): [description]
+            project (amicus.Project): [description]
 
         Returns:
-            Any: [description]
-        """           
-        return data    
+            amicus.Project: [description]
+            
+        """                
+        return project   
 
     
 @dataclasses.dataclass
@@ -510,14 +452,15 @@ class Survey(ParallelWorker):
 
     """ Public Methods """
     
-    def implement(self, data: Any, **kwargs) -> Any:
+    def resolve(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
-            data (Any): [description]
+            project (amicus.Project): [description]
 
         Returns:
-            Any: [description]
-        """           
-        return data   
+            amicus.Project: [description]
+            
+        """                
+        return project 
     

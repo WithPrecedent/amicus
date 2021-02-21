@@ -216,17 +216,19 @@ class Needy(amicus.types.Quirk):
         """
         kwargs = {}
         for need in more_itertools.always_iterable(cls.needs):
-            try:
-                kwargs[need] = getattr(instance, need)
-            except AttributeError:
+            if need in ['self']:
+                kwargs[instance.__class__.__name__] = instance
+            else:
                 try:
-                    kwargs[need] = instance.contents[need]
-                except (AttributeError, KeyError):
-                    raise KeyError(
-                        f'{need} could not be found in order to call a '
-                        f'method of {cls.__name__}')
+                    kwargs[need] = getattr(instance, need)
+                except AttributeError:
+                    try:
+                        kwargs[need] = instance.contents[need]
+                    except (AttributeError, KeyError):
+                        raise KeyError(
+                            f'{need} could not be found in order to call a '
+                            f'method of {cls.__name__}')
         return kwargs
-
 
 
 # @dataclasses.dataclass

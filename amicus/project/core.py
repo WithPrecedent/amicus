@@ -17,9 +17,11 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import copy
 import dataclasses
 import inspect
+import multiprocessing
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
                     Optional, Sequence, Set, Tuple, Type, Union)
@@ -225,7 +227,7 @@ class Parameters(amicus.types.Lexicon):
 
 @dataclasses.dataclass
 class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
-    """Keystone class for parts of an amicus Workflow.
+    """Keystone class for parts of an  Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -305,7 +307,7 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
             else:
                 return cls.from_name(kwargs)
         else:
-            raise ValueError('create method requires name keyword parameter')
+            raise ValueError('create method requires a name keyword parameter')
             
     @classmethod
     def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
@@ -324,8 +326,7 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
             Component: [description]
             
         """        
-        keys = more_itertools.always_iterable(name)
-        for key in keys:
+        for key in more_itertools.always_iterable(name):
             for library in ['instances', 'subclasses']:
                 item = None
                 try:
@@ -555,8 +556,9 @@ class Outline(Stage):
         outline.initialization[name] = {}
         outline.attributes[name] = {}
         component = cls.keystones.component.create(name = [name, design])
-        parameters = tuple(i for i in list(component.__annotations__.keys()) 
-                           if i not in ['name', 'contents'])
+        parameters = tuple(
+            i for i in list(component.__annotations__.keys()) 
+            if i not in ['name', 'contents'])
         for key, value in section.items():
             suffix = key.split('_')[-1]
             prefix = key[:-len(suffix) - 1]
@@ -694,19 +696,19 @@ class Workflow(amicus.structures.Graph, Stage):
             
         """        
         workflow = cls()
-        workflow = cls._add_component(
+        workflow = cls.add_component(
             name = name,
             outline = outline,
             workflow = workflow)
         for component in outline.components[name]:
-            workflow = cls._add_component(
+            workflow = cls.add_component(
                 name = component,
                 outline = outline,
                 workflow = workflow)
         return workflow
     
     @classmethod
-    def _add_component(cls, 
+    def add_component(cls, 
         name: str, 
         outline: Outline, 
         workflow: Workflow) -> Workflow:
@@ -758,33 +760,141 @@ class Workflow(amicus.structures.Graph, Stage):
         Returns:
             amicus.Project: [description]
             
-        """        
-        for path in iter(self):
-            project = self.execute_path(project = project, path = path, **kwargs)  
+        """
+        if project.parallelize:
+            multiprocessing.set_start_method('spawn')
+        for root in self.roots:
+            result = Result(name = f'path_1')
+            result.path.append(root)
+            project = self.implement(
+                node = root,
+                project = project,
+                **kwargs)
         return project
-
-    def execute_path(self, 
+    
+    def implement(self, 
+        node: str, 
         project: amicus.Project, 
-        path: Sequence[str], 
         **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
+            node (str):
             project (amicus.Project): [description]
-            path (Sequence[str]): [description]
 
         Returns:
             amicus.Project: [description]
             
-        """        
-        for node in more_itertools.always_iterable(path):
-            component = self.components[node]
-            project = component.execute(project = project, **kwargs)    
+        """      
+        component = self.components[node]
+        project = component.execute(project = project, **kwargs)
+        subcomponents = self.contents[node]
+        if len(subcomponents) > 1:
+            if project.parallelize:
+                project = self._implement_parallel(
+                    component = component,
+                    project = project, 
+                    **kwargs)
+        elif len(subcomponents) == 1:
+            project = self.        
+
+    """ Private Methods """
+   
+    def _implement_in_parallel(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if project.parallelize:
+            with multiprocessing.Pool() as pool:
+                project = pool.starmap(self._implement_in_serial, project, **kwargs)
+        return project 
+
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for path in self.workflow.permutations:
+            project = self._implement_path(project = project, path = path, **kwargs)
         return project
+    
+    def _implement_path(self, data: Any, path: List[str], **kwargs) -> Any:  
+        for node in path:
+            component = self.workflow.components[node]
+            data = component.execute(data = data, **kwargs)
+        return data
+
+           
+                 
+        # for path in iter(self):
+        #     project = self.execute_path(project = project, path = path, **kwargs)  
+        # return project
+
+    # def execute_path(self, 
+    #     project: amicus.Project, 
+    #     path: Sequence[str], 
+    #     **kwargs) -> amicus.Project:
+    #     """[summary]
+
+    #     Args:
+    #         project (amicus.Project): [description]
+    #         path (Sequence[str]): [description]
+
+    #     Returns:
+    #         amicus.Project: [description]
             
+    #     """        
+    #     for node in more_itertools.always_iterable(path):
+    #         component = self.components[node]
+    #         project = component.execute(project = project, **kwargs)    
+    #     return project
+
+    # """ Public Methods """
+    
+    # def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+    #     """[summary]
+
+    #     Args:
+    #         project (amicus.Project): [description]
+
+    #     Returns:
+    #         amicus.Project: [description]
+            
+    #     """     
+    #     if hasattr(project, 'parallelize') and project.parallelize:
+    #         method = self._implement_in_parallel
+    #     else:
+    #         method = self._implement_in_serial
+    #     return method(project = project, **kwargs)
+
 
 @dataclasses.dataclass
-class Summary(amicus.types.Lexicon, Stage):
+class Result(amicus.types.Lexicon):            
+    
+    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    name: str = None
+    path: Sequence[str] = dataclasses.field(default_factory = list)
+    
+
+@dataclasses.dataclass
+class Summary(amicus.framework.Library, Stage):
     """Collects and stores results of executing a Workflow.
     
     Args:
@@ -799,17 +909,15 @@ class Summary(amicus.types.Lexicon, Stage):
             a list with 'workflow' and 'data'.          
               
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
-    default: Any = None
+    contents: Mapping[str, Result] = dataclasses.field(default_factory = dict)
+    default: Any = Result()
     prefix: str = 'path'
-    needs: ClassVar[Union[Sequence[str], str]] = ['workflow', 'data']
+    needs: ClassVar[Union[Sequence[str], str]] = ['self']
 
     """ Public Methods """
     
     @classmethod
-    def from_workflow(cls, 
-        workflow: Workflow, data: Any = None,
-        copy_data: bool = True, **kwargs) -> amicus.Project:
+    def from_project(cls, project: amicus.Project, **kwargs) -> amicus.Project:
         """[summary]
 
         Args:
@@ -820,13 +928,106 @@ class Summary(amicus.types.Lexicon, Stage):
             
         """
         summary = cls()
-        for i, path in enumerate(workflow):
-            key = f'{cls.prefix}_{str(i)}'
-            if copy_data:
-                to_use = copy.deepcopy(data)
-            else:
-                to_use = data
-            summary.contents[key] = workflow.execute(data = to_use,
-                                                          path = path,
-                                                          **kwargs)
+        project._result = amicus.types.Lexicon()
+        for i, path in enumerate(project.workflow):
+            project = project.workflow.execute_path(
+                project = project,
+                path = path,
+                **kwargs)
+            summary[f'{cls.prefix}_{str(i)}'] = project._result
+        delattr(project, '_result')
         return summary
+
+    """ Public Methods """
+   
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """
+        if project.parallelize:
+            multiprocessing.set_start_method('spawn')
+        for root in project.workflow.roots:
+            result = Result(name = f'{self.prefix}_1')
+            result.path.append(root)
+            project = self.implement(
+                node = root,
+                project = project,
+                **kwargs)
+        return project
+    
+    def implement(self, 
+        node: str, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """[summary]
+
+        Args:
+            node (str):
+            project (amicus.Project): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """      
+        component = self.components[node]
+        project = component.execute(project = project, **kwargs)
+        subcomponents = self.contents[node]
+        if len(subcomponents) > 1:
+            if project.parallelize:
+                project = self._implement_parallel(
+                    component = component,
+                    project = project, 
+                    **kwargs)
+        elif len(subcomponents) == 1:
+            project = self.        
+
+    """ Private Methods """
+   
+    def _implement_in_parallel(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if project.parallelize:
+            with multiprocessing.Pool() as pool:
+                project = pool.starmap(self._implement_in_serial, project, **kwargs)
+        return project 
+
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for path in self.workflow.permutations:
+            project = self._implement_path(project = project, path = path, **kwargs)
+        return project
+    
+    def _implement_path(self, data: Any, path: List[str], **kwargs) -> Any:  
+        for node in path:
+            component = self.workflow.components[node]
+            data = component.execute(data = data, **kwargs)
+        return data
+
+           

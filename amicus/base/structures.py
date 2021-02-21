@@ -210,8 +210,9 @@ class Structure(amicus.Bunch, abc.ABC):
     def __add__(self, other: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
-        Structure adding uses the 'combine' method. Read its docstring for further
-        details about how the graphs are added together.
+        Adding another structure uses the 'combine' method. Read that method's 
+        docstring for further details about how the structures are added 
+        together.
         
         Args:
             other (Structure): a second Structure to combine with this one.
@@ -223,8 +224,9 @@ class Structure(amicus.Bunch, abc.ABC):
     def __iadd__(self, other: Any) -> None:
         """Adds 'other' Structure to this Structure.
 
-        Structure adding uses the 'combine' method. Read its docstring for further
-        details about how the graphs are added together.
+        Adding another structure uses the 'combine' method. Read that method's 
+        docstring for further details about how the structures are added 
+        together.
         
         Args:
             other (Structure): a second Structure to combine with this one.
