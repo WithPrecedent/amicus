@@ -1,15 +1,14 @@
 """
-.. module:: amicus main
-:synopsis: command-line data science made simple
-:author: Corey Rayburn Yung
-:copyright: 2019-2020
-:license: Apache-2.0
+amicus main: a friend to your python projects
+Corey Rayburn Yung <coreyrayburnyung@gmail.com>
+Copyright 2020-2021, Corey Rayburn Yung
+License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
 """
-
+from __future__ import annotations
 import sys
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
-
-import amicus
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import amicus
 
@@ -26,8 +25,8 @@ def _args_to_dict() -> Dict[str, str]:
         how-to-convert-commandline-key-value-args-to-dictionary
 
     Returns:
-        arguments(dict): dictionary of command line options when the options
-            are separated by '='.
+        Dict[str, str]: dictionary of command line options when the options are 
+            separated by '='.
 
     """
     arguments = {}
@@ -42,7 +41,7 @@ if __name__ == '__main__':
     # Gets command line arguments and converts them to dict.
     arguments = _args_to_dict()
     # Calls Project with passed command-line arguments.
-    Project(
-        idea = arguments.get('-idea'),
+    amicus.Project(
+        settings = arguments.get('-settings'),
         clerk = arguments.get('-clerk', None),
-        dataset = arguments.get('-dataset', None))
+        data = arguments.get('-data', None))

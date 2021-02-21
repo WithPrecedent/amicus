@@ -8,8 +8,8 @@ Contents:
 
 """
 import dataclasses
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import numpy as np
 import pandas as pd

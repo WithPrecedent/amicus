@@ -7,8 +7,8 @@
 """
 from __future__ import annotations
 import dataclasses
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 
 
 def add_slots(cls) -> object:

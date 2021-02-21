@@ -25,11 +25,12 @@ To Do:
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import copy
 import dataclasses
 import itertools
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import more_itertools
 
@@ -37,7 +38,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Node(amicus.quirks.Element, amicus.types.Proxy):
+class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
     """Vertex for any amicus composite Structure.
     
     Node acts a basic wrapper for any item stored in an amicus Structure. An
@@ -59,6 +60,62 @@ class Node(amicus.quirks.Element, amicus.types.Proxy):
     """
     contents: Any = None
     name: str = None
+
+    """ Initialization Methods """
+    
+    def __init_subclass__(cls, **kwargs):
+        """Forces subclasses to use the same hash methods.
+        
+        This is necessary because dataclasses do not automatically inherit the
+        hash and equivalance methods from their super classes.
+        
+        """
+        super().__init_subclass__(**kwargs)
+        cls.__hash__ = Node.__hash__
+        cls.__eq__ = Node.__eq__
+        cls.__ne__ = Node.__ne__
+        
+    """ Dunder Methods """
+
+    def __hash__(self) -> Hashable:
+        """Makes Node hashable so that it can be used as a key in a dict.
+
+        Rather than using the object ID, this method prevents too Nodes with
+        the same name from being used in a composite object that uses a dict as
+        its base storage type.
+        
+        Returns:
+            Hashable: of Node 'name'.
+            
+        """
+        return hash(self.name)
+
+    def __eq__(self, other: Node) -> bool:
+        """Makes Node hashable so that it can be used as a key in a dict.
+
+        Args:
+            other (Node): other Node instance to test for equivalance.
+            
+        Returns:
+            bool: whether 'name' is the same as 'other.name'.
+            
+        """
+        try:
+            return str(self.name) == str(other.name)
+        except AttributeError:
+            return str(self.name) == other
+
+    def __ne__(self, other: Node) -> bool:
+        """Completes equality test dunder methods.
+
+        Args:
+            other (Node): other Node instance to test for equivalance.
+           
+        Returns:
+            bool: whether 'name' is not the same as 'other.name'.
+            
+        """
+        return not(self == other)
 
    
 @dataclasses.dataclass
@@ -318,7 +375,7 @@ class Structure(amicus.Bunch, abc.ABC):
             
         """        
         if isinstance(node, str):
-            return str
+            return node
         else:
             try:
                 return node.name
@@ -370,61 +427,56 @@ class Graph(amicus.types.Lexicon, Structure):
     Graph also supports autovivification where a list is created as a value for
     a missing key. This means that a Graph need not inherit from defaultdict.
     
-    The Graph does not actually store node objects. Rather, it maintains the
-    string names of nodes which can then be used to create and iterate over
-    nodes (as is done by Workflow in the project subpackage).
-    
     Args:
-        contents (Dict[str, List[str]]): an adjacency list where the keys are 
-            the names of nodes and the values are names of nodes which the key 
-            is connected to. Defaults to an empty dict.
+        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
+            keys are nodes and the values are nodes which the key is connected 
+            to. Defaults to an empty dict.
         default (Any): default value to return when the 'get' method is used.
                   
     """  
-    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
+        default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
     
     """ Properties """
            
     @property
-    def endpoints(self) -> List[str]:
+    def endpoints(self) -> List[Hashable]:
         """Returns endpoint nodes in the Graph.
 
         Returns:
-            List[str]: names of endpoint node in 'contents'. 
+            List[Hashable]: endpoint nodes in 'contents'. 
             
         """
         return [k for k in self.contents.keys() if not self.contents[k]]
               
     @property
-    def nodes(self) -> List[str]:
+    def nodes(self) -> List[Hashable]:
         """Returns all nodes in the Graph.
 
         Returns:
-            List[str]: all nodes.
+            List[Hashable]: all nodes.
             
         """
         return list(self.keys())
 
     @property
-    def paths(self) -> List[List[str]]:
+    def paths(self) -> List[List[Hashable]]:
         """Returns all paths through the Graph in a list of lists form.
         
         Returns:
-            List[List[str]]: returns all paths from 'roots' to 'endpoints' in a 
-                list of lists of names of nodes.
+            List[List[Hashable]]: returns all paths from 'roots' to 'endpoints' 
+                in a list of lists of nodes.
                 
         """
-        return self._find_all_permutations(
-            starts = self.roots, 
-            ends = self.endpoints)
+        return self._find_all_paths(starts = self.roots, ends = self.endpoints)
        
     @property
-    def roots(self) -> List[str]:
+    def roots(self) -> List[Hashable]:
         """Returns root nodes in the Graph.
 
         Returns:
-            List[str]: root nodes.
+            List[Hashable]: root nodes.
             
         """
         stops = list(itertools.chain.from_iterable(self.contents.values()))
@@ -433,53 +485,57 @@ class Graph(amicus.types.Lexicon, Structure):
     """ Class Methods """
     
     @classmethod
-    def create(cls, source: Any, **kwargs) -> Graph:
+    def create(cls, **kwargs) -> Graph:
         """Creates an instance of a Graph subclass from 'source'.
         
-        'source' must be an adjacency list, adjacency matrix, or edge list. For
-        specific formatting of each supported source type, look at the docs for
-        each of the called methods beginning with 'from_'.
+        kwargs must include an adjacency list (at kwargs['adjacency']), 
+        adjacency matrix (at kwargs['matrix']), or edge list (at 
+        kwargs['edges']). For specific formatting of each supported source type, 
+        look at the docs for each of the called methods beginning with 'from_'.
                 
-        If 'source' is an adjacency matrix, 'names' should also be passed as a
+        If the source is an adjacency matrix, 'names' should also be passed as a
         list of node names corresponding with the adjacency matrix.
-        
-        Args:
-            source (Any): data in another form to convert to the internal 
-                structure in a Graph.
                 
         Raises:
             TypeError: if source is not an adjacency list, adjacency matrix, or
                 edge list.
                 
         """
-        if (isinstance(source, Dict) 
-                and all(isinstance(v, List) for v in source.values())):
-            return cls.from_adjacency(adjaceny = source)
-        elif isinstance(source, List):
-            if all(isinstance(i, Tuple) for i in source):
-                return cls.from_edges(egdes = source)
-            elif all(isinstance(i, List) for i in source):
-                return cls.from_matrix(matrix = source, **kwargs)
+        if ('adjacency' in kwargs 
+                and (isinstance(kwargs['adjacency'], Dict) 
+                and all(isinstance(v, List) 
+                    for v in kwargs['adjacency'].values()))):
+            return cls.from_adjacency(**kwargs)
+        elif ('edges' in kwargs
+                and isinstance(kwargs['edges'], List)
+                and all(isinstance(i, Tuple) for i in kwargs['edges'])):
+            return cls.from_edges(**kwargs)
+        elif ('matrix' in kwargs
+                and 'names' in kwargs
+                and isinstance(kwargs['matrix'], List)
+                and all(isinstance(i, List) for i in kwargs['matrix'])):
+            return cls.from_matrix(**kwargs)
         raise TypeError(
-            'source must be an adjacency list, adjacency matrix, or edge list')
+            'create requires an adjacency list, adjacency matrix, or edge list')
            
     @classmethod
-    def from_adjacency(cls, adjacency: Dict[str, List[str]]) -> Graph:
+    def from_adjacency(cls, adjacency: Dict[Hashable, List[Hashable]]) -> Graph:
         """Creates a Graph instance from an adjacency list.
 
         Args:
-            adjacency (Dict[str, List[str]]): adjacency list used to create a
-                Graph instance.
+            adjacency (Dict[Hashable, List[Hashable]]): adjacency list used to 
+                create a Graph instance.
             
         """
         return cls(contents = adjacency)
     
     @classmethod
-    def from_edges(cls, edges: List[Tuple[str]]) -> Graph:
+    def from_edges(cls, edges: List[Tuple[Hashable]]) -> Graph:
         """Creates a Graph instance from an edge list.
 
         Args:
-            edges (List[Tuple[str]]): Edge list used to create a Graph instance.
+            edges (List[Tuple[Hashable]]): Edge list used to create a Graph 
+                instance.
             
         """
         contents = {}
@@ -493,14 +549,16 @@ class Graph(amicus.types.Lexicon, Structure):
         return cls(contents = contents)
     
     @classmethod
-    def from_matrix(cls, matrix: List[List[int]], names: List[str]) -> Graph:
+    def from_matrix(cls, 
+        matrix: List[List[int]], 
+        names: List[Hashable]) -> Graph:
         """Creates a Graph instance from an adjacency matrix
 
         Args:
             matrix (matrix: List[List[int]]): adjacency matrix used to create a 
                 Graph instance. The values in the matrix should be 1 
                 (indicating an edge) and 0 (indicating no edge).
-            names (List[str]): names of nodes in the order of the rows and
+            names (List[Hashable]): names of nodes in the order of the rows and
                 columns in 'matrix'.
             
         """
@@ -519,32 +577,26 @@ class Graph(amicus.types.Lexicon, Structure):
     
     """ Public Methods """
     
-    def add(self, nodes: Union[str, Tuple[str]]) -> None:
+    def add(self, item: Union[Hashable, Tuple[Hashable]]) -> None:
         """Adds nodes or edges to 'contents' depending on type.
         
         Args:
-            nodes (Union[str, Tuple[str]]): either a str name or a tuple 
+            item (Union[Hashable, Tuple[Hashable]]): either a node or a tuple 
                 containing the names of nodes for an edge to be created.
-        
-        Raises:
-            TypeError: if 'nodes' is neither a str or a tuple of two strings.
-            
+
         """
-        if isinstance(nodes, str):
-            self.add_node(node = nodes)
-        elif isinstance(nodes, tuple) and len(nodes) == 2:
-            self.add_edge(start = nodes[0], stop = nodes[1])
+        if isinstance(item, tuple) and len(item) == 2:
+            self.add_edge(start = item[0], stop = item[1])
         else:
-            raise TypeError('nodes must be a str for adding a node or a tuple '
-                            'of two strings for adding an edge')
+            self.add_node(node = item)
         return self
 
-    def add_edge(self, start: str, stop: str) -> None:
+    def add_edge(self, start: Hashable, stop: Hashable) -> None:
         """Adds an edge to 'contents'.
 
         Args:
-            start (str): node for edge to start.
-            stop (str): node for edge to stop.
+            start (Hashable): name of node for edge to start.
+            stop (Hashable): name of node for edge to stop.
             
         Raises:
             ValueError: if 'start' is the same as 'stop'.
@@ -559,37 +611,37 @@ class Graph(amicus.types.Lexicon, Structure):
             if start not in self.contents:
                 self.add_node(node = start)
             if stop not in self.contents[start]:
-                self.contents[start].append(stop)
+                self.contents[start].append(self._namify(stop))
         return self
 
-    def add_node(self, node: str) -> None:
+    def add_node(self, node: Hashable) -> None:
         """Adds a node to 'contents'.
         
         Args:
-            node (str): node to add to the graph.
+            node (Hashable): node to add to the graph.
             
         Raises:
             ValueError: if 'node' is already in 'contents'.
         
         """
         if node in self.contents:
-            pass
+            raise ValueError(f'node is already in {self._namify(node = self)}')
         else:
             self.contents[node] = []
         return self
 
     def append(self, 
-        node: str,
-        start: Union[str, Sequence[str]] = None) -> None:
+        node: Hashable,
+        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
         """Appends 'node' to the stored data structure.
 
         Subclasses should ordinarily provide their own methods.
         
         Args:
-            node (str): item to add to 'contents'.
-            start (Union[str, Sequence[str]]): where to add new node to. If
-                there are multiple nodes in 'start', 'node' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
+            node (Hashable): item to add to 'contents'.
+            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
+                to. If there are multiple nodes in 'start', 'node' will be added 
+                to each of the starting points. If 'start' is None, 'endpoints'
                 will be used. Defaults to None.
             
         """ 
@@ -604,21 +656,20 @@ class Graph(amicus.types.Lexicon, Structure):
         return self  
     
     def branchify(self, 
-        nodes: Sequence[Sequence[str]],
-        start: Union[str, Sequence[str]] = None) -> None:
+        nodes: Sequence[Sequence[Hashable]],
+        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
         """Adds parallel paths to the stored data structure.
 
         Subclasses should ordinarily provide their own methods.
 
         Args:
-            nodes (Sequence[Sequence[str]]): a list of list of nodes which
+            nodes (Sequence[Sequence[Hashable]]): a list of list of nodes which
                 should have a Cartesian product determined and extended to
                 the stored data structure.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.tr]], optional): [description]. 
-                Defaults to None.
+            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
+                to. If there are multiple nodes in 'start', 'node' will be added 
+                to each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
                 
         """
         if start is None:
@@ -655,12 +706,12 @@ class Graph(amicus.types.Lexicon, Structure):
             raise TypeError('structure must be a Graph type to combine')
         return self
 
-    def delete_edge(self, start: str, stop: str) -> None:
+    def delete_edge(self, start: Hashable, stop: Hashable) -> None:
         """Deletes edge from graph.
 
         Args:
-            start (str): starting node for the edge to delete.
-            stop (str): ending node for the edge to delete.
+            start (Hashable): starting node for the edge to delete.
+            stop (Hashable): ending node for the edge to delete.
         
         Raises:
             KeyError: if 'start' is not a node in the Graph.
@@ -675,11 +726,11 @@ class Graph(amicus.types.Lexicon, Structure):
             raise ValueError(f'{stop} is not connected to {start}')
         return self
        
-    def delete_node(self, node: str) -> None:
+    def delete_node(self, node: Hashable) -> None:
         """Deletes node from graph.
         
         Args:
-            node (str): node to delete from 'contents'.
+            node (Hashable): node to delete from 'contents'.
         
         Raises:
             KeyError: if 'node' is not in 'contents'.
@@ -708,19 +759,19 @@ class Graph(amicus.types.Lexicon, Structure):
         """
         new_graph = copy.deepcopy(self)
         for node in more_itertools.always_iterable(subset):
-            new_graph.delete_node(node)
+            new_graph.delete_node(node = node)
         return new_graph
 
     def extend(self, 
-        nodes: Sequence[str],
-        start: Union[str, Sequence[str]] = None) -> None:
+        nodes: Sequence[Hashable],
+        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
         """Adds 'nodes' to the stored data structure.
 
         Args:
-            nodes (Sequence[str]): names of items to add.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
+            nodes (Sequence[Hashable]): names of items to add.
+            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
+                to. If there are multiple nodes in 'start', 'node' will be added 
+                to each of the starting points. If 'start' is None, 'endpoints'
                 will be used. Defaults to None.
                 
         """
@@ -735,18 +786,55 @@ class Graph(amicus.types.Lexicon, Structure):
         for edge_pair in edges:
             self.add_edge(start = edge_pair[0], stop = edge_pair[1])
         return self  
-           
-    def search(self, start: str = None, depth_first: bool = True) -> List[str]:
+  
+    def find_paths(self, 
+        start: Hashable, 
+        end: Hashable, 
+        path: List[Hashable] = []) -> List[List[Hashable]]:
+        """Returns all paths in graph from 'start' to 'end'.
+
+        The code here is adapted from: https://www.python.org/doc/essays/graphs/
+        
+        Args:
+            start (Hashable): node to start paths from.
+            end (Hashable): node to end paths.
+            path (List[Hashable]): a path from 'start' to 'end'. Defaults to an 
+                empty list. 
+
+        Returns:
+            List[List[Hashable]]: a list of possible paths (each path is a list 
+                nodes) from 'start' to 'end'.
+            
+        """
+        path = path + [start]
+        if start == end:
+            return [path]
+        if start not in self.contents:
+            return []
+        paths = []
+        for node in self.contents[start]:
+            if node not in path:
+                new_paths = self.find_paths(
+                    start = node, 
+                    end = end, 
+                    path = path)
+                for new_path in new_paths:
+                    paths.append(new_path)
+        return paths
+                  
+    def search(self, 
+        start: Hashable = None, 
+        depth_first: bool = True) -> List[Hashable]:
         """Returns a path through the stored data structure.
 
         Args:
-            start (str): node to start the path from. If None, it is assigned to
-                'roots'. Defaults to None.
+            start (Hashable): node to start the path from. If None, it is 
+                assigned to 'roots'. Defaults to None.
             depth_first (bool): whether the search should be depth first (True)
                 or breadth first (False). Defaults to True.
 
         Returns:
-            List[str]: nodes in a path through the stored data structure.
+            List[Hashable]: nodes in a path through the stored data structure.
             
         """        
         if start is None:
@@ -775,14 +863,14 @@ class Graph(amicus.types.Lexicon, Structure):
 
     """ Private Methods """
 
-    def _breadth_first_search(self, node: str) -> List[str]:
+    def _breadth_first_search(self, node: Hashable) -> List[Hashable]:
         """Returns a breadth first search path through the Graph.
 
         Args:
-            node (str): node to start the search from.
+            node (Hashable): node to start the search from.
 
         Returns:
-            List[str]: nodes in a path through the Graph.
+            List[Hashable]: nodes in a path through the Graph.
             
         """        
         visited = set()
@@ -794,15 +882,17 @@ class Graph(amicus.types.Lexicon, Structure):
                 queue.extend(set(self[vertex]) - visited)
         return list(visited)
        
-    def _depth_first_search(self, node: str, visited: List[str]) -> List[str]:
+    def _depth_first_search(self, 
+        node: Hashable, 
+        visited: List[Hashable]) -> List[Hashable]:
         """Returns a depth first search path through the Graph.
 
         Args:
-            node (str): node to start the search from.
-            visited (List[str]): list of visited nodes.
+            node (Hashable): node to start the search from.
+            visited (List[Hashable]): list of visited nodes.
 
         Returns:
-            List[str]: nodes in a path through the Graph.
+            List[Hashable]: nodes in a path through the Graph.
             
         """  
         if node not in visited:
@@ -810,70 +900,35 @@ class Graph(amicus.types.Lexicon, Structure):
             for edge in self[node]:
                 self._depth_first_search(node = edge, visited = visited)
         return visited
-    
+  
     def _find_all_paths(self, 
-        start: str, 
-        end: str, 
-        path: List[str] = []) -> List[List[str]]:
-        """Returns all paths in graph from 'start' to 'end'.
-
-        The code here is adapted from: https://www.python.org/doc/essays/graphs/
-        
-        Args:
-            start (str): node to start paths from.
-            end (str): node to end paths.
-            path (List[str]): a path from 'start' to 'end'. Defaults to an empty 
-                list. 
-
-        Returns:
-            List[List[str]]: a list of possible paths (each path is a list of
-                Element names) from 'start' to 'end'
-            
-        """
-        path = path + [start]
-        if start == end:
-            return [path]
-        if start not in self.contents:
-            return []
-        paths = []
-        for node in self.contents[start]:
-            if node not in path:
-                new_paths = self._find_all_paths(
-                    start = node, 
-                    end = end, 
-                    path = path)
-                for new_path in new_paths:
-                    paths.append(new_path)
-        return paths
-       
-    def _find_all_permutations(self, 
-        starts: Union[str, Sequence[str]],
-        ends: Union[str, Sequence[str]]) -> List[List[str]]:
+        starts: Union[Hashable, Sequence[Hashable]],
+        ends: Union[Hashable, Sequence[Hashable]]) -> List[List[Hashable]]:
         """[summary]
 
         Args:
-            start (Union[str, Sequence[str]]): starting points for paths through
-                the Graph.
-            ends (Union[str, Sequence[str]]): endpoints for paths through the
-                Graph.
+            start (Union[Hashable, Sequence[Hashable]]): starting points for 
+                paths through the Graph.
+            ends (Union[Hashable, Sequence[Hashable]]): endpoints for paths 
+                through the Graph.
 
         Returns:
-            List[List[str]]: list of all paths through the Graph from all
+            List[List[Hashable]]: list of all paths through the Graph from all
                 'starts' to all 'ends'.
             
         """
-        all_permutations = []
+        all_paths = []
         for start in more_itertools.always_iterable(starts):
             for end in more_itertools.always_iterable(ends):
-                paths = self._find_all_paths(
+                paths = self.find_paths(
                     start = start, 
                     end = end)
                 if paths:
-                    if all(isinstance(path, str) for path in paths):
-                        all_permutations.append(paths)
+                    if all(isinstance(path, Hashable) for path in paths):
+                        all_paths.append(paths)
                     else:
-                        all_permutations.extend(paths)
-        return all_permutations
+                        all_paths.extend(paths)
+        return all_paths
 
 
 # @dataclasses.dataclass

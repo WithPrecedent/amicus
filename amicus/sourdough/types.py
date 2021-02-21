@@ -25,9 +25,6 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
-    Library (Lexicon): a dict that adds dot notation access for first level keys
-        and includes 'borrow' and 'deposit' methods with altered getting and 
-        setting methods. 
     Quirk (ABC): base class for all amicus quirks (described above). Its 
         'quirks' class attribute stores all subclasses.
         
@@ -36,8 +33,8 @@ from __future__ import annotations
 import abc
 import collections.abc
 import dataclasses
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import more_itertools
 
@@ -976,129 +973,18 @@ class Catalog(Lexicon):
             if i not in more_itertools.always_iterable(key)}
         return self
 
-
-@dataclasses.dataclass
-class Library(Lexicon):
-    """Dictionary with optional first-level dot notation access.
-    
-    A Library inherits the differences between a Lexicon and an ordinary python
-    dict.
-
-    A Library differs from a Lexicon in 3 significant ways:
-        1) It adds on dot notation access for first level keys. Ordinary dict 
-            access methods are still available, inherited from Lexicon.
-        2) It has a 'borrow' method that accepts multiple keys and returns the 
-            first match.
-        3) It has a 'deposit' method which returns an error if the passed key
-            already exists in the stored dict.
-    
-    Args:
-        contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
-            dict.
-        default (Any): default value to return when the 'get' method is used.
-              
-    """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    default: Any = None
-    
-    """ Public Methods """
-
-    def borrow(self, name: Union[str, Sequence[str]]) -> Any:
-        """Returns a stored item.
-        
-        Args:
-            name (Union[str, Sequence[str]]): key(s) to accessing item in 
-                'contents'. If 'name' is a Sequence, the first match found is 
-                returned.
-            
-        Returns:
-            Any: stored item.
-            
-        """
-        match = self.default
-        for item in more_itertools.always_iterable(name):
-            try:
-                match = self.contents[item]
-                break
-            except KeyError:
-                pass
-        return match
-        
-    def deposit(self, name: str, item: Any) -> None:
-        """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
-        
-        Args:
-            name (str): key to use to store 'item'.
-            item (Any): item to store in 'contents'.
-            
-        Raises:
-            ValueError: if 'name' matches an existing key in 'contents'.
-            
-        """
-        if name in dir(self):
-            raise ValueError(f'{name} is already in {self.__class__.__name__}')
-        else:
-            self[name] = item
-        return self
-
-    """ Dunder Methods """
-    
-    def __getattr__(self, key: str) -> Any:
-        """Returns an item in 'contents' matching 'key'.
-
-        Args:
-            key (str): name of item in 'contents' to return.
-
-        Raises:
-            AttributeError: if 'key' doesn't match an item in 'contents'.
-
-        Returns:
-            Any: item stored in 'contents'.
-            
-        """
-        try:
-            return self[key]
-        except KeyError as key_error:
-            raise AttributeError(key_error)
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        """Stores 'value' in 'contents' at 'key'.
-
-        Args:
-            key (str): name of item to store in 'contents'.
-            value (Any): item to store in 'contents'.
-            
-        """
-        self[key] = value
-        return self
-
-    def __delattr__(self, key: str) -> None:
-        """Deletes item in 'contents' corresponding to 'key'
-
-        Args:
-            key (str): name of item in 'contents' to delete.
-
-        Raises:
-            AttributeError: if 'key' doesn't match an item in 'contents'.
-           
-        """
-        try:
-            del self[key]
-        except KeyError as key_error:
-            raise AttributeError(key_error)
-
        
 @dataclasses.dataclass
 class Quirk(abc.ABC):
     """Base class for amicus quirks (mixin-approximations).
     
     Args:
-        quirks (ClassVar[Library]): a library of Quirk subclasses.
+        quirks (ClassVar[Lexicon]): a dictionary of Quirk subclasses.
         
     Namespaces: __init_subclass__
     
     """
-    quirks: ClassVar[Library] = Library()
+    quirks: ClassVar[Lexicon] = Lexicon()
     
     """ Initialization Methods """
     

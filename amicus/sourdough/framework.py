@@ -6,6 +6,7 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 
 Contents:
+    Library (object):
     Keystone (Quirk, ABC):
     create_keystone (FunctionType):
     Validator (Quirk):
@@ -22,13 +23,43 @@ import abc
 import copy
 import dataclasses
 import inspect
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Tuple, Type, Union)
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Tuple, Type, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
 
 import amicus
+
+
+@dataclasses.dataclass
+class Library(object):
+    """A set of Keystone subclasses."""
+    
+    """ Public Methods """
+
+    def register(self, name: str, keystone: Keystone) -> None:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            keystone (Keystone): [description]
+
+        """
+        keystone.instances = amicus.types.Catalog()
+        keystone.subclasses = amicus.types.Catalog()
+        setattr(self, name, keystone)
+        return self
+
+    def remove(self, name: str) -> None:
+        """[summary]
+
+        Args:
+            name (str): [description]
+
+        """
+        delattr(self, name)
+        return self
 
 
 @dataclasses.dataclass
@@ -47,9 +78,9 @@ class Keystone(amicus.types.Quirk, abc.ABC):
     instance is a dataclass and '__post_init__' is not overridden).
     
     Args:
-        keystones (ClassVar[amicus.types.Library]): library that stores direct
-            subclasses (those with Keystone in their '__bases__' attribute) and 
-            allows runtime access and instancing of those stored subclasses.
+        keystones (ClassVar[Library]): library that stores direct subclasses 
+            (those with Keystone in their '__bases__' attribute) and allows 
+            runtime access and instancing of those stored subclasses.
     
     Attributes:
         subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
@@ -67,7 +98,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         keystones, subclasses, instances, select, instance, __init_subclass__
     
     """
-    keystones: ClassVar[amicus.types.Library] = amicus.types.Library()
+    keystones: ClassVar[Library] = Library()
     
     """ Initialization Methods """
     
@@ -78,11 +109,8 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         key = amicus.tools.snakify(cls.__name__)
         # Adds class to 'keystones' if it is a base class.
         if Keystone in cls.__bases__:
-            # Creates libraries on this class base for storing subclasses.
-            cls.subclasses = amicus.types.Catalog()
-            cls.instances = amicus.types.Catalog()
-            # Adds this class to 'keystones' using 'key'.
-            cls.keystones.register(name = key, item = cls)
+            # Registers a new Keystone.
+            cls.keystones.register(name = key, keystone = cls)
         # Adds concrete subclasses to 'library' using 'key'.
         if not abc.ABC in cls.__bases__:
             cls.subclasses[key] = cls
