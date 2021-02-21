@@ -43,7 +43,7 @@ class Settings(amicus.framework.Keystone, amicus.options.Configuration):
             datatypes (True) or left alone (False). If 'contents' was imported 
             from an .ini file, a False value will leave all values as strings. 
             Defaults to True.
-        defaults (Mapping[str, Mapping[str]]): any default options that should
+        standard (Mapping[str, Mapping[str]]): any default options that should
             be used when a user does not provide the corresponding options in 
             their configuration settings. Defaults to a dict with 'general', 
             'files', and 'amicus' sections listed.
@@ -71,7 +71,7 @@ class Settings(amicus.framework.Keystone, amicus.options.Configuration):
     contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
         dataclasses.field(default_factory = dict))
     infer_types: bool = True
-    defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+    standard: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = lambda: {
             'general': {
                 'verbose': False, 

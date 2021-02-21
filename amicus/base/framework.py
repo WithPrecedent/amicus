@@ -30,116 +30,38 @@ import amicus
 
 
 @dataclasses.dataclass
-class Library(amicus.types.Lexicon):
-    """Stores Keystone classes with first-level dot notation access.
+class Registry(amicus.types.Library):
+    """Stores Keystones with first-level dot notation access.
     
-    A Library inherits the differences between a Lexicon and an ordinary python
-    dict.
+    A Registry inherits the differences between a Library and Lexicon and an 
+    ordinary python dict.
 
-    A Library differs from a Lexicon in 5 significant ways:
-        1) It adds on dot access for first level keys. Ordinary dict access
-            methods are still available, inherited from Lexicon.
-        2) It has a 'borrow' method that accepts multiple keys and returns the 
-            first match.
-        3) It has a 'deposit' method which returns an error if the passed key
-            already exists in the stored dict.
-        4) It has a 'suffixes' property which returns simple plurals (adding an
+    A Registry differs from a Library in 2 significant ways:
+        1) It has a 'suffixes' property which returns simple plurals (adding an
             's') to each key in 'contents'.
-        5) It is designed to hold Keystone classes.
+        2) It is designed to hold Keystone classes.
     
     Args:
-        contents (Mapping[str, amicus.framework.Keystone]]): stored dictionary of
-            Keystone classes. Defaults to an empty dict.
+        contents (Mapping[str, Keystone]]): stored dictionary of Keystone 
+            subclasses. Defaults to an empty dict.
         default (Any): default value to return when the 'get' method is used.
               
     """
-    contents: Mapping[str, amicus.framework.Keystone] = dataclasses.field(
-        default_factory = dict)
+    contents: Mapping[str, Keystone] = dataclasses.field(default_factory = dict)
     default: Any = None
+
+    """ Properties """
     
-    """ Public Methods """
-
-    def borrow(self, name: Union[str, Sequence[str]]) -> amicus.framework.Keystone:
-        """Returns a stored subclass unchanged.
+    @property
+    def suffixes(self) -> Tuple[str]:
+        """Returns all Keystone names with an 's' added to the end.
         
-        Args:
-            name (str): key to accessing subclass in 'contents'.
-            
         Returns:
-            Type: stored class.
-            
+            Tuple[str]: all Keystone names with an 's' added in order to create
+                simple plurals.
+                
         """
-        match = self.default
-        for item in more_itertools.always_iterable(name):
-            try:
-                match = self.contents[item]
-                break
-            except KeyError:
-                pass
-        return match
-        
-    def deposit(self, name: str, item: amicus.framework.Keystone) -> None:
-        """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
-        
-        Args:
-            name (str): key to use to store 'item'.
-            item (amicus.framework.Keystone): item to store in 'contents'.
-            
-        Raises:
-            ValueError: if 'name' matches an existing key in 'contents'.
-            
-        """
-        if name in dir(self):
-            raise ValueError(f'{name} is already in {self.__class__.__name__}')
-        else:
-            self[name] = item
-        return self
-
-    """ Dunder Methods """
-    
-    def __getattr__(self, key: str) -> Any:
-        """Returns an item in 'contents' matching 'key'.
-
-        Args:
-            key (str): name of item in 'contents' to return.
-
-        Raises:
-            AttributeError: if 'key' doesn't match an item in 'contents'.
-
-        Returns:
-            Any: item stored in 'contents'.
-            
-        """
-        try:
-            return self[key]
-        except KeyError as key_error:
-            raise AttributeError(key_error)
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        """Stores 'value' in 'contents' at 'key'.
-
-        Args:
-            key (str): name of item to store in 'contents'.
-            value (Any): item to store in 'contents'.
-            
-        """
-        self[key] = value
-        return self
-
-    def __delattr__(self, key: str) -> None:
-        """Deletes item in 'contents' corresponding to 'key'
-
-        Args:
-            key (str): name of item in 'contents' to delete.
-
-        Raises:
-            AttributeError: if 'key' doesn't match an item in 'contents'.
-           
-        """
-        try:
-            del self[key]
-        except KeyError as key_error:
-            raise AttributeError(key_error)
+        return tuple(key + 's' for key in self.contents.keys())
 
 
 @dataclasses.dataclass
@@ -282,6 +204,83 @@ class Keystone(amicus.types.Quirk, abc.ABC):
                 setattr(instance, key, value)
             return instance
 
+
+
+@dataclasses.dataclass
+class Workshop(object):
+    """
+    """
+    bases: Library = Library()
+    quirks: Library = Quirk.quirks
+
+    """ Public Methods """
+    
+    def create_bases(self) -> None:
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        quirks = self._get_settings_quirks()
+        for key, value in self.manager.project.bases.items():
+            self.contents[key] = self.create_class(
+                name = key, 
+                base = value, 
+                quirks = quirks)
+        return self
+            
+    def create_class(self, name: str, base: Callable, 
+                     quirks: Sequence[sourdough.Quirk]) -> Callable:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            base (Callable): [description]
+            quirks (Sequence[sourdough.Quirk])
+
+        Returns:
+            Callable: [description]
+            
+        """
+        if quirks:
+            bases = quirks.append(base)
+            new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
+            # Recursively adds quirks to items in the 'registry' of 'base'.
+            if hasattr(base, 'registry'):
+                newregistry = {}
+                for key, value in base.registry.items():
+                    newregistry[key] = self.create_class(
+                        name = key,
+                        base = value,
+                        quirks = quirks)
+                new_base.registry = newregistry
+        else:
+            new_base = base
+        return new_base
+             
+    """ Private Methods """
+    
+    def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
+        """[summary]
+
+        Returns:
+            Sequence[sourdough.Quirk]: [description]
+            
+        """
+        settings_keys = {
+            'verbose': 'talker', 
+            'early_validation': 'validator', 
+            'conserve_memory': 'conserver'}
+        quirks = []
+        for key, value in settings_keys.items():
+            try:
+                if self.manager.project.settings['general'][key]:
+                    quirks.append(sourdough.Quirk.options[value])
+            except KeyError:
+                pass
+        return quirks
+
+ 
 
 @dataclasses.dataclass
 class Validator(amicus.types.Quirk):

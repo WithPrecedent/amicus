@@ -59,7 +59,7 @@ class Configuration(amicus.types.Lexicon):
             a file with settings. Defaults to en empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty dict.
-        defaults (Mapping[str, Mapping[str]]): any default options that should
+        standard (Mapping[str, Mapping[str]]): any default options that should
             be used when a user does not provide the corresponding options in 
             their configuration settings. Defaults to an empty dict.
         infer_types (bool): whether values in 'contents' are converted to other 
@@ -70,7 +70,7 @@ class Configuration(amicus.types.Lexicon):
     contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = dict)
     default: Any = dataclasses.field(default_factory = dict)
-    defaults: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+    standard: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = dict)
     infer_types: bool = True
 
@@ -88,7 +88,7 @@ class Configuration(amicus.types.Lexicon):
         if self.infer_types:
             self.contents = self._infer_types(contents = self.contents)
         # Adds default settings as backup settings to 'contents'.
-        self.contents = self._add_defaults(contents = self.contents)
+        self.contents = self._add_standard(contents = self.contents)
 
     """ Class Methods """
 
@@ -331,7 +331,7 @@ class Configuration(amicus.types.Lexicon):
                 new_contents[key] = amicus.tools.typify(value)
         return new_contents
 
-    def _add_defaults(self, 
+    def _add_standard(self, 
         contents: Mapping[str, Mapping[str, Any]]) -> (
             Mapping[str, Mapping[str, Any]]):
         """Creates a backup set of mappings for amicus settings lookup.
@@ -339,13 +339,13 @@ class Configuration(amicus.types.Lexicon):
 
         Args:
             contents (MutableMapping[Any, Mapping[Any, Any]]): a nested contents 
-                dict to add defaults to.
+                dict to add standard to.
 
         Returns:
-            Mapping[Any, Mapping[Any, Any]]: with stored defaults added.
+            Mapping[Any, Mapping[Any, Any]]: with stored standard added.
 
         """
-        new_contents = self.defaults
+        new_contents = self.standard
         new_contents.update(contents)
         return new_contents
 

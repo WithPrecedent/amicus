@@ -25,12 +25,12 @@ Contents:
     Catalog (Lexicon): wildcard-accepting dict which is primarily intended for 
         storing different options and strategies. It also returns lists of 
         matches if a list of keys is provided.
+    Library (Lexicon): a dict that adds dot notation access for first level keys
+        and includes 'borrow' and 'deposit' methods with altered getting and 
+        setting methods. 
     Quirk (ABC): base class for all amicus quirks (described above). Its 
         'quirks' class attribute stores all subclasses.
-    Library (Lexicon): a dict that adds dot notation access for first level keys
-        and includes a 'deposit' method which returns an error if the user 
-        passes a key that already exists in the stored dict.
-
+        
 """
 from __future__ import annotations
 import abc
@@ -806,10 +806,10 @@ class Catalog(Lexicon):
         1) It recognizes an 'all' key which will return a list of all values
             stored in a Catalog instance.
         2) It recognizes a 'default' key which will return all values matching
-            keys listed in the 'defaults' attribute. 'default' can also be set
+            keys listed in the 'standard' attribute. 'default' can also be set
             using the 'catalog['default'] = new_default' assignment. If 
-            'defaults' is not passed when the instance is initialized, the 
-            initial value of 'defaults' is 'all'.
+            'standard' is not passed when the instance is initialized, the 
+            initial value of 'standard' is 'all'.
         3) It recognizes a 'none' key which will return an empty list.
         4) It supports a list of keys being accessed with the matching values 
             returned. For example, 'catalog[['first_key', 'second_key']]' will 
@@ -819,14 +819,12 @@ class Catalog(Lexicon):
             value or a stored value in a list (if 'always_return_list' is
             True). The latter option is available to make iteration easier
             when the iterator assumes a single datatype will be returned.
-        6) It includes an 'instance' method which return instances or stored 
-            classes, respectively.
 
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
             dict.
         default (Any): default value to return when the 'get' method is used.
-        defaults (Sequence[Any]]): a list of keys in 'contents' which will be 
+        standard (Sequence[Any]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
             'default' will be set to all keys.
         always_return_list (bool): whether to return a list even when the key 
@@ -837,7 +835,7 @@ class Catalog(Lexicon):
     """
     contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
-    defaults: Sequence[Any] = dataclasses.field(default_factory = list)
+    standard: Sequence[Any] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
     
     """ Initialization Methods """
@@ -850,7 +848,7 @@ class Catalog(Lexicon):
         except AttributeError:
             pass   
         # Sets 'default' to all keys of 'contents', if not passed.
-        self.defaults = self.defaults or 'all'
+        self.standard = self.standard or 'all'
 
     """ Public Methods """
 
@@ -867,40 +865,17 @@ class Catalog(Lexicon):
             Catalog: with only key/value pairs without keys in 'subset'.
 
         """
-        if not isinstance(self.defaults, list):
-            new_defaults = self.defaults
+        if not isinstance(self.standard, list):
+            new_standard = self.standard
         else:
-            new_defaults = [i for i in self.defaults if i not in subset] 
+            new_standard = [i for i in self.standard if i not in subset] 
         return super().excludify(
             subset = subset, 
             default = self.default,
-            defaults = new_defaults,
+            standard = new_standard,
             always_return_list = self.always_return_list,
             **kwargs)
 
-    # def instance(self, 
-    #     key: Union[Any, Sequence[Any]], **kwargs) -> Union[Any, Sequence[Any]]:
-    #     """Returns instance(s) of (a) stored class(es).
-        
-    #     This method acts as a factory for instancing stored classes.
-        
-    #     Args:
-    #         key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
-    #         kwargs: arguments to pass to the selected item(s) when instanced.
-                    
-    #     Returns:
-    #         Union[Any, Sequence[Any]]: stored value(s).
-            
-    #     """
-    #     items = self[key]
-    #     if isinstance(items, Sequence) and not isinstance(items, str):
-    #         instances = []
-    #         for item in items:
-    #             instances.append(item(**kwargs))
-    #     else:
-    #         instances = items(**kwargs)
-    #     return instances
-                   
     def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
         """Returns a new instance with a subset of 'contents'.
 
@@ -914,14 +889,14 @@ class Catalog(Lexicon):
             Catalog: with only key/value pairs with keys in 'subset'.
 
         """
-        if not isinstance(self.defaults, list):
-            new_defaults = self.defaults
+        if not isinstance(self.standard, list):
+            new_standard = self.standard
         else:
-            new_defaults = [i for i in self.defaults if i in subset] 
+            new_standard = [i for i in self.standard if i in subset] 
         return super().subsetify(
             subset = subset, 
             default = self.default,
-            defaults = new_defaults,
+            standard = new_standard,
             always_return_list = self.always_return_list,
             **kwargs)
 
@@ -944,13 +919,13 @@ class Catalog(Lexicon):
         # Returns a list of all values if the 'all' key is sought.
         if key in ['all', ['all']]:
             return list(self.contents.values())
-        # Returns a list of values for keys listed in 'defaults' attribute.
-        elif key in ['default', ['default'], 'defaults', ['defaults']]:
+        # Returns a list of values for keys listed in 'standard' attribute.
+        elif key in ['default', 'defaults', 'standard']:
             try:
-                return self[self.defaults]
+                return self[self.standard]
             except KeyError:
                 return list(
-                    {k: self.contents[k] for k in self.defaults}.values())
+                    {k: self.contents[k] for k in self.standard}.values())
         # Returns an empty list if a null value is sought.
         elif key in ['none', ['none'], 'None', ['None']]:
             return []
@@ -978,8 +953,8 @@ class Catalog(Lexicon):
                 in 'contents'.
 
         """
-        if key in ['default', ['default'], 'defaults', ['defaults']]:
-            self.defaults = more_itertools.always_iterable(value)
+        if key in ['default', 'defaults', 'standard']:
+            self.standard = more_itertools.always_iterable(value)
         else:
             try:
                 self.contents[key] = value
@@ -1002,15 +977,19 @@ class Catalog(Lexicon):
 
 
 @dataclasses.dataclass
-class Library(amicus.types.Lexicon):
-    """Dictionary with first-level dot notation access.
+class Library(Lexicon):
+    """Dictionary with optional first-level dot notation access.
     
     A Library inherits the differences between a Lexicon and an ordinary python
     dict.
 
-    A Library differs from a Lexicon in 1 significant way:
-        1) It adds on dot access for first level keys. Ordinary dict access
-            methods are still available, inherited from Lexicon.
+    A Library differs from a Lexicon in 3 significant ways:
+        1) It adds on dot notation access for first level keys. Ordinary dict 
+            access methods are still available, inherited from Lexicon.
+        2) It has a 'borrow' method that accepts multiple keys and returns the 
+            first match.
+        3) It has a 'deposit' method which returns an error if the passed key
+            already exists in the stored dict.
     
     Args:
         contents (Mapping[str, Any]]): stored dictionary. Defaults to an empty 
@@ -1021,6 +1000,46 @@ class Library(amicus.types.Lexicon):
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
     
+    """ Public Methods """
+
+    def borrow(self, name: Union[str, Sequence[str]]) -> Any:
+        """Returns a stored item.
+        
+        Args:
+            name (Union[str, Sequence[str]]): key(s) to accessing item in 
+                'contents'. If 'name' is a Sequence, the first match found is 
+                returned.
+            
+        Returns:
+            Any: stored item.
+            
+        """
+        match = self.default
+        for item in more_itertools.always_iterable(name):
+            try:
+                match = self.contents[item]
+                break
+            except KeyError:
+                pass
+        return match
+        
+    def deposit(self, name: str, item: Any) -> None:
+        """Adds 'item' at 'name' to 'contents' if 'name' isn't in 'contents'.
+        
+        Args:
+            name (str): key to use to store 'item'.
+            item (Any): item to store in 'contents'.
+            
+        Raises:
+            ValueError: if 'name' matches an existing key in 'contents'.
+            
+        """
+        if name in dir(self):
+            raise ValueError(f'{name} is already in {self.__class__.__name__}')
+        else:
+            self[name] = item
+        return self
+
     """ Dunder Methods """
     
     def __getattr__(self, key: str) -> Any:
@@ -1072,10 +1091,13 @@ class Library(amicus.types.Lexicon):
 class Quirk(abc.ABC):
     """Base class for amicus quirks (mixin-approximations).
     
+    Args:
+        quirks (ClassVar[Library]): a library of Quirk subclasses.
+        
     Namespaces: __init_subclass__
     
     """
-    quirks: ClassVar[Catalog] = Catalog()
+    quirks: ClassVar[Library] = Library()
     
     """ Initialization Methods """
     
@@ -1086,4 +1108,5 @@ class Quirk(abc.ABC):
         if not abc.ABC in cls.__bases__:
             # Creates a snakecase key of the class name.
             key = amicus.tools.snakify(cls.__name__)
+            # Stores 'cls' in 'quirks'.
             cls.quirks[key] = cls
