@@ -32,7 +32,7 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Hybrid via amicus.base.types.Hybrid,
+    Instead of acccesing Hybrid via amicus.sourdough.types.Hybrid,
     you can just use: amicus.Hybrid
     
 They also operate on a lazy importing system. This means that modules are only
@@ -53,28 +53,30 @@ the lazy importation system used throughout amicus.
 
 """
 importables: Dict[str, str] = {
-    'base': 'base',
+    'sourdough': 'sourdough',
     'project': 'project',
     'utilities': 'utilities',
     'decorators': 'utilities.decorators',
     'memory': 'utilities.memory',
     'tools': 'utilities.tools',
-    'quirks': 'base.quirks',
-    'types': 'base.types',
-    'options': 'base.options',
-    'structures': 'base.structures',
-    'Proxy': 'base.types.Proxy',
-    'Bunch': 'base.types.Bunch',
-    'Progression': 'base.types.Progression',
-    'Hybrid': 'base.types.Hybrid',
-    'Lexicon': 'base.types.Lexicon',
-    'Catalog': 'base.types.Catalog',
-    'Configuration': 'base.options.Configuration',
-    'Clerk': 'base.options.Clerk',
-    'Validator': 'base.validation.Validator',
-    'Converter': 'base.validation.Converter',
-    'Structure': 'base.structures.Structure',
-    'Graph': 'base.structures.Graph',
+    'quirks': 'sourdough.quirks',
+    'types': 'sourdough.types',
+    'options': 'sourdough.options',
+    'structures': 'sourdough.structures',
+    'Proxy': 'sourdough.types.Proxy',
+    'Bunch': 'sourdough.types.Bunch',
+    'Progression': 'sourdough.types.Progression',
+    'Hybrid': 'sourdough.types.Hybrid',
+    'Lexicon': 'sourdough.types.Lexicon',
+    'Catalog': 'sourdough.types.Catalog',
+    'Configuration': 'sourdough.options.Configuration',
+    'Clerk': 'sourdough.options.Clerk',
+    'Keystone': 'sourdough.framework.Keystone',
+    'create_keystone': 'sourdough.framework.create_keystone',
+    'Validator': 'sourdough.framework.Validator',
+    'Converter': 'sourdough.framework.Converter',
+    'Structure': 'sourdough.structures.Structure',
+    'Graph': 'sourdough.structures.Graph',
     'Project': 'project.interface.Project'}
 
 def __getattr__(name: str) -> Any:
