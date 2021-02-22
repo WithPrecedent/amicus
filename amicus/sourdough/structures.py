@@ -10,7 +10,7 @@ unweighted and directed. However, the architecture of Structure and Node can
 support weighted edges and undirected composite structures as well.
 
 Contents:
-    Node (Element, Proxy):
+    Node (Element, Proxy, collections.abc.Hashable):
     SimpleNode (Node):
     SmartNode (Node):
     Structure (Keystone, ABC): base class for all amicus composite structures.
@@ -64,7 +64,7 @@ class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
     """ Initialization Methods """
     
     def __init_subclass__(cls, **kwargs):
-        """Forces subclasses to use the same hash methods.
+        """Forces subclasses to use the same hash methods as Node.
         
         This is necessary because dataclasses do not automatically inherit the
         hash and equivalance methods from their super classes.

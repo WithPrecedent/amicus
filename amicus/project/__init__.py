@@ -22,10 +22,10 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import amicus
 
-from .base import *
+from .core import *
 from .converters import *
 from .components import *
-from .stages import *
+from .interface import *
 
 """ 
 The keys of 'importables' are the attribute names of how users should access
@@ -33,18 +33,18 @@ the modules and other items listed in values. 'importables' is necessary for
 the lazy importation system used throughout amicus.
 """
 importables: Dict[str, str] = {
-    'Configuration': 'base.Configuration',
-    'Filer': 'base.Filer',
-    'Workflow': 'base.Workflow',
-    'Component': 'base.Component',
-    'Worker': 'base.Worker',
-    'Creator': 'base.Creator',
-    'Results': 'base.Results',
+    'Configuration': 'core.Configuration',
+    'Filer': 'core.Filer',
+    'Workflow': 'core.Workflow',
+    'Component': 'core.Component',
+    'Worker': 'core.Worker',
+    'Creator': 'core.Creator',
+    'Results': 'core.Results',
     'Step': 'components.Step',
     'Technique': 'components.Technique',
     'interface': 'interface',
     'components': 'components',
-    'base': 'base',
+    'core': 'core',
     'workbench': 'workbench'}
 
 

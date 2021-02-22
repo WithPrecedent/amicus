@@ -17,7 +17,6 @@ Contents:
 """
 from __future__ import annotations
 import abc
-import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -226,7 +225,7 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
+class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
     """Keystone class for parts of an  Workflow.
 
     Args:
@@ -268,19 +267,6 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], Parameters] = Parameters()
     parallel: ClassVar[bool] = False
-
-    """ Properties """
-    
-    @property
-    def suffixes(self) -> Tuple[str]:
-        """Returns all Component names with an 's' added to the end.
-        
-        Returns:
-            Tuple[str]: all Component names with an 's' added in order to create
-                simple plurals.
-                
-        """
-        return tuple(key + 's' for key in self.subclasses.keys())
     
     """ Public Class Methods """
 
@@ -339,11 +325,10 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
         if item is None:
             raise KeyError(f'No matching item for {str(name)} was found') 
         elif inspect.isclass(item):
-            return cls(name = name, **kwargs)
+            return cls(name = key, **kwargs)
         else:
             instance = copy.deepcopy(item)
-            for key, value in kwargs.items():
-                setattr(instance, key, value)
+            instance._add_attributes(attributes = kwargs)
             return instance
   
     @classmethod
@@ -368,7 +353,9 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
             names = [name, outline.designs[name]]
         else:
             names = name
-        return cls.from_name(name = names, **parameters)
+        instance = cls.from_name(name = names, **parameters)
+        instance._add_attributes(attributes = outline.attributes[name])
+        return instance
 
     """ Public Methods """
     
@@ -408,7 +395,7 @@ class Component(amicus.framework.Keystone, amicus.quirks.Element, abc.ABC):
         else:
             parameters = kwargs
         if self.contents not in [None, 'None', 'none']:
-            project = self.contents.implement(project = project, **parameters)
+            project = self.contents.execute(project = project, **parameters)
         return project
 
     """ Private Methods """
@@ -528,7 +515,7 @@ class Outline(Stage):
                 name = section, 
                 settings = settings,
                 outline = outline)
-        outline = cls._add_runtime_parameters(
+        outline = cls._get_runtime_parameters(
             outline = outline, 
             settings = settings)
         return outline 
@@ -634,7 +621,7 @@ class Outline(Stage):
         return structure  
 
     @classmethod
-    def _add_runtime_parameters(cls, 
+    def _get_runtime_parameters(cls, 
         outline: Outline, 
         settings: Settings) -> Outline:
         """[summary]

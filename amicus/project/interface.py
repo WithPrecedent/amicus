@@ -38,9 +38,8 @@ LOGGER.addHandler(file_handler)
 
 @dataclasses.dataclass
 class Project(
-    core.Keystone, 
-    amicus.quirks.Validator, 
-    amicus.types.Lexicon,
+    amicus.framework.Keystone, 
+    amicus.framework.Validator, 
     collections.abc.Iterator):
     """Directs construction and execution of an amicus project.
     
@@ -90,9 +89,9 @@ class Project(
             dot-accessible dictionary of base classes. Each base class has 
             'subclasses' and 'instances' class attributes which contain catalogs
             of subclasses and instances of those keystones classes. This 
-            attribute is inherited from 'core.Keystone'. Changing this attribute 
-            will entirely replace the existing links between this instance and 
-            all other base classes.
+            attribute is inherited from Keystone. Changing this attribute will 
+            entirely replace the existing links between this instance and all 
+            other base classes.
         
     """
     name: str = None
