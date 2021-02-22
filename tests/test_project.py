@@ -76,12 +76,14 @@ class Dynamite(amicus.project.Technique):
     
 
 def test_project():
-    project = amicus.Project(
+    project = amicus.Project.create(
         name = 'cool_project',
         settings = pathlib.Path('tests') / 'project_settings.py',
         automatic = True)
     # Tests base libraries.
-    assert 'parser' in amicus.project.Component.library
+    assert 'parser' in amicus.project.Component.subclasses
+    dynamite = Dynamite()
+    assert 'annihilate' in amicus.project.Component.instances
     
     # Tests outline construction.
     assert project.outline.runtime['divide'] == {'replace_strings': True}
@@ -93,12 +95,12 @@ def test_project():
     assert project.outline.attributes['parser'] == {'random_thing': True}
     
     # Tests workflow construction.
+    print('test project workflow', project.workflow.contents)
     assert list(project.workflow.contents.keys()) == [
         'cool_project', 
         'reviewer',
         'parser',
         'munger']
-    
     return
 
 

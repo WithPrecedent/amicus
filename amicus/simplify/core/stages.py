@@ -121,7 +121,7 @@ class Outline(base.Stage):
         outline.designs[name] = design
         outline.initialization[name] = {}
         outline.attributes[name] = {}
-        component = cls.keystones.component.library.borrow(names = [name, design])
+        component = cls.keystones.component.library.select(names = [name, design])
         parameters = tuple(i for i in list(component.__annotations__.keys()) 
                            if i not in ['name', 'contents'])
         for key, value in section.items():
@@ -341,7 +341,7 @@ class Workflow(base.Stage, amicus.Graph):
         """
         workflow.append(node = name)
         design = outline.designs[name]
-        component = cls.keystones.component.library.borrow(names = [name, design])
+        component = cls.keystones.component.library.select(names = [name, design])
         instance = component.from_outline(name = name, outline = outline)
         workflow.components[name] = instance
         return workflow

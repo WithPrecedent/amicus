@@ -1,4 +1,4 @@
-settings = {
+configuration = {
     'general': {
         'verbose': True,
         'seed': 43,

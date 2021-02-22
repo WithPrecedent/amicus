@@ -33,6 +33,24 @@ import amicus
 
 
 @dataclasses.dataclass
+class Registry(amicus.types.Catalog):
+    """A Catalog of Keystone subclasses."""
+
+    """ Properties """
+    
+    @property
+    def suffixes(self) -> Tuple[str]:
+        """Returns all subclass names with an 's' added to the end.
+        
+        Returns:
+            Tuple[str]: all subclass names with an 's' added in order to create
+                simple plurals.
+                
+        """
+        return tuple(key + 's' for key in self.contents.keys())
+
+
+@dataclasses.dataclass
 class Library(object):
     """A set of Keystone subclasses."""
     
@@ -47,7 +65,7 @@ class Library(object):
 
         """
         keystone.instances = amicus.types.Catalog()
-        keystone.subclasses = amicus.types.Catalog()
+        keystone.subclasses = Registry()
         setattr(self, name, keystone)
         return self
 
@@ -128,20 +146,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             key = amicus.tools.snakify(self.__class__.__name__)
         self.instances[key] = self
 
-    """ Properties """
-    
-    @property
-    def suffixes(self) -> Tuple[str]:
-        """Returns all subclass names with an 's' added to the end.
-        
-        Returns:
-            Tuple[str]: all subclass names with an 's' added in order to create
-                simple plurals.
-                
-        """
-        return tuple(key + 's' for key in self.subclasses.keys())
-
-    """ Public Class Methods """
+    """ Class Methods """
     
     @classmethod
     def select(cls, name: Union[str, Sequence[str]]) -> Type[Keystone]:
@@ -295,9 +300,7 @@ class Validator(amicus.types.Quirk):
                 kwargs = {name: getattr(self, name)}
                 validated = getattr(self, f'_validate_{name}')(**kwargs)
             else:
-                converter = self._initialize_converter(
-                    name = name, 
-                    converter = name)
+                converter = self._initialize_converter(name = name)
                 try:
                     validated = converter.validate(
                         item = getattr(self, name),
@@ -331,8 +334,7 @@ class Validator(amicus.types.Quirk):
 
     """ Private Methods """
     
-    def _initialize_converter(self, name: str,
-            converter: Union[str, Converter, Type[Converter]]) -> Converter:
+    def _initialize_converter(self, name: str) -> Converter:
         """[summary]
 
         Args:
@@ -341,16 +343,12 @@ class Validator(amicus.types.Quirk):
         Returns:
             Converter: [description]
         """
-        if isinstance(converter, str):
-            try:
-                converter = self.converters[name]
-            except KeyError:
-                raise KeyError(
-                    f'No local or stored type validator exists for {name}')
-        if not isinstance(converter, Converter):
-            converter = converter()
-            self.converters[name] = converter  
-        return converter              
+        try:
+            converter = self.converters[name]
+        except KeyError:
+            raise KeyError(
+                f'No local or stored type validator exists for {name}')
+        return converter()             
 
 
 @dataclasses.dataclass
@@ -415,7 +413,7 @@ class Converter(abc.ABC):
             elif (isinstance(item, str) 
                     or isinstance(item, List)
                     or isinstance(item, Tuple)):
-                validated = base.library.borrow(names = item)(**kwargs)
+                validated = base.library.select(names = item)(**kwargs)
             elif isinstance(item, self.alternatives) and self.alternatives:
                 validated = base(item, **kwargs)
             else:

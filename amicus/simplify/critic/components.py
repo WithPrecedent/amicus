@@ -387,8 +387,6 @@ class ShapExplain(Explainer):
         return algorithm.load('algorithm')
 
     def _apply_to_chapter(self, chapter: 'Chapter') -> 'Chapter':
-        print('test algo', self.algorithm)
-        print('test model', self.model.algorithm)
         self.algorithm = self.algorithm(
             model = self.model.algorithm,
             data = getattr(chapter.data, '_'.join(

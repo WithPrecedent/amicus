@@ -62,6 +62,7 @@ importables: Dict[str, str] = {
     'quirks': 'sourdough.quirks',
     'types': 'sourdough.types',
     'options': 'sourdough.options',
+    'framework': 'sourdough.framework',
     'structures': 'sourdough.structures',
     'Proxy': 'sourdough.types.Proxy',
     'Bunch': 'sourdough.types.Bunch',

@@ -189,10 +189,15 @@ class Needy(amicus.types.Quirk):
             Needy: instance of a Needy subclass.
             
         """
+        print('test create', cls.__name__, kwargs.keys())
         needs = list(more_itertools.always_iterable(cls.needs))
-        method = getattr(cls, f'from_{needs[0]}')
+        if needs[0] in ['self']:
+            suffix = tuple(kwargs.keys())[0]
+        else:
+            suffix = needs[0]
+        method = getattr(cls, f'from_{suffix}')
         for need in needs:
-            if need not in kwargs:
+            if need not in kwargs and need not in ['self']:
                 raise ValueError(
                     f'The create method must include a {need} argument')
         return method(**kwargs)      
@@ -217,7 +222,8 @@ class Needy(amicus.types.Quirk):
         kwargs = {}
         for need in more_itertools.always_iterable(cls.needs):
             if need in ['self']:
-                kwargs[instance.__class__.__name__] = instance
+                key = amicus.tools.snakify(instance.__class__.__name__)
+                kwargs[key] = instance
             else:
                 try:
                     kwargs[need] = getattr(instance, need)

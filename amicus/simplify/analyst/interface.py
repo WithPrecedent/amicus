@@ -310,7 +310,6 @@ class Report(amicus.base.SimpleSummary):
 
 #     def __post_init__(self) -> None:
 #         """Initializes class instance attributes."""
-#         print('test idea in analyst', self.idea)
 #         self = self.idea.apply(instance = self)
 #         # Creates 'Finisher' instance to finalize 'Technique' instances.
 #         self.finisher = AnalystFinisher(worker = self.worker)

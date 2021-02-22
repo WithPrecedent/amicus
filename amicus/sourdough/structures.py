@@ -515,8 +515,10 @@ class Graph(amicus.types.Lexicon, Structure):
                 and isinstance(kwargs['matrix'], List)
                 and all(isinstance(i, List) for i in kwargs['matrix'])):
             return cls.from_matrix(**kwargs)
-        raise TypeError(
-            'create requires an adjacency list, adjacency matrix, or edge list')
+        else:
+            return cls()
+        # raise TypeError(
+        #     'create requires an adjacency list, adjacency matrix, or edge list')
            
     @classmethod
     def from_adjacency(cls, adjacency: Dict[Hashable, List[Hashable]]) -> Graph:

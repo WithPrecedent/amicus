@@ -242,7 +242,7 @@ class Worker(SimpleProcess):
         """        
         worker = super().from_outline(name = name, outline = outline, **kwargs)
         if hasattr(worker, 'workflow'):
-            worker.workflow = cls.keystones.stage.library.borrow(
+            worker.workflow = cls.keystones.stage.library.select(
                 names = 'workflow')()
             if worker.parallel:
                 method = cls._create_parallel
@@ -290,7 +290,6 @@ class Worker(SimpleProcess):
         Returns:
         
         """
-        print('test serial', worker.name)
         name = worker.name
         components = cls._depth_first(name = name, outline = outline)
         collapsed = list(more_itertools.collapse(components))

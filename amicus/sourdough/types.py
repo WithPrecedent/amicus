@@ -117,9 +117,12 @@ class Proxy(collections.abc.Container):
 
         """
         try:
-            return object.__getattr___(self.contents, attribute)
+            return object.__getattribute___(
+                object.__getattribute___(self, 'contents'), attribute)
         except AttributeError:
-            raise AttributeError(f'{attribute} is not in {self.__name__}') 
+            raise AttributeError(
+                f'{attribute} is not in '
+                f'{object.__getattribute___(self, "__name__")}') 
 
     def __setattr__(self, attribute: str, value: Any):
         """Sets 'attribute' to 'value'.
@@ -133,11 +136,11 @@ class Proxy(collections.abc.Container):
             value (Any): value to store in 'attribute'.
 
         """
-        if hasattr(self, attribute):
+        if hasattr(self, attribute) or self.contents is None:
             object.__setattr__(self, attribute, value)
         else:
             object.__setattr__(self.contents, attribute, value)
-
+            
     def __delattr__(self, attribute: str):
         """Deletes 'attribute'.
         

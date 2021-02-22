@@ -289,9 +289,9 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
         """        
         if 'name' in kwargs:
             if 'outline' in kwargs:
-                return cls.from_outline(kwargs)
+                return cls.from_outline(**kwargs)
             else:
-                return cls.from_name(kwargs)
+                return cls.from_name(**kwargs)
         else:
             raise ValueError('create method requires a name keyword parameter')
             
@@ -311,7 +311,7 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
         Returns:
             Component: [description]
             
-        """        
+        """       
         for key in more_itertools.always_iterable(name):
             for library in ['instances', 'subclasses']:
                 item = None
@@ -498,7 +498,9 @@ class Outline(Stage):
         Returns:
             Outline: [description]
             
-        """   
+        """  
+        structure = cls._get_structure(name = name, settings = settings) 
+        outline = cls(name = name, structure = structure)  
         skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
         component_keys = [k for k in settings.keys() if k not in skips]
         if name is None:
@@ -507,89 +509,18 @@ class Outline(Stage):
             except IndexError:
                 raise ValueError(
                     'No sections in settings indicate how to construct a ' 
-                    'project outline')
-        structure = cls._get_structure(name = name, settings = settings) 
-        outline = cls(name = name, structure = structure)      
+                    'project outline')   
         for section in component_keys:
-            outline = cls._parse_section(
+            outline = outline._parse_section(
                 name = section, 
                 settings = settings,
                 outline = outline)
-        outline = cls._get_runtime_parameters(
+        outline = outline._get_runtime_parameters(
             outline = outline, 
             settings = settings)
         return outline 
     
-    """ Private Class Methods """
-    
-    @classmethod
-    def _parse_section(cls, 
-        name: str, 
-        settings: Settings, 
-        outline: Outline) -> Outline:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (base.Settings): [description]
-            outline (Outline): [description]
-
-        Returns:
-            Outline: [description]
-        """        
-        section = settings[name]
-        design = cls._get_design(name = name, settings = settings)
-        outline.designs[name] = design
-        outline.initialization[name] = {}
-        outline.attributes[name] = {}
-        component = cls.keystones.component.create(name = [name, design])
-        parameters = tuple(
-            i for i in list(component.__annotations__.keys()) 
-            if i not in ['name', 'contents'])
-        for key, value in section.items():
-            suffix = key.split('_')[-1]
-            prefix = key[:-len(suffix) - 1]
-            if suffix in ['design', 'workflow']:
-                pass
-            elif suffix in cls.keystones.component.suffixes:
-                outline.designs.update(dict.fromkeys(value, suffix[:-1]))
-                outline.components[prefix] = value 
-            elif suffix in parameters:
-                outline.initialization[name][suffix] = value 
-            elif prefix in [name]:
-                outline.attributes[name][suffix] = value
-            else:
-                outline.attributes[name][key] = value
-        return outline   
-
-    @classmethod
-    def _get_design(cls, name: str, settings: Settings) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (base.Settings):
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            str: [description]
-            
-        """
-        try:
-            design = settings[name][f'{name}_design']
-        except KeyError:
-            try:
-                design = settings[name][f'design']
-            except KeyError:
-                try:
-                    design = settings['amicus']['default_design']
-                except KeyError:
-                    raise KeyError(f'To designate a design, a key in settings '
-                                   f'must either be named "design" or '
-                                   f'"{name}_design"')
-        return design    
+    """ Private Methods """
 
     @classmethod
     def _get_structure(cls, name: str, settings: Settings) -> str:
@@ -619,9 +550,75 @@ class Outline(Stage):
                                    f' in settings must either be named '
                                    f'"workflow" or "{name}_workflow"')
         return structure  
+  
+    def _parse_section(self, 
+        name: str, 
+        settings: Settings, 
+        outline: Outline) -> Outline:
+        """[summary]
 
-    @classmethod
-    def _get_runtime_parameters(cls, 
+        Args:
+            name (str): [description]
+            settings (base.Settings): [description]
+            outline (Outline): [description]
+
+        Returns:
+            Outline: [description]
+        """        
+        section = settings[name]
+        design = self._get_design(name = name, settings = settings)
+        outline.designs[name] = design
+        outline.initialization[name] = {}
+        outline.attributes[name] = {}
+        component = self.keystones.component.create(name = [name, design])
+        parameters = tuple(
+            i for i in list(component.__annotations__.keys()) 
+            if i not in ['name', 'contents'])
+        for key, value in section.items():
+            suffix = key.split('_')[-1]
+            prefix = key[:-len(suffix) - 1]
+            if suffix in ['design', 'workflow']:
+                pass
+            elif suffix in self.keystones.component.subclasses.suffixes:
+                outline.designs.update(dict.fromkeys(value, suffix[:-1]))
+                outline.components[prefix] = value 
+            elif suffix in parameters:
+                outline.initialization[name][suffix] = value 
+            elif prefix in [name]:
+                outline.attributes[name][suffix] = value
+            else:
+                outline.attributes[name][key] = value
+        return outline   
+
+    def _get_design(self, name: str, settings: Settings) -> str:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            settings (base.Settings):
+
+        Raises:
+            KeyError: [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        try:
+            design = settings[name][f'{name}_design']
+        except KeyError:
+            try:
+                design = settings[name][f'design']
+            except KeyError:
+                try:
+                    design = settings['amicus']['default_design']
+                except KeyError:
+                    raise KeyError(f'To designate a design, a key in settings '
+                                   f'must either be named "design" or '
+                                   f'"{name}_design"')
+        return design    
+
+    def _get_runtime_parameters(self, 
         outline: Outline, 
         settings: Settings) -> Outline:
         """[summary]
@@ -647,7 +644,7 @@ class Outline(Stage):
        
 
 @dataclasses.dataclass
-class Workflow(amicus.structures.Graph, Stage):
+class Workflow(Stage, amicus.structures.Graph):
     """Stores lightweight workflow and corresponding components.
     
     Args:
@@ -661,7 +658,11 @@ class Workflow(amicus.structures.Graph, Stage):
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
             another instance for some method within a subclass. Defaults to 
             a list with 'outline' and 'name'.
-                   
+    
+    ToDo:
+        Move current methods to a Pipeline type Workflow and make
+            a true Graph Workflow here.
+                     
     """
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
@@ -683,11 +684,9 @@ class Workflow(amicus.structures.Graph, Stage):
             
         """        
         workflow = cls()
-        workflow = cls.add_component(
-            name = name,
-            outline = outline,
-            workflow = workflow)
+        print('test workflow creation', name)
         for component in outline.components[name]:
+            print('test workflow subcomponents', component)
             workflow = cls.add_component(
                 name = component,
                 outline = outline,
@@ -711,9 +710,18 @@ class Workflow(amicus.structures.Graph, Stage):
             
         """
         workflow.append(node = name)
-        workflow.components[name] = cls.keystones.component.from_outline(
+        component = cls.keystones.component.from_outline(
             name = name, 
             outline = outline)
+        workflow.components[name] = component
+        instance = component()
+        if hasattr(component, 'workflow'):        
+            for subcomponent in outline.components[name]:
+                print('test workflow subcomponents', component)
+                workflow = cls.add_component(
+                    name = component,
+                    outline = outline,
+                    workflow = component.workflow)
         return workflow
                               
     """ Public Methods """
@@ -737,141 +745,7 @@ class Workflow(amicus.structures.Graph, Stage):
             self.components.update(workflow.components)
         super().combine(workflow = workflow)
         return self
-   
-    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """[summary]
-
-        Args:
-            project (amicus.Project): [description]
-
-        Returns:
-            amicus.Project: [description]
-            
-        """
-        if project.parallelize:
-            multiprocessing.set_start_method('spawn')
-        for root in self.roots:
-            result = Result(name = f'path_1')
-            result.path.append(root)
-            project = self.implement(
-                node = root,
-                project = project,
-                **kwargs)
-        return project
-    
-    def implement(self, 
-        node: str, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """[summary]
-
-        Args:
-            node (str):
-            project (amicus.Project): [description]
-
-        Returns:
-            amicus.Project: [description]
-            
-        """      
-        component = self.components[node]
-        project = component.execute(project = project, **kwargs)
-        subcomponents = self.contents[node]
-        if len(subcomponents) > 1:
-            if project.parallelize:
-                project = self._implement_parallel(
-                    component = component,
-                    project = project, 
-                    **kwargs)
-        elif len(subcomponents) == 1:
-            project = self.        
-
-    """ Private Methods """
-   
-    def _implement_in_parallel(self, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """Applies 'implementation' to 'project' using multiple cores.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        if project.parallelize:
-            with multiprocessing.Pool() as pool:
-                project = pool.starmap(self._implement_in_serial, project, **kwargs)
-        return project 
-
-    def _implement_in_serial(self, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """Applies 'implementation' to 'project' using multiple cores.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        for path in self.workflow.permutations:
-            project = self._implement_path(project = project, path = path, **kwargs)
-        return project
-    
-    def _implement_path(self, data: Any, path: List[str], **kwargs) -> Any:  
-        for node in path:
-            component = self.workflow.components[node]
-            data = component.execute(data = data, **kwargs)
-        return data
-
-           
-                 
-        # for path in iter(self):
-        #     project = self.execute_path(project = project, path = path, **kwargs)  
-        # return project
-
-    # def execute_path(self, 
-    #     project: amicus.Project, 
-    #     path: Sequence[str], 
-    #     **kwargs) -> amicus.Project:
-    #     """[summary]
-
-    #     Args:
-    #         project (amicus.Project): [description]
-    #         path (Sequence[str]): [description]
-
-    #     Returns:
-    #         amicus.Project: [description]
-            
-    #     """        
-    #     for node in more_itertools.always_iterable(path):
-    #         component = self.components[node]
-    #         project = component.execute(project = project, **kwargs)    
-    #     return project
-
-    # """ Public Methods """
-    
-    # def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
-    #     """[summary]
-
-    #     Args:
-    #         project (amicus.Project): [description]
-
-    #     Returns:
-    #         amicus.Project: [description]
-            
-    #     """     
-    #     if hasattr(project, 'parallelize') and project.parallelize:
-    #         method = self._implement_in_parallel
-    #     else:
-    #         method = self._implement_in_serial
-    #     return method(project = project, **kwargs)
-
-
+ 
 @dataclasses.dataclass
 class Result(amicus.types.Lexicon):            
     
@@ -915,14 +789,7 @@ class Summary(amicus.framework.Library, Stage):
             
         """
         summary = cls()
-        project._result = amicus.types.Lexicon()
-        for i, path in enumerate(project.workflow):
-            project = project.workflow.execute_path(
-                project = project,
-                path = path,
-                **kwargs)
-            summary[f'{cls.prefix}_{str(i)}'] = project._result
-        delattr(project, '_result')
+        summary.execute(project = project, **kwargs)
         return summary
 
     """ Public Methods """
@@ -939,13 +806,17 @@ class Summary(amicus.framework.Library, Stage):
         """
         if project.parallelize:
             multiprocessing.set_start_method('spawn')
-        for root in project.workflow.roots:
-            result = Result(name = f'{self.prefix}_1')
-            result.path.append(root)
-            project = self.implement(
-                node = root,
-                project = project,
-                **kwargs)
+        for i, path in enumerate(project.workflow.paths):
+            name = f'{self.prefix}_{i + 1}'
+            project._result = Result(name = name, path = path)
+            for node in path:
+                try:
+                    component = project.workflow.components[node]
+                    project = component.execute(project = project, **kwargs)
+                except KeyError:
+                    pass
+            self.contents[name] = project._result    
+        del project._result    
         return project
     
     def implement(self, 
@@ -972,11 +843,16 @@ class Summary(amicus.framework.Library, Stage):
                     project = project, 
                     **kwargs)
         elif len(subcomponents) == 1:
-            project = self.        
+            project = self._implement_in_serial(
+                component = component,
+                project = project,
+                **kwargs)
+        return project      
 
     """ Private Methods """
    
     def _implement_in_parallel(self, 
+        component: Component,
         project: amicus.Project, 
         **kwargs) -> amicus.Project:
         """Applies 'implementation' to 'project' using multiple cores.
@@ -991,10 +867,15 @@ class Summary(amicus.framework.Library, Stage):
         """
         if project.parallelize:
             with multiprocessing.Pool() as pool:
-                project = pool.starmap(self._implement_in_serial, project, **kwargs)
+                project = pool.starmap(
+                    self._implement_in_serial, 
+                    component, 
+                    project, 
+                    **kwargs)
         return project 
 
     def _implement_in_serial(self, 
+        component: Component,
         project: amicus.Project, 
         **kwargs) -> amicus.Project:
         """Applies 'implementation' to 'project' using multiple cores.
@@ -1007,14 +888,4 @@ class Summary(amicus.framework.Library, Stage):
             Project: with possible alterations made.       
         
         """
-        for path in self.workflow.permutations:
-            project = self._implement_path(project = project, path = path, **kwargs)
-        return project
-    
-    def _implement_path(self, data: Any, path: List[str], **kwargs) -> Any:  
-        for node in path:
-            component = self.workflow.components[node]
-            data = component.execute(data = data, **kwargs)
-        return data
-
-           
+        return component.execute(project = project, **kwargs)

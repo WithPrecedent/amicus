@@ -38,8 +38,9 @@ LOGGER.addHandler(file_handler)
 
 @dataclasses.dataclass
 class Project(
-    amicus.framework.Keystone, 
+    amicus.quirks.Needy,
     amicus.framework.Validator, 
+    amicus.framework.Keystone, 
     collections.abc.Iterator):
     """Directs construction and execution of an amicus project.
     
@@ -108,12 +109,12 @@ class Project(
     summary: Union[Type[core.Stage], str] = core.Summary
     automatic: bool = True
     data: Any = None
+    needs: ClassVar[Sequence[str]] = ['settings']
     stages: ClassVar[Union[Type[core.Stage], str]] = [
         'outline', 
         'workflow', 
         'summary']
     validations: ClassVar[Sequence[str]] = [
-        'settings', 
         'name', 
         'identification', 
         'filer']
@@ -130,6 +131,7 @@ class Project(
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods.
+        self.settings = self._validate_settings(settings = self.settings)
         self.validate(validations = self.validations)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
@@ -139,16 +141,29 @@ class Project(
         if self.automatic:
             self.execute()
 
-    """ Public Methods """
+    """ Class Methods """
 
+    @classmethod
+    def from_settings(cls, settings: core.Settings, **kwargs) -> Project:
+        return cls(settings = settings, **kwargs)
+        
+    """ Public Methods """
+    
+    def advance(self) -> Any:
+        """Returns next product created in iterating a Director instance."""
+        return self.__next__()
+    
     def execute(self ) -> None:
-        """Iterates through all stages"""
-        for stage in self:
-            next(stage)
-        return self 
+        """Iterates through all stages."""
+        for stage in self.stages:
+            self.advance()
+        return self
                         
     """ Private Methods """
 
+    def _validate_settings(self, settings: Any) -> core.Settings:
+        return self.keystones.settings.create(file_path = settings)
+    
     def _validate_name(self, name: str) -> str:
         """Creates 'name' if one doesn't exist.
         
@@ -208,7 +223,7 @@ class Project(
             current = self.stages[self.index]
             if isinstance(current, str):
                 name = amicus.tools.snakify(current)
-                stage = base.borrow(name = name)
+                stage = base.select(name = name)
             elif inspect.isclass(current) and issubclass(current, base):
                 stage = current
                 name = amicus.tools.snakify(stage.__name__)
@@ -219,6 +234,7 @@ class Project(
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Creating {name}')
             kwargs = stage.needify(instance = self)
+            print('test name current', name, current, kwargs.keys())
             setattr(self, name, stage.create(**kwargs))
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Completed {name}')
