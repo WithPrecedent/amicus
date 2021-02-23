@@ -97,7 +97,6 @@ def test_project():
     # Tests workflow construction.
     print('test project workflow', project.workflow.contents)
     assert list(project.workflow.contents.keys()) == [
-        'cool_project', 
         'reviewer',
         'parser',
         'munger']

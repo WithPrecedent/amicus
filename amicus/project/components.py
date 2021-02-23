@@ -160,11 +160,9 @@ class Worker(core.Component):
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
     
-    """ Class Methods """
+    """ Private Methods """
 
-    @classmethod
-    def from_outline(cls, name: str,
-                     outline: amicus.project.Outline, **kwargs) -> Worker:
+    def _add_extras(self, outline: amicus.project.Outline) -> None:
         """[summary]
 
         Args:
@@ -175,45 +173,11 @@ class Worker(core.Component):
             Worker: [description]
             
         """        
-        worker = super().from_outline(name = name, outline = outline, **kwargs)
-        if hasattr(worker, 'workflow'):
-            worker.workflow = cls.keystones.stage.library.select(
-                names = 'workflow')()
-            if worker.parallel:
-                method = cls._create_parallel
-            else:
-                method = cls._create_serial
-            worker = method(worker = worker, outline = outline)
-        return worker
-
-    @classmethod                
-    def _create_parallel(cls, worker: Worker,
-                         outline: amicus.project.Outline) -> Worker:
-        """[summary]
-
-        Args:
-            worker (Worker): [description]
-            outline (amicus.project.Outline): [description]
-
-        Returns:
-        
-        """
-        name = worker.name
-        step_names = outline.components[name]
-        possible = [outline.components[s] for s in step_names]
-        worker.workflow.branchify(nodes = possible)
-        for i, step_options in enumerate(possible):
-            for option in step_options:
-                technique = cls.from_outline(name = option, outline = outline)
-                wrapper = cls.from_outline(name = step_names[i],
-                                           outline = outline,
-                                           contents = technique)
-                worker.workflow.components[option] = wrapper
-        return worker 
+        print('test adding extra workflow')
+        self._add_workflow(outline = outline)
+        return self
     
-    @classmethod
-    def _create_serial(cls, worker: Worker,
-                       outline: amicus.project.Outline) -> Worker:                     
+    def _add_workflow(self, outline: amicus.project.Outline) -> None:                     
         """[summary]
 
         Args:
@@ -223,18 +187,17 @@ class Worker(core.Component):
         Returns:
         
         """
-
-        name = worker.name
-        components = cls._depth_first(name = name, outline = outline)
+        if self.workflow is None:
+            self.workflow = self.keystones.stage.select(name = 'workflow')()
+        name = self.name
+        components = self._depth_first(name = name, outline = outline)
         collapsed = list(more_itertools.collapse(components))
-        worker.workflow.extend(nodes = collapsed)
+        self.workflow.extend(nodes = collapsed)
         for item in collapsed:
-            component = cls.from_outline(name = item, outline = outline)
-            worker.workflow.components[item] = component
-        return worker
+            component = self.from_outline(name = item, outline = outline)
+        return self
 
-    @classmethod
-    def _depth_first(cls, name: str, outline: core.Stage) -> List:
+    def _depth_first(self, name: str, outline: core.Stage) -> List:
         """
 
         Args:
@@ -251,7 +214,9 @@ class Worker(core.Component):
             organized.append(item)
             if item in outline.components:
                 organized_subcomponents = []
-                subcomponents = cls._depth_first(name = item, outline = outline)
+                subcomponents = self._depth_first(
+                    name = item, 
+                    outline = outline)
                 organized_subcomponents.append(subcomponents)
                 if len(organized_subcomponents) == 1:
                     organized.append(organized_subcomponents[0])
@@ -321,6 +286,32 @@ class ParallelWorker(Worker, abc.ABC):
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
     parallel: ClassVar[bool] = True
+
+    """ Private Methods """
+                 
+    def _add_workflow(self, outline: amicus.project.Outline) -> None:
+        """[summary]
+
+        Args:
+            outline (amicus.project.Outline): [description]
+
+        Returns:
+        
+        """
+        if self.workflow is None:
+            self.workflow = self.keystones.stage.select(names = 'workflow')()
+        name = self.name
+        step_names = outline.components[name]
+        possible = [outline.components[s] for s in step_names]
+        self.workflow.branchify(nodes = possible)
+        for i, step_options in enumerate(possible):
+            for option in step_options:
+                technique = self.from_outline(name = option, outline = outline)
+                wrapper = self.from_outline(name = step_names[i],
+                                           outline = outline,
+                                           contents = technique)
+                self.workflow.components[option] = wrapper
+        return self
 
 
 @dataclasses.dataclass

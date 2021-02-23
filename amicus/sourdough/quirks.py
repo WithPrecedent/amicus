@@ -189,7 +189,6 @@ class Needy(amicus.types.Quirk):
             Needy: instance of a Needy subclass.
             
         """
-        print('test create', cls.__name__, kwargs.keys())
         needs = list(more_itertools.always_iterable(cls.needs))
         if needs[0] in ['self']:
             suffix = tuple(kwargs.keys())[0]

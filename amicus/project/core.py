@@ -224,7 +224,7 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
+class Component(amicus.framework.Keystone, amicus.structures.SimpleNode, abc.ABC):
     """Keystone class for parts of an  Workflow.
 
     Args:
@@ -310,10 +310,12 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
         Returns:
             Component: [description]
             
-        """       
-        for key in more_itertools.always_iterable(name):
+        """
+        names = amicus.tools.listify(name)
+        primary = names[0]
+        item = None
+        for key in names:
             for library in ['instances', 'subclasses']:
-                item = None
                 try:
                     item = getattr(cls, library)[key]
                     break
@@ -321,10 +323,11 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
                     pass
             if item is not None:
                 break
+        print('test item match', item)
         if item is None:
             raise KeyError(f'No matching item for {str(name)} was found') 
         elif inspect.isclass(item):
-            return cls(name = key, **kwargs)
+            return item(name = primary, **kwargs)
         else:
             instance = copy.deepcopy(item)
             instance._add_attributes(attributes = kwargs)
@@ -349,11 +352,16 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
         else:
             parameters = kwargs
         if name in outline.designs:
-            names = [name, outline.designs[name]]
+            keys = [name, outline.designs[name]]
         else:
-            names = name
-        instance = cls.from_name(name = names, **parameters)
-        instance._add_attributes(attributes = outline.attributes[name])
+            keys = name
+        instance = cls.from_name(name = keys, **parameters)
+        print('test instance created', keys, instance)
+        try:
+            instance._add_attributes(attributes = outline.attributes[name])
+        except KeyError:
+            pass
+        instance._add_extras(outline = outline)
         return instance
 
     """ Public Methods """
@@ -413,6 +421,16 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode):
             setattr(self, key, value)
         return self
 
+    def _add_extras(self, outline: amicus.project.Outline) -> None:
+        """Hook to allow subclasses to add functionality to base Component.
+
+        Args:
+            outline (amicus.project.Outline): [description]
+
+        """
+        print('test base add extras method')
+        return self
+    
 
 @dataclasses.dataclass
 class Stage(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
@@ -665,7 +683,6 @@ class Workflow(Stage, amicus.structures.Graph):
     """
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
-    components: amicus.types.Catalog = amicus.types.Catalog()
     needs: ClassVar[Union[Sequence[str], str]] = ['outline', 'name']
 
     """ Class Methods """
@@ -712,7 +729,6 @@ class Workflow(Stage, amicus.structures.Graph):
         component = cls.keystones.component.from_outline(
             name = name, 
             outline = outline)
-        workflow.components[name] = component
         if hasattr(component, 'workflow'):        
             for subcomponent in outline.components[name]:
                 print('test workflow subcomponents', component)
@@ -743,18 +759,31 @@ class Workflow(Stage, amicus.structures.Graph):
             self.components.update(workflow.components)
         super().combine(workflow = workflow)
         return self
- 
+
+
 @dataclasses.dataclass
 class Result(amicus.types.Lexicon):            
-    
+    """Stores results from a single path through a Workflow.
+
+    Args:
+        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
+            dict.  
+        default (Any): default value to return when the 'get' method is used.
+        name (str): name of particular path through a workflow for which 
+            'contents' are associated.
+        path (Sequence[str]): the names of the nodes through a workflow 
+            corresponding to the results stored in 'contents'.
+        
+    """
     contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
+    default: Any = None
     name: str = None
     path: Sequence[str] = dataclasses.field(default_factory = list)
     
 
 @dataclasses.dataclass
-class Summary(amicus.framework.Library, Stage):
-    """Collects and stores results of executing a Workflow.
+class Summary(amicus.types.Lexicon, Stage):
+    """Collects and stores results of all paths through a Workflow.
     
     Args:
         contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
@@ -809,7 +838,7 @@ class Summary(amicus.framework.Library, Stage):
             project._result = Result(name = name, path = path)
             for node in path:
                 try:
-                    component = project.workflow.components[node]
+                    component = self.keystones.component.instance(name = node)
                     project = component.execute(project = project, **kwargs)
                 except KeyError:
                     pass

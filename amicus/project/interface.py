@@ -234,7 +234,6 @@ class Project(
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Creating {name}')
             kwargs = stage.needify(instance = self)
-            print('test name current', name, current, kwargs.keys())
             setattr(self, name, stage.create(**kwargs))
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'Completed {name}')

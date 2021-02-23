@@ -117,12 +117,12 @@ class Proxy(collections.abc.Container):
 
         """
         try:
-            return object.__getattribute___(
-                object.__getattribute___(self, 'contents'), attribute)
+            return object.__getattribute__(
+                object.__getattribute__(self, 'contents'), attribute)
         except AttributeError:
             raise AttributeError(
                 f'{attribute} is not in '
-                f'{object.__getattribute___(self, "__name__")}') 
+                f'{object.__getattribute__(self, "__name__")}') 
 
     def __setattr__(self, attribute: str, value: Any):
         """Sets 'attribute' to 'value'.
