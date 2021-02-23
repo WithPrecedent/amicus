@@ -35,9 +35,8 @@ class Settings(amicus.framework.Keystone, amicus.options.Configuration):
     """Loads and stores configuration settings for a Project.
 
     Args:
-        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
-            dict, a str file path to a file with settings, or a pathlib Path to
-            a file with settings. Defaults to en empty dict.
+        contents (Mapping[str, Mapping[str, Any]]): a two-level nested dict for
+            storing configuration options. Defaults to en empty dict.
         infer_types (bool): whether values in 'contents' are converted to other 
             datatypes (True) or left alone (False). If 'contents' was imported 
             from an .ini file, a False value will leave all values as strings. 
@@ -67,8 +66,8 @@ class Settings(amicus.framework.Keystone, amicus.options.Configuration):
             instanced. 
             
     """
-    contents: Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]] = (
-        dataclasses.field(default_factory = dict))
+    contents: Mapping[str, Mapping[str, Any]] = dataclasses.field(
+        default_factory = dict)
     infer_types: bool = True
     standard: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory = lambda: {
@@ -714,7 +713,6 @@ class Workflow(Stage, amicus.structures.Graph):
             name = name, 
             outline = outline)
         workflow.components[name] = component
-        instance = component()
         if hasattr(component, 'workflow'):        
             for subcomponent in outline.components[name]:
                 print('test workflow subcomponents', component)

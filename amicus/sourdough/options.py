@@ -54,9 +54,8 @@ class Configuration(amicus.types.Lexicon):
     other sections. This is implemented in the 'project' subpackage.
 
     Args:
-        contents (Union[str, pathlib.Path, Mapping[str, Mapping[str, Any]]]): a 
-            dict, a str file path to a file with settings, or a pathlib Path to
-            a file with settings. Defaults to en empty dict.
+        contents (Mapping[str, Mapping[str, Any]]): a two-level nested dict for
+            storing configuration options. Defaults to en empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty dict.
         standard (Mapping[str, Mapping[str]]): any standard options that should
