@@ -266,12 +266,26 @@ class Component(
                 
     """
     name: str = None
-    contents: Any = None
+    contents: Callable = None
+    container: str = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], Parameters] = Parameters()
     parallel: ClassVar[bool] = False
     needs: ClassVar[Union[Sequence[str], str]] = ['name']
     
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        if self.container is None:
+            key = self.name
+        else:
+            key = f'{self.name}_{self.container}'
+        self.instances[key] = self
+        
     """ Construction Methods """
 
     @classmethod
@@ -671,7 +685,6 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
                     'No settings indicate how to construct a project workflow') 
         outlines = {} 
         for key in keys:
-            print('test outline keys', key)
             outlines[key] = Outline.create(
                 name = key,
                 settings = settings, 
@@ -715,7 +728,9 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
             permutation = []
             for option in step_options:
                 t_keys = [option, outline.designs[option]]
-                technique = self.keystones.component.from_name(name = t_keys)
+                technique = self.keystones.component.from_name(
+                    name = t_keys,
+                    container = step_names[i])
                 s_keys = [step_names[i], outline.designs[step_names[i]]]    
                 step = self.keystones.component.select(name = s_keys)
                 step = step(name = option, contents = technique)

@@ -4,7 +4,7 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 """
-
+from __future__ import annotations
 import dataclasses
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 

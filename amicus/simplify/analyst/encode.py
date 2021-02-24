@@ -12,9 +12,8 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
                     Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import amicus
-
-
-encoders = amicus.types.Catalog()
+from amicus import project
+from amicus import simplify
 
 
 @dataclasses.dataclass
@@ -44,14 +43,48 @@ class Encode(amicus.project.Step):
                                                 
     """
     name: str = 'encode'
-    contents: amicus.project.Technique = None
-    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
-    parallel: ClassVar[bool] = True
+    contents: Encoder = None
+    container: str = 'analyst'
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())
+    
+
+@dataclasses.dataclass
+class Encoder(amicus.quirks.Loader, amicus.project.Technique):
+    """Wrapper for a Technique.
+
+    An instance will try to return attributes from 'contents' if the attribute 
+    is not found in the Step instance. 
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        contents (Technique): stored Technique instance used by the 'implement' 
+            method.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'implement' method is called. Defaults to an empty dict.
+        parallel (ClassVar[bool]): indicates whether this Component design is
+            meant to be at the end of a parallel workflow structure. Defaults to 
+            True.
+                                                
+    """
+    name: str = 'encoder'
+    contents: Union[Callable, Type, object, str] = None
+    container: str = 'encode'
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())
+    module: str = None
     
     
 @dataclasses.dataclass
-class CategoryEncoder(amicus.quirks.SklearnTransformer, 
-                      amicus.project.Technique):
+class CategoryEncoder(Encoder):
     """Wrapper for an encoder from category-encoders.
 
     Args:
@@ -76,8 +109,8 @@ class CategoryEncoder(amicus.quirks.SklearnTransformer,
     name: str = None
     contents: Union[Callable, Type, object, str] = None
     iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
-    module: str = None
+    parameters: Union[Mapping[str, Any], project.Parameters] = project.Parameters()
+    module: str = 'category_encoders'
     parallel: ClassVar[bool] = False 
 
     """ Public Methods """
@@ -128,12 +161,13 @@ category_encoders = {
     'weight_of_evidence': 'WOEEncoder'}
 
 
-for encoder, algorithm in category_encoders:
-    kwargs = {
-        'name': encoder, 
-        'contents': algorithm,
-        'module': 'category_encoders',
-        'parameters': amicus.project.Parameters(
-            name = f'{encoder}_encode',
-            runtime = {'cols': 'data.categoricals'})}
-    Encode.keystones.component[encoder] = CategoryEncoder(**kwargs)
+def instancify() -> None:
+    for encoder, algorithm in category_encoders:
+        kwargs = {
+            'name': encoder, 
+            'contents': algorithm,
+            'parameters': amicus.project.Parameters(
+                name = encoder,
+                implementation = {'cols': 'data.categoricals'})}
+        CategoryEncoder(**kwargs)
+    return
