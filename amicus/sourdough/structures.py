@@ -432,6 +432,7 @@ class Graph(amicus.types.Lexicon, Structure):
             keys are nodes and the values are nodes which the key is connected 
             to. Defaults to an empty dict.
         default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
                   
     """  
     contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
@@ -765,7 +766,7 @@ class Graph(amicus.types.Lexicon, Structure):
         return new_graph
 
     def extend(self, 
-        nodes: Sequence[Hashable],
+        nodes: Sequence[Union[Hashable, List]],
         start: Union[Hashable, Sequence[Hashable]] = None) -> None:
         """Adds 'nodes' to the stored data structure.
 
@@ -777,14 +778,15 @@ class Graph(amicus.types.Lexicon, Structure):
                 will be used. Defaults to None.
                 
         """
+        collapsed = tuple(more_itertools.collapse(nodes))
         if start is None:
             start = self.endpoints
         if start:
             for starting in more_itertools.always_iterable(start):
-                self.add_edge(start = starting, stop = nodes[0])
+                self.add_edge(start = starting, stop = collapsed[0])
         else:
-            self.add_node(nodes[0])
-        edges = more_itertools.windowed(nodes, 2)
+            self.add_node(collapsed[0])
+        edges = more_itertools.windowed(collapsed, 2)
         for edge_pair in edges:
             self.add_edge(start = edge_pair[0], stop = edge_pair[1])
         return self  
