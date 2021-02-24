@@ -40,8 +40,7 @@ LOGGER.addHandler(file_handler)
 class Project(
     amicus.quirks.Needy,
     amicus.framework.Validator, 
-    amicus.framework.Keystone, 
-    collections.abc.Iterator):
+    amicus.framework.Keystone):
     """Directs construction and execution of an amicus project.
     
     Args:
@@ -137,7 +136,11 @@ class Project(
         self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
-        # Calls 'create' and 'execute' if 'automatic' is True.
+        # Automatically creates 'workflow' from 'settings'.
+        self.workflow = self.keystones.workflow.from_settings(
+            settings = self.settings, 
+            name = self.name)
+        # Calls 'execute' if 'automatic' is True.
         if self.automatic:
             self.execute()
 
@@ -149,14 +152,16 @@ class Project(
         
     """ Public Methods """
     
-    def advance(self) -> Any:
-        """Returns next product created in iterating a Director instance."""
-        return self.__next__()
+    # def advance(self) -> Any:
+    #     """Returns next product created in iterating a Director instance."""
+    #     return self.__next__()
     
-    def execute(self ) -> None:
+    def execute(self) -> None:
         """Iterates through all stages."""
-        for stage in self.stages:
-            self.advance()
+        self.workflow = self.keystones.workflow.from_settings(
+            settings = self.settings, 
+            name = self.name)
+        self.summary = self.keystones.summary.create(project = self)
         return self
                         
     """ Private Methods """
@@ -205,40 +210,40 @@ class Project(
             identification = amicus.tools.datetime_string(prefix = self.name)
         return identification
   
-    """ Dunder Methods """
+    # """ Dunder Methods """
 
-    def __iter__(self) -> Iterable:
-        """Returns iterable of a Project instance.
+    # def __iter__(self) -> Iterable:
+    #     """Returns iterable of a Project instance.
         
-        Returns:
-            Iterable: of the Project instance.
+    #     Returns:
+    #         Iterable: of the Project instance.
             
-        """
-        return iter(self)
+    #     """
+    #     return iter(self)
  
-    def __next__(self) -> None:
-        """Completes a Stage instance."""
-        if self.index < len(self.stages):
-            base = self.keystones.stage
-            current = self.stages[self.index]
-            if isinstance(current, str):
-                name = amicus.tools.snakify(current)
-                stage = base.select(name = name)
-            elif inspect.isclass(current) and issubclass(current, base):
-                stage = current
-                name = amicus.tools.snakify(stage.__name__)
-            else:
-                raise TypeError(
-                    f'Items in stages must be str or {base.__name__} '
-                    f'subclasses (not instances)') 
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'Creating {name}')
-            kwargs = stage.needify(instance = self)
-            setattr(self, name, stage.create(**kwargs))
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'Completed {name}')
-            self.index += 1
-        else:
-            raise IndexError()
-        return self
+    # def __next__(self) -> None:
+    #     """Completes a Stage instance."""
+    #     if self.index < len(self.stages):
+    #         base = self.keystones.stage
+    #         current = self.stages[self.index]
+    #         if isinstance(current, str):
+    #             name = amicus.tools.snakify(current)
+    #             stage = base.select(name = name)
+    #         elif inspect.isclass(current) and issubclass(current, base):
+    #             stage = current
+    #             name = amicus.tools.snakify(stage.__name__)
+    #         else:
+    #             raise TypeError(
+    #                 f'Items in stages must be str or {base.__name__} '
+    #                 f'subclasses (not instances)') 
+    #         if hasattr(self, 'verbose') and self.verbose:
+    #             print(f'Creating {name}')
+    #         kwargs = stage.needify(instance = self)
+    #         setattr(self, name, stage.create(**kwargs))
+    #         if hasattr(self, 'verbose') and self.verbose:
+    #             print(f'Completed {name}')
+    #         self.index += 1
+    #     else:
+    #         raise IndexError()
+    #     return self
     

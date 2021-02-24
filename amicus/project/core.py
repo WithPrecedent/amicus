@@ -10,7 +10,7 @@ Contents:
     Parameters
     Component
     Stage
-    Outline
+    Workflow
     Workflow
     Summary
 
@@ -21,9 +21,9 @@ import copy
 import dataclasses
 import inspect
 import multiprocessing
-import pathlib
-from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping, 
-                    Optional, Sequence, Set, Tuple, Type, Union)
+import textwrap
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+                    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 
@@ -224,8 +224,12 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Component(amicus.framework.Keystone, amicus.structures.SimpleNode, abc.ABC):
-    """Keystone class for parts of an  Workflow.
+class Component(
+    amicus.framework.Keystone, 
+    amicus.quirks.Needy,
+    amicus.structures.SimpleNode, 
+    abc.ABC):
+    """Keystone class for parts of a Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -266,34 +270,10 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode, abc.ABC
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], Parameters] = Parameters()
     parallel: ClassVar[bool] = False
+    needs: ClassVar[Union[Sequence[str], str]] = ['name']
     
-    """ Public Class Methods """
+    """ Construction Methods """
 
-    @classmethod
-    def create(cls, **kwargs) -> Component:
-        """Returns instance of first match of 'name' in stored catalogs.
-        
-        The method prioritizes the 'instances' catalog over 'subclasses' and any
-        passed names in the order they are listed.
-        
-        Args:
-            name (Union[str, Sequence[str]]): [description]
-            
-        Raises:
-            KeyError: [description]
-            
-        Returns:
-            Component: [description]
-            
-        """        
-        if 'name' in kwargs:
-            if 'outline' in kwargs:
-                return cls.from_outline(**kwargs)
-            else:
-                return cls.from_name(**kwargs)
-        else:
-            raise ValueError('create method requires a name keyword parameter')
-            
     @classmethod
     def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
         """Returns instance of first match of 'name' in stored catalogs.
@@ -333,35 +313,22 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode, abc.ABC
             return instance
   
     @classmethod
-    def from_outline(cls, name: str, outline: Outline, **kwargs) -> Component:
+    def from_outline(cls, outline: Outline, **kwargs) -> Component:
         """[summary]
 
         Args:
-            name (str): [description]
-            section (str): [description]
             outline (Outline): [description]
 
         Returns:
             Component: [description]
-            
-        """              
-        if name in outline.initialization:
-            parameters = outline.initialization[name]
-            parameters.update(kwargs)
-        else:
-            parameters = kwargs
-        if name in outline.designs:
-            keys = [name, outline.designs[name]]
-        else:
-            keys = name
+        """                      
+        parameters = outline.initialization
+        parameters.update(kwargs)
+        keys = [outline.name, outline.designs[outline.name]]
         instance = cls.from_name(name = keys, **parameters)
-        try:
-            instance._add_attributes(attributes = outline.attributes[name])
-        except KeyError:
-            pass
-        instance._add_extras(outline = outline)
+        instance._add_attributes(attributes = outline.attributes)
         return instance
-
+        
     """ Public Methods """
     
     def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
@@ -418,43 +385,15 @@ class Component(amicus.framework.Keystone, amicus.structures.SimpleNode, abc.ABC
         for key, value in attributes.items():
             setattr(self, key, value)
         return self
-
-    def _add_extras(self, outline: amicus.project.Outline) -> None:
-        """Hook to allow subclasses to add functionality to base Component.
-
-        Args:
-            outline (amicus.project.Outline): [description]
-
-        """
-        return self
     
-
-@dataclasses.dataclass
-class Stage(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
-    """Creates an amicus object.
+    """ Dunder Methods """
     
-    Args:
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. Defaults to an
-            empty list.     
-                
-    Attributes:
-        keystones (ClassVar[amicus.framework.Library]): library that stores 
-            amicus base classes and allows runtime access and instancing of 
-            those stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
-            concrete subclasses and allows runtime access and instancing of 
-            those stored subclasses. 
-        instances (ClassVar[amicus.types.Catalog]): catalog that stores
-            subclass instances and allows runtime access of those stored 
-            subclass instances.
-                       
-    """
-    needs: ClassVar[Union[Sequence[str], str]] = []
-
-
+    def __str__(self) -> str:
+        return self.name
+    
+    
 @dataclasses.dataclass
-class Outline(Stage):
+class Outline(object):
     """Information needed to construct and execute a Workflow.
 
     Args:
@@ -463,14 +402,11 @@ class Outline(Stage):
             amicus instance needs settings from a Settings instance, 
             'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
-        structure (str): the name matching the type of workflow to be used in a
-            project. Defaults to None.
-        adjacency (Dict[str, List]): a dictionary with keys that are names of
+        design (str): the name of the type of Component to be used. Defaults to 
+            None.
+        connections (Dict[str, List]): a dictionary with keys that are names of
             components and values that are lists of subcomponents for the keys. 
             Defaults to an empty dict.
-        designs (Dict[str, str]): a dictionary with keys that are names of 
-            components and values that are the names of the design structure for
-            the keys. Defaults to an empty dict.
         initialization (Dict[str, Dict[str, Any]]): a dictionary with keys that 
             are the names of components and values which are dictionaries of 
             pararmeters to use when created the component listed in the key. 
@@ -489,122 +425,78 @@ class Outline(Stage):
             
     """
     name: str = None
-    structure: str = None
-    adjacency: Dict[str, List] = dataclasses.field(default_factory = dict)
+    connections: Dict[str, List[str]] = dataclasses.field(
+        default_factory = dict)
     designs: Dict[str, str] = dataclasses.field(default_factory = dict)
-    initialization: Dict[str, Dict[str, Any]] = dataclasses.field(
-        default_factory = dict)
-    runtime: Dict[str, Dict[str, Any]] = dataclasses.field(
-        default_factory = dict)
-    attributes: Dict[str, Dict[str, Any]] = dataclasses.field(
-        default_factory = dict)
-    needs: ClassVar[Union[Sequence[str], str]] = ['settings', 'name']
+    initialization: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    implementation: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
 
-    """ Public Class Methods """
+    """ Public Methods """
     
     @classmethod   
-    def from_settings(cls, settings: Settings, name: str = None) -> Outline:
-        """[summary]
-
-        Args:
-            source (base.Settings): [description]
-
-        Returns:
-            Outline: [description]
-            
-        """  
-        structure = cls._get_structure(name = name, settings = settings) 
-        outline = cls(name = name, structure = structure)  
-        skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
-        component_keys = [k for k in settings.keys() if k not in skips]
-        if name is None:
-            try:
-                name = component_keys[0]
-            except IndexError:
-                raise ValueError(
-                    'No sections in settings indicate how to construct a ' 
-                    'project outline')   
-        for section in component_keys:
-            outline = outline._parse_section(
-                name = section, 
-                settings = settings,
-                outline = outline)
-        outline = outline._get_runtime_parameters(
-            outline = outline, 
-            settings = settings)
-        return outline 
-    
-    """ Private Methods """
-
-    @classmethod
-    def _get_structure(cls, name: str, settings: Settings) -> str:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            section (Mapping[str, Any]): [description]
-
-        Raises:
-            KeyError: [description]
-
-        Returns:
-            str: [description]
-            
-        """
-        try:
-            structure = settings[name][f'{name}_workflow']
-        except KeyError:
-            try:
-                structure = settings[name][f'workflow']
-            except KeyError:
-                try:
-                    structure = settings['amicus']['default_workflow']
-                except KeyError:
-                    raise KeyError(f'To designate a workflow structure, a key '
-                                   f' in settings must either be named '
-                                   f'"workflow" or "{name}_workflow"')
-        return structure  
-  
-    def _parse_section(self, 
+    def create(cls, 
         name: str, 
         settings: Settings, 
-        outline: Outline) -> Outline:
+        keystones: amicus.framework.Library) -> Outline:
         """[summary]
 
         Args:
+            settings (Settings): [description]
             name (str): [description]
-            settings (base.Settings): [description]
-            outline (Outline): [description]
+
+        Raises:
+            ValueError: [description]
 
         Returns:
             Outline: [description]
-        """        
+            
+        """
+        connections = {}
+        designs = {}
+        initialization = {}
+        attributes = {}        
         section = settings[name]
-        design = self._get_design(name = name, settings = settings)
-        outline.designs[name] = design
-        outline.initialization[name] = {}
-        outline.attributes[name] = {}
-        component = self.keystones.component.create(name = [name, design])
-        parameters = tuple(
-            i for i in list(component.__annotations__.keys()) 
+        designs[name] = cls._get_design(name = name, settings = settings)
+        lookups = [name, designs[name]]
+        dummy_component = keystones.component.create(name = lookups)
+        possible_initialization = tuple(
+            i for i in list(dummy_component.__annotations__.keys()) 
             if i not in ['name', 'contents'])
         for key, value in section.items():
             suffix = key.split('_')[-1]
             prefix = key[:-len(suffix) - 1]
             if suffix in ['design', 'workflow']:
                 pass
-            elif suffix in self.keystones.component.subclasses.suffixes:
-                outline.designs.update(dict.fromkeys(value, suffix[:-1]))
-                outline.adjacency[prefix] = value 
-            elif suffix in parameters:
-                outline.initialization[name][suffix] = value 
+            elif suffix in keystones.component.subclasses.suffixes:
+                designs.update(dict.fromkeys(value, suffix[:-1]))
+                edges = amicus.tools.listify(value)
+                if prefix in connections:
+                    connections[prefix].extend(edges)
+                else:
+                    connections[prefix] = edges 
+            elif suffix in possible_initialization:
+                initialization[suffix] = value 
             elif prefix in [name]:
-                outline.attributes[name][suffix] = value
+                attributes[suffix] = value
             else:
-                outline.attributes[name][key] = value
-        return outline   
+                attributes[key] = value
+        implementation = cls._add_implementation(
+            name = name, 
+            settings = settings,
+            connections = connections)
+        return cls(
+            name = name, 
+            connections = connections,
+            designs = designs,
+            initialization = initialization,
+            implementation = implementation,
+            attributes = attributes)
 
-    def _get_design(self, name: str, settings: Settings) -> str:
+    """ Private Methods """
+
+    @staticmethod
+    def _get_design(name: str, settings: Settings) -> str:
         """[summary]
 
         Args:
@@ -630,112 +522,291 @@ class Outline(Stage):
                     raise KeyError(f'To designate a design, a key in settings '
                                    f'must either be named "design" or '
                                    f'"{name}_design"')
-        return design    
+        return design     
 
-    def _get_runtime_parameters(self, 
-        outline: Outline, 
-        settings: Settings) -> Outline:
+    @staticmethod        
+    def _add_implementation(
+        name: str, 
+        settings: Settings,
+        connections: Dict[str, List[str]]) -> Dict[str, Dict[str, Any]]:
         """[summary]
 
         Args:
-            outline (Outline): [description]
-            settings (base.Settings): [description]
+            name (str): [description]
+            settings (Settings): [description]
+            connections
 
         Returns:
-            Outline: [description]
+            Dict[str, Any]: [description]
             
         """
-        for component in outline.adjacency.keys():
-            names = [component]
-            if component in outline.designs:
-                names.append(outline.designs[component])
-            for name in names:
+        implementation = {}
+        components = list(connections.keys())
+        more_components = list(more_itertools.collapse(connections.values()))      
+        components = components.extend(more_components)
+        if components:
+            for name in components:
                 try:
-                    outline.runtime[name] = settings[f'{name}_parameters']
+                    implementation[name] = settings[f'{name}_parameters']
                 except KeyError:
-                    pass
-        return outline
-       
+                    implementation[name] = {}
+        return implementation
 
+ 
 @dataclasses.dataclass
-class Workflow(Stage, amicus.structures.Graph):
-    """Stores lightweight workflow and corresponding components.
+class Workflow(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
+    """A workflow factory that can be constructed from a Settings instance.
     
     Args:
-        contents (Dict[str, List[str]]): an adjacency list where the keys are 
-            the names of nodes and the values are names of nodes which the key 
-            is connected to. Defaults to an empty dict.
-        default (Any): default value to use when a key is missing and a new
-            one is automatically corrected. Defaults to an empty list.
-        components (amicus.types.Catalog): stores Component instances that 
-            correspond to nodes in 'contents'. Defaults to an empty Catalog.
+        contents (Dict[Component], List[str]]): an connections list where the 
+            keys are nodes and the values are nodes which the key is connected 
+            to. Defaults to an empty dict.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. Defaults to 
-            a list with 'outline' and 'name'.
+            another instance for some method within a subclass. Defaults to a
+            list with 'settings' and 'name'.   
+                
+    Attributes:
+        keystones (ClassVar[amicus.framework.Library]): library that stores 
+            amicus base classes and allows runtime access and instancing of 
+            those stored subclasses.
+        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+            concrete subclasses and allows runtime access and instancing of 
+            those stored subclasses. 
+        instances (ClassVar[amicus.types.Catalog]): catalog that stores
+            subclass instances and allows runtime access of those stored 
+            subclass instances.
+                       
+    """
+    contents: Dict[Component, List[str]] = dataclasses.field(
+        default_factory = dict)
+    default: Any = dataclasses.field(default_factory = list)
+    needs: ClassVar[Union[Sequence[str], str]] = ['settings', 'name']
+
+    """ Initialization Methods """
     
-    ToDo:
-        Move current methods to a Pipeline type Workflow and make
-            a true Graph Workflow here.
-                     
+    def __init_subclass__(cls, **kwargs):
+        """Adds 'cls' to 'Validator.converters' if it is a concrete class."""
+        super().__init_subclass__(**kwargs)
+        if not abc.ABC in cls.__bases__:
+            key = amicus.tools.snakify(cls.__name__)
+            # Removes '_workflow' from class name so that the key is consistent
+            # with the key name for the class being constructed.
+            try:
+                key = key.replace('_workflow', '')
+            except ValueError:
+                pass
+            cls.subclasses[key] = cls
+            
+    """ Class Methods """
+    
+    @classmethod   
+    def from_settings(cls, settings: Settings, name: str = None) -> Workflow:
+        """[summary]
+
+        Args:
+            source (base.Settings): [description]
+
+        Returns:
+            Workflow: [description]
+            
+        """ 
+        try:
+            structure = settings[name][f'{name}_workflow']
+        except KeyError:
+            try:
+                structure = settings[name][f'workflow']
+            except KeyError:
+                try:
+                    structure = settings['amicus']['default_workflow']
+                except KeyError:
+                    raise KeyError(f'To designate a workflow structure, a key '
+                                   f' in settings must either be named '
+                                   f'"workflow" or "{name}_workflow"')
+        workflow = cls.keystones.workflow.select(name = structure)
+        return workflow.from_settings(settings = settings, name = name)
+
+
+@dataclasses.dataclass
+class GraphWorkflow(Workflow, amicus.structures.Graph):
+    """A Workflow Graph that can be created from a Settings instance.
+
+    Args:
+        contents (Dict[Component], List[str]]): an connections list where the 
+            keys are nodes and the values are nodes which the key is connected 
+            to. Defaults to an empty dict.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
+            another instance for some method within a subclass. Defaults to a
+            list with 'settings' and 'name'.   
+     
     """
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
-    needs: ClassVar[Union[Sequence[str], str]] = ['outline', 'name']
-
-    """ Class Methods """
-            
-    @classmethod
-    def from_outline(cls, outline: Outline, name: str) -> Workflow:
-        """Creates a Workflow from an Outline.
-
-        Args:
-            outline (Outline): [description]
-            name (str): [description]
-
-        Returns:
-            Workflow: [description]
-            
-        """        
-        workflow = cls()
-        print('test workflow creation', name)
-        for component in outline.adjacency[name]:
-            print('test workflow subcomponents', component)
-            workflow = cls.add_component(
-                name = component,
-                outline = outline,
-                workflow = workflow)
-        return workflow
+    components: Dict[Component] = dataclasses.field(default_factory = dict)
+    needs: ClassVar[Union[Sequence[str], str]] = ['settings', 'name']
     
-    @classmethod
-    def add_component(cls, 
-        name: str, 
-        outline: Outline, 
-        workflow: Workflow) -> Workflow:
+    """ Public Class Methods """
+    
+    @classmethod   
+    def from_settings(cls, settings: Settings, name: str = None) -> Workflow:
         """[summary]
 
         Args:
-            name (str): [description]
-            details (Details): [description]
-            workflow (Workflow): [description]
+            source (base.Settings): [description]
 
         Returns:
             Workflow: [description]
             
+        """  
+        skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
+        keys = [k for k in settings.keys() if k not in skips] 
+        if name is None:
+            try:
+                name = keys[0]
+            except IndexError:
+                raise ValueError(
+                    'No settings indicate how to construct a project workflow') 
+        outlines = {} 
+        for key in keys:
+            print('test outline keys', key)
+            outlines[key] = Outline.create(
+                name = key,
+                settings = settings, 
+                keystones = cls.keystones)
+        workflow = cls.from_outlines(outlines = outlines, name = name) 
+        return workflow 
+    
+    @classmethod
+    def from_outlines(cls, outlines: Dict[str, Outline], name: str) -> Workflow:
         """
-        workflow.append(node = name)
-        component = cls.keystones.component.from_outline(
-            name = name, 
-            outline = outline)
-        if hasattr(component, 'workflow'):        
-            for subcomponent in outline.adjacency[name]:
-                print('test workflow subcomponents', component)
-                workflow = cls.add_component(
-                    name = component,
-                    outline = outline,
-                    workflow = component.workflow)
+        """
+        workflow = cls()
+        outlines.pop(name)
+        for outline in outlines.values():
+            component = cls.keystones.component.from_outline(outline = outline)
+            kwargs = {'outline': outline, 'component': component}
+            if component.parallel:
+                workflow._add_parallel_components(**kwargs)
+            else:
+                workflow._add_serial_components(**kwargs)
         return workflow
+               
+    """ Private Methods """
+    
+    def _add_parallel_components(self, 
+            outline: Outline, 
+            component: Component) -> None:
+        """[summary]
 
+        Args:
+            outline (Outline): [description]
 
+        Returns:
+        
+        """
+        self.append(component)
+        step_names = outline.connections[outline.name]
+        possible = [outline.connections[step] for step in step_names]
+        nodes = []
+        for i, step_options in enumerate(possible):
+            permutation = []
+            for option in step_options:
+                t_keys = [option, outline.designs[option]]
+                technique = self.keystones.component.from_name(name = t_keys)
+                s_keys = [step_names[i], outline.designs[step_names[i]]]    
+                step = self.keystones.component.select(name = s_keys)
+                step = step(name = option, contents = technique)
+                permutation.append(step)
+            nodes.append(permutation)
+        self.branchify(nodes = nodes)
+        # self.append(component.resolver)
+        return self
+
+    def _add_serial_components(self, 
+            outline: Outline, 
+            component: Component) -> None:
+        """[summary]
+
+        Args:
+            outline (Outline): [description]
+
+        Returns:
+        
+        """
+        self.append(component)
+        components = self._depth_first(name = outline.name, outline = outline)
+        collapsed = list(more_itertools.collapse(components))
+        nodes = []
+        for node in collapsed:
+            keys = [node, outline.designs[node]]
+            component = self.keystones.component.from_name(name = keys)
+            nodes.append(component)
+        self.extend(nodes = nodes)
+        return self
+    
+    def _depth_first(self, name: str, outline: Outline) -> List:
+        """
+
+        Args:
+            name (str):
+            details (Blueprint): [description]
+
+        Returns:
+            List[List[str]]: [description]
+            
+        """
+        organized = []
+        components = outline.connections[name]
+        for item in components:
+            organized.append(item)
+            if item in outline.connections:
+                organized_subcomponents = []
+                subcomponents = self._depth_first(
+                    name = item, 
+                    outline = outline)
+                organized_subcomponents.append(subcomponents)
+                if len(organized_subcomponents) == 1:
+                    organized.append(organized_subcomponents[0])
+                else:
+                    organized.append(organized_subcomponents)
+        return organized
+
+    def _get_component(self, name: str, outline: Outline) -> Component:
+        """
+        """
+        lookups = [name, outline.designs[name]]
+        kwargs = {}
+        try:
+            kwargs.update(outline.initialization[name])
+        except KeyError:
+            pass
+        try:
+            kwargs.update({'parameters': outline.implementation[name]})
+        except KeyError:
+            pass     
+        component = self.keystones.component.from_name(name = name, **kwargs)
+        if name in [outline.name]:
+            component._add_attributes(attributes = outline.attributes)
+        return component     
+        
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        """[summary]
+
+        Returns:
+            str: [description]
+        """
+        new_line = '\n'
+        representation = [f'{new_line}amicus {self.__class__.__name__}']
+        representation.append('adjacency list:')
+        for node, edges in self.contents.items():
+            representation.append(f'    {node.name}: {str(edges)}')
+        return new_line.join(representation) 
+    
 @dataclasses.dataclass
 class Result(amicus.types.Lexicon):            
     """Stores results from a single path through a Workflow.
@@ -757,7 +828,10 @@ class Result(amicus.types.Lexicon):
     
 
 @dataclasses.dataclass
-class Summary(amicus.types.Lexicon, Stage):
+class Summary(
+    amicus.framework.Keystone, 
+    amicus.quirks.Needy, 
+    amicus.types.Lexicon):
     """Collects and stores results of all paths through a Workflow.
     
     Args:
@@ -808,6 +882,7 @@ class Summary(amicus.types.Lexicon, Stage):
         """
         if project.parallelize:
             multiprocessing.set_start_method('spawn')
+        project._result = None
         for i, path in enumerate(project.workflow.paths):
             name = f'{self.prefix}_{i + 1}'
             project._result = Result(name = name, path = path)

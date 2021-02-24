@@ -85,21 +85,11 @@ def test_project():
     dynamite = Dynamite()
     assert 'annihilate' in amicus.project.Component.instances
     
-    # Tests outline construction.
-    assert project.outline.runtime['divide'] == {'replace_strings': True}
-    assert list(project.outline.attributes.keys()) == [
-        'cool_project', 
-        'reviewer', 
-        'parser',
-        'munger']
-    assert project.outline.attributes['parser'] == {'random_thing': True}
-    
     # Tests workflow construction.
-    print('test project workflow', project.workflow.contents)
-    assert list(project.workflow.contents.keys()) == [
-        'reviewer',
-        'parser',
-        'munger']
+    print('test project workflow', project.workflow)
+    print('test workflow paths', len(project.workflow.paths))
+    print('test workflow endpoints', str(project.workflow.endpoints))
+    print('test workflow roots', str(project.workflow.roots))
     return
 
 
