@@ -1,5 +1,5 @@
 """
-analyst.scale
+simplify.analyst.scale
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0) 
@@ -12,10 +12,8 @@ import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, Optional, Sequence, Tuple, Type, Union)
 
-import numpy as np
-import pandas as pd
-
 import amicus
+from amicus import project
 
 
 @dataclasses.dataclass
@@ -33,22 +31,27 @@ class Scale(amicus.project.Step):
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
         parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
             when the 'implement' method is called. Defaults to an empty dict.
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be at the end of a parallel workflow structure. Defaults to 
             True.
                                                 
-    """    
+    """
     name: str = 'scale'
-    contents: amicus.project.Technique = None
-    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
-    parallel: ClassVar[bool] = True
+    contents: Scaler = None
+    container: str = 'analyst'
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())   
     
-
+    
 @dataclasses.dataclass
-class MinMaxScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
+class Scaler(amicus.quirks.Loader, amicus.project.Technique):
+    """Wrapper for an scaler from category-scalers.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -67,197 +70,84 @@ class MinMaxScale(amicus.components.SklearnTransformer):
         parallel (ClassVar[bool]): indicates whether this Component design is
             meant to be at the end of a parallel workflow structure. Defaults to 
             False.
-                                                
-    """  
-    name: str = 'min_max'
-    contents: Union[Callable, Type, object, str] = 'MinMaxScaler'
+            
+    """
+    name: str = None
+    contents: Union[Callable, Type, object, str] = None
+    container: str = 'scale'
     iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'min_max_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())   
+    module: str = None
+
+    """ Public Methods """
+    
+    def implement(self, project: amicus.Project) -> amicus.Project:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """
+        self.contents = self.contents(**self.parameters)
+        data = project.data
+        data.x_train = self.contents.fit(data.x_train)
+        data.x_train = self.contents.transform(data.x_train)
+        if data.x_test is not None:
+            data.x_test = self.contents.transform(data.x_test)
+        if data.x_validate is not None:
+            data.x_validate = self.contents.transform(data.x_validate)
+        project.data = data
+        return project
 
 
-
-scalers = amicus.types.Catalog()
-
-
-@dataclasses.dataclass
-class MaxAbsoluteScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Technique): stored Technique instance used by the 'implement' 
-            method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-                                                
-    """  
-    name: str = 'max_absolute'
-    contents: Union[Callable, Type, object, str] = 'MaxAbsScaler'
-    iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'max_absolute_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
-
-
-@dataclasses.dataclass
-class NormalizeScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Technique): stored Technique instance used by the 'implement' 
-            method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-                                                
-    """  
-    name: str = 'normalize'
-    contents: Union[Callable, Type, object, str] = 'Normalizer'
-    iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'normalize_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
-
-
-@dataclasses.dataclass
-class QuantileScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Technique): stored Technique instance used by the 'implement' 
-            method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-                                                
-    """  
-    name: str = 'quantile'
-    contents: Union[Callable, Type, object, str] = 'QuantileTransformer'
-    iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'quantile_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
-
-
-@dataclasses.dataclass
-class RobustScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Technique): stored Technique instance used by the 'implement' 
-            method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-                                                
-    """  
-    name: str = 'robust'
-    contents: Union[Callable, Type, object, str] = 'RobustScaler'
-    iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'robust_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
-
-
-@dataclasses.dataclass
-class StandardScale(amicus.components.SklearnTransformer):
-    """Wrapper for a Technique.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
-            instance. Defaults to None.
-        contents (Technique): stored Technique instance used by the 'implement' 
-            method.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
-            when the 'implement' method is called. Defaults to an empty dict.
-        parallel (ClassVar[bool]): indicates whether this Component design is
-            meant to be at the end of a parallel workflow structure. Defaults to 
-            False.
-                                                
-    """  
-    name: str = 'standard'
-    contents: Union[Callable, Type, object, str] = 'StandardScaler'
-    iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters(
-                          name = 'standard_scale',
-                          default = {'copy': False}, 
-                          selected = ['copy'])
-    module: str = 'sklearn.preprocessing'
-    parallel: ClassVar[bool] = False
+catalog = amicus.types.Catalog(
+    contents = {  
+        'max_absolute_scale': Scaler(
+            name = 'maximum absolute scaler',
+            contents = 'MaxAbsScaler',
+            parameters = project.Parameters(
+                name = 'max_absolute_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing'),
+        'min_max_scale': Scaler(
+            name = 'minimum maximum scaler',
+            contents = 'MinMaxScaler',
+            parameters = project.Parameters(
+                name = 'min_max_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing'),
+        'normalize_scale': Scaler(
+            name = 'normalizer scaler',
+            contents = 'Normalizer',
+            parameters = project.Parameters(
+                name = 'normalize_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing'),      
+        'quantile_scale': Scaler(
+            name = 'quantile scaler',
+            contents = 'QuantileTransformer',
+            parameters = project.Parameters(
+                name = 'quantile_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing'),   
+        'robust_scale': Scaler(
+            name = 'robust scaler',
+            contents = 'RobustScaler',
+            parameters = project.Parameters(
+                name = 'robust_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing'),   
+        'standard_scale': Scaler(
+            name = 'standard scaler',
+            contents = 'StandardScaler',
+            parameters = project.Parameters(
+                name = 'min_max_scale',
+                default = {'copy': False}),
+            module = 'sklearn.preprocessing')})
 
 
 # @dataclasses.dataclass

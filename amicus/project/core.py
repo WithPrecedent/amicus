@@ -362,19 +362,20 @@ class Component(
             amicus.Project: [description]
             
         """
-        if self.parameters:
-            if isinstance(self.parameters, Parameters):
-                self.parameters.finalize(project = project)
-            parameters = self.parameters
-            parameters.update(kwargs)
-        else:
-            parameters = kwargs
-        if self.iterations in ['infinite']:
-            while True:
-                project = self.implement(project = project, **kwargs)
-        else:
-            for iteration in range(self.iterations):
-                project = self.implement(project = project, **kwargs)
+        if self.contents not in [None, 'None', 'none']:
+            if self.parameters:
+                if isinstance(self.parameters, Parameters):
+                    self.parameters.finalize(project = project)
+                parameters = self.parameters
+                parameters.update(kwargs)
+            else:
+                parameters = kwargs
+            if self.iterations in ['infinite']:
+                while True:
+                    project = self.implement(project = project, **kwargs)
+            else:
+                for iteration in range(self.iterations):
+                    project = self.implement(project = project, **kwargs)
         return project
 
     def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
@@ -387,8 +388,8 @@ class Component(
             amicus.Project: [description]
             
         """
-        if self.contents not in [None, 'None', 'none']:
-            project = self.contents.execute(project = project, **kwargs)
+        
+        project = self.contents.execute(project = project, **kwargs)
         return project
 
     """ Private Methods """

@@ -1,5 +1,5 @@
 """
-analyst.split
+simplify.analyst.split
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0) 
@@ -7,22 +7,20 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 Contents:
 
 """
+from __future__ import annotations
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, Optional, Sequence, Tuple, Type, Union)
 
 import amicus
 
-from . import base
 import amicus
+from amicus import project
 
 
 @dataclasses.dataclass
-class Split(amicus.project.Step):
+class Split(amicus.project.Worker):
     """Wrapper for a Technique.
-
-    An instance will try to return attributes from 'contents' if the attribute 
-    is not found in the Step instance. 
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -40,13 +38,14 @@ class Split(amicus.project.Step):
                                                 
     """    
     name: str = 'split'
-    contents: amicus.project.Technique = None
-    parameters: Union[Mapping[str, Any], base.Parameters] = base.Parameters()
-    parallel: ClassVar[bool] = True
+    contents: Splitter = None
+    container: str = 'analyst'
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())   
 
 
 @dataclasses.dataclass
-class SklearnSplitter(amicus.project.Technique):
+class Splitter(amicus.project.Technique):
     """Wrapper for a scikit-learn data splitter.
 
     Args:
@@ -71,11 +70,11 @@ class SklearnSplitter(amicus.project.Technique):
     """
     name: str = None
     contents: Union[Callable, Type, object, str] = None
+    container: str = 'split'
     iterations: Union[int, str] = 1
-    parameters: Union[Mapping[str, Any], 
-                      base.Parameters] = base.Parameters()
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())   
     module: str = None
-    parallel: ClassVar[bool] = False
 
     """ Public Methods """
     
@@ -89,54 +88,51 @@ class SklearnSplitter(amicus.project.Technique):
             amicus.Project: [description]
             
         """
-        try:
-            self.parameters = self.parameters.finalize(project = project)
-        except AttributeError:
-            pass
         self.contents = self.contents(**self.parameters)
         project.data.splits = tuple(self.contents.split(project.data.x))
         project.data.split()
         return project
 
-splitters = amicus.types.Catalog(
+
+catalog = amicus.types.Catalog(
     contents = {
-        'train_test_split': SklearnSplitter(
+        'train_test_split': Splitter(
             name = 'train test',
             contents = 'ShuffleSplit',
-            parameters = base.Parameters(
+            parameters = project.Parameters(
                 name = 'train_test',
                 default = {'n_splits': 1, 'test_size': 0.33, 'shuffle': True}, 
-                runtime = {'random_state': 'seed'}),
+                implementation = {'random_state': 'seed'}),
             module = 'sklearn.model_selection'),
-        'kfold_split': SklearnSplitter(
+        'kfold_split': Splitter(
             name = 'kfold',
             contents = 'Kfold',
-            parameters = base.Parameters(
+            parameters = project.Parameters(
                 name = 'kfold',
                 default = {'n_splits': 5, 'shuffle': True},  
-                runtime = {'random_state': 'seed'}),
+                implementation = {'random_state': 'seed'}),
             module = 'sklearn.model_selection'),
-        'stratified_kfold_split': SklearnSplitter(
+        'stratified_kfold_split': Splitter(
             name = 'stratified kfold',
             contents = 'Stratified_KFold',
-            parameters = base.Parameters(
+            parameters = project.Parameters(
                 name = 'stratified_kfold',
                 default = {'n_splits': 5, 'shuffle': True},  
-                runtime = {'random_state': 'seed'}),
+                implementation = {'random_state': 'seed'}),
             module = 'sklearn.model_selection'),
-        'group_kfold_split': SklearnSplitter(
+        'group_kfold_split': Splitter(
             name = 'group kfold',
             contents = 'GroupKFold',
-            parameters = base.Parameters(
+            parameters = project.Parameters(
                 name = 'group_kfold',
                 default = {'n_splits': 5, 'shuffle': True},  
-                runtime = {'random_state': 'seed'}),
+                implementation = {'random_state': 'seed'}),
             module = 'sklearn.model_selection'),
-        'time_series_split': SklearnSplitter(
+        'time_series_split': Splitter(
             name = 'time series split',
             contents = 'Group_KFold',
-            parameters = base.Parameters(
+            parameters = project.Parameters(
                 name = 'time_series_split',
                 default = {'n_splits': 5, 'shuffle': True},  
-                runtime = {'random_state': 'seed'}),
+                implementation = {'random_state': 'seed'}),
             module = 'sklearn.model_selection')})
