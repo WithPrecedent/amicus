@@ -17,6 +17,8 @@ import pandas as pd
 import sklearn
 import amicus
 
+from .. import base
+
 
 @dataclasses.dataclass
 class Model(amicus.project.Step):
@@ -50,6 +52,39 @@ class Model(amicus.project.Step):
     parameters: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
     parallel: ClassVar[bool] = True
 
+
+@dataclasses.dataclass
+class Modeler(amicus.quirks.Loader, amicus.project.Technique):
+    """Wrapper for a Technique.
+
+    An instance will try to return attributes from 'contents' if the attribute 
+    is not found in the Step instance. 
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
+            instance. Defaults to None.
+        contents (Technique): stored Technique instance used by the 'implement' 
+            method.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'implement' method is called. Defaults to an empty dict.
+        parallel (ClassVar[bool]): indicates whether this Component design is
+            meant to be at the end of a parallel workflow structure. Defaults to 
+            True.
+                                                
+    """
+    name: str = 'encoder'
+    contents: Union[Callable, Type, object, str] = None
+    container: str = 'encode'
+    parameters: Union[Mapping[str, Any], project.Parameters] = (
+        project.Parameters())
+    module: str = None
 
 
 
@@ -271,7 +306,7 @@ gpu_options = {
             module = 'cuml',
             algorithm = 'KMeans',
             transform_method = None)},
-    'regressor': {
+    'regress': {
         'lasso': Tool(
             name = 'lasso',
             module = 'cuml',
@@ -287,14 +322,19 @@ gpu_options = {
             module = 'cuml',
             algorithm = 'RidgeRegression',
             transform_method = None)}}
-self.contents['model'] = model_options[
-    self.idea['analyst']['model_type']]
-if self.idea['general']['gpu']:
-    self.contents['model'].update(
-        gpu_options[idea['analyst']['model_type']])
-return self.contents
 
 
+@dataclasses.dataclass
+class ModelBuilder(base.Builder):
+    
+    needs: ClassVar[Sequence[str]] = ['model_type', 'gpu']
+    
+    @classmethod
+    def from_model_type(self, model_type: str, gpu: bool) -> None:
+        base_models = options[model_type]
+        if gpu:
+            base_models.update(gpu_options[model_type])
+        for 
 
 
 

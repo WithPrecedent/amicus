@@ -185,13 +185,13 @@ class Structure(amicus.Bunch, abc.ABC):
     """ Properties """
            
     @property
-    def endpoints(self) -> List[str]:
-        """Returns endpoint nodes in the Graph.
+    def endpoints(self) -> List[Any]:
+        """Returns endpoint nodes in the Structure.
 
         Subclasses must provide their own properties.
         
         Returns:
-            List[str] namea of endpoints in the stored data structure.
+            List[Any] namea of endpoints in the stored data structure.
             
         """
         raise NotImplementedError(
@@ -199,13 +199,13 @@ class Structure(amicus.Bunch, abc.ABC):
             f'structure')
            
     @property             
-    def nodes(self) -> List[str]:
-        """Returns all nodes in the Graph.
+    def nodes(self) -> List[Any]:
+        """Returns all nodes in the Structure.
 
         Subclasses must provide their own properties.
         
         Returns:
-            List[str]: names of all nodes in the stored data structure.
+            List[Any]: names of all nodes in the stored data structure.
             
         """
         raise NotImplementedError(
@@ -213,13 +213,13 @@ class Structure(amicus.Bunch, abc.ABC):
             f'structure')
         
     @property
-    def paths(self) -> List[List[str]]:
+    def paths(self) -> List[List[Any]]:
         """Returns all paths through the stored data structure.
 
         Subclasses must provide their own properties.
                 
         Returns:
-            List[List[str]]: returns all paths from 'roots' to 'endpoints' in a 
+            List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
                 list of lists of names of nodes.
                 
         """
@@ -228,13 +228,13 @@ class Structure(amicus.Bunch, abc.ABC):
             f'structure')
            
     @property
-    def roots(self) -> List[str]:
+    def roots(self) -> List[Any]:
         """Returns root nodes in the stored data structure.
 
         Subclasses must provide their own properties.
 
         Returns:
-            List[str]: names of root nodes in the stored data structure.
+            List[Any]: names of root nodes in the stored data structure.
             
         """
         raise NotImplementedError(
@@ -343,7 +343,7 @@ class Structure(amicus.Bunch, abc.ABC):
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
          
-    def search(self, start: str = None, depth_first: bool = True) -> List[str]:
+    def search(self, start: str = None, depth_first: bool = True) -> List[Any]:
         """Returns a path through the stored data structure.
 
         Subclasses should ordinarily provide their own methods.
@@ -355,7 +355,7 @@ class Structure(amicus.Bunch, abc.ABC):
                 or breadth first (False). Defaults to True.
 
         Returns:
-            List[str]: nodes in a path through the stored data structure.
+            List[Any]: nodes in a path through the stored data structure.
             
         """        
         raise NotImplementedError(
@@ -935,25 +935,204 @@ class Graph(amicus.types.Lexicon, Structure):
         return all_paths
 
 
+@dataclasses.dataclass
+class Pipeline(amicus.types.Hybrid, Structure):
+    """Stores a pipeline structure using an amicus Hybrid.
+    
+    Args:
+        contents (Sequence[Any]): items with 'name' attributes to store. If a 
+            dict is passed, the keys will be ignored and only the values will be 
+            added to 'contents'. If a single item is passed, it will be placed 
+            in a list. Defaults to an empty list.
+        default (Any): default value to return when the 'get' method is used.
+            
+    """
+    contents: Sequence[Any] = dataclasses.field(default_factory = list)
+    default: Any = None
+
+    """ Properties """
+           
+    @property
+    def endpoints(self) -> List[Any]:
+        """Returns endpoint nodes in the Pipeline.
+        
+        For a consistent interface among structures, 'endpoints' returns a list 
+        even though a Pipeline has only one enpoint.
+
+        Returns:
+            List[Any] nodes in the stored data structure.
+            
+        """
+        return [self.contents[-1]]
+           
+    @property             
+    def nodes(self) -> List[Any]:
+        """Returns all nodes in the Graph.
+
+        Returns:
+            List[Any]: names of all nodes in the stored data structure.
+            
+        """
+        return self.contents
+        
+    @property
+    def paths(self) -> List[List[Any]]:
+        """Returns all paths through the stored data structure.
+     
+        Returns:
+            List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
+                list of lists of names of nodes.
+                
+        """
+        return self.contents
+           
+    @property
+    def roots(self) -> List[Any]:
+        """Returns root nodes in Pipeline
+
+        For a consistent interface among structures, 'roots' returns a list even 
+        though a Pipeline has only one root.
+        
+        Returns:
+            List[Any]: names of root nodes in the stored data structure.
+            
+        """
+        return [self.contents[0]]
+
+    """ Class Methods """
+    
+    @classmethod
+    def create(cls, **kwargs) -> Structure:
+        """Creates an instance of a Structure subclass from 'source'.
+        
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+ 
+    @classmethod
+    def from_nodes(cls, nodes: Union[Any, Sequence[Any]]) -> Pipeline:
+        """[summary]
+
+        Args:
+            nodes (Union[Any, Sequence[Any]]): [description]
+
+        Returns:
+            Pipeline: [description]
+            
+        """        
+        return cls(contents = amicus.tools.listify(nodes))    
+        
+    """ Public Methods """
+    
+    def add(self, nodes: Any, **kwargs) -> None:
+        """Adds 'nodes' to the stored data structure.
+        
+        Subclasses should ordinarily provide their own methods.
+        
+        Args:
+            nodes (Any): item(s) to add to 'contents'.
+            
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+
+    def append(self, 
+        node: str,
+        start: Union[str, Sequence[str]] = None, 
+        **kwargs) -> None:
+        """Appends 'node' to the stored data structure.
+
+        Subclasses should ordinarily provide their own methods.
+        
+        Args:
+            node (str): item to add to 'contents'.
+            start (Union[str, Sequence[str]]): where to add new node to. If
+                there are multiple nodes in 'start', 'node' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+            
+        """ 
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+    
+    def branchify(self, 
+        nodes: Sequence[Sequence[str]],
+        start: Union[str, Sequence[str]] = None, 
+        **kwargs) -> None:
+        """Adds parallel paths to the stored data structure.
+
+        Subclasses should ordinarily provide their own methods.
+
+        Args:
+            nodes (Sequence[Sequence[str]]): a list of list of nodes which
+                should have a Cartesian product determined and extended to
+                the stored data structure.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """ 
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+
+    def combine(self, structure: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Subclasses should ordinarily provide their own methods.
+        
+        Args:
+            structure (Structure): a second Structure to combine with this one.
+            
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+
+    def extend(self, 
+        nodes: Sequence[str],
+        start: Union[str, Sequence[str]] = None) -> None:
+        """Adds 'nodes' to the stored data structure.
+
+        Subclasses should ordinarily provide their own methods.
+
+        Args:
+            nodes (Sequence[str]): names of items to add.
+            start (Union[str, Sequence[str]]): where to add new nodes to. If
+                there are multiple nodes in 'start', 'nodes' will be added to
+                each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+         
+    def search(self, 
+        start: Hashable = None, 
+        depth_first: bool = True) -> List[Any]:
+        """Returns a path through the stored data structure.
+
+        Args:
+            start (str): node to start the path from. If None, it is assigned to
+                'roots'. Defaults to None.
+            depth_first (bool): whether the search should be depth first (True)
+                or breadth first (False). Defaults to True.
+
+        Returns:
+            List[Any]: nodes in a path through the stored data structure.
+            
+        """        
+        return self.contents
+
+
 # @dataclasses.dataclass
 # class Tree(amicus.types.Hybrid, Structure):
 #     """Stores a general tree structure using an amicus Hybrid.
-    
-#     Args:
-#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
-#             dict is passed, the keys will be ignored and only the values will be 
-#             added to 'contents'. If a single item is passed, it will be placed 
-#             in a list. Defaults to an empty list.
-#         default (Any): default value to return when the 'get' method is used.
-            
-#     """
-#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
-#     default: Any = None
-
-
-# @dataclasses.dataclass
-# class Pipeline(amicus.types.Hybrid, Structure):
-#     """Stores a pipeline structure using an amicus Hybrid.
     
 #     Args:
 #         contents (Sequence[Any]): items with 'name' attributes to store. If a 

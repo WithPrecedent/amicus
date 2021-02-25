@@ -21,7 +21,6 @@ import copy
 import dataclasses
 import inspect
 import multiprocessing
-import textwrap
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
@@ -327,21 +326,29 @@ class Component(
             return instance
   
     @classmethod
-    def from_outline(cls, outline: Outline, **kwargs) -> Component:
+    def from_outline(cls, 
+        outline: Outline, 
+        name: str = None, 
+        **kwargs) -> Component:
         """[summary]
 
         Args:
             outline (Outline): [description]
+            name (str, optional): [description]. Defaults to None.
 
         Returns:
             Component: [description]
-        """                      
+        """        
+        if name is None:
+            name = outline.name     
+        lookups = [name, outline.designs[name]]
         parameters = outline.initialization
+        parameters.update({'parameters': outline.implementation[name]}) 
         parameters.update(kwargs)
-        keys = [outline.name, outline.designs[outline.name]]
-        instance = cls.from_name(name = keys, **parameters)
-        instance._add_attributes(attributes = outline.attributes)
-        return instance
+        instance = cls.from_name(name = lookups, **parameters)
+        if name in [outline.name]:
+            instance._add_attributes(attributes = outline.attributes) 
+        return instance                   
         
     """ Public Methods """
     
@@ -354,7 +361,14 @@ class Component(
         Returns:
             amicus.Project: [description]
             
-        """ 
+        """
+        if self.parameters:
+            if isinstance(self.parameters, Parameters):
+                self.parameters.finalize(project = project)
+            parameters = self.parameters
+            parameters.update(kwargs)
+        else:
+            parameters = kwargs
         if self.iterations in ['infinite']:
             while True:
                 project = self.implement(project = project, **kwargs)
@@ -373,15 +387,8 @@ class Component(
             amicus.Project: [description]
             
         """
-        if self.parameters:
-            if isinstance(self.parameters, Parameters):
-                self.parameters.finalize(project = project)
-            parameters = self.parameters
-            parameters.update(kwargs)
-        else:
-            parameters = kwargs
         if self.contents not in [None, 'None', 'none']:
-            project = self.contents.execute(project = project, **parameters)
+            project = self.contents.execute(project = project, **kwargs)
         return project
 
     """ Private Methods """
