@@ -16,14 +16,207 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import copy
 import dataclasses
+import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
                     Mapping, Optional, Sequence, Tuple, Type, Union)
 
-
+import amicus
 from . import core
 
 
+@dataclasses.dataclass
+class Component(
+    amicus.framework.Keystone, 
+    amicus.quirks.Needy,
+    amicus.structures.SimpleNode, 
+    abc.ABC):
+    """Keystone class for parts of a Workflow.
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
+        contents (Any): stored item(s) for use by a Component subclass instance.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        parameters (Mapping[Any, Any]]): parameters to be attached to 'contents' 
+            when the 'implement' method is called. Defaults to an empty dict.
+        parallel (ClassVar[bool]): indicates whether this Component design is
+            meant to be at the end of a parallel workflow structure. Defaults to 
+            False.
+    
+    Attributes:
+        keystones (ClassVar[amicus.framework.Library]): library that stores 
+            direct subclasses (those with Keystone in their '__bases__' 
+            attribute) and allows implementation access and instancing of those stored 
+            subclasses.
+        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+            concrete subclasses and allows implementation access and instancing of 
+            those stored subclasses. 'subclasses' is automatically created when 
+            a direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced.
+        instances (ClassVar[amicus.types.Catalog]): catalog that stores
+            subclass instances and allows implementation access of those stored 
+            subclass instances. 'instances' is automatically created when a 
+            direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced. 
+                
+    """
+    name: str = None
+    contents: Any = None
+    parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
+    iterations: Union[int, str] = 1
+    suffix: ClassVar[str] = None
+    needs: ClassVar[Union[Sequence[str], str]] = ['name']
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        if self.suffix is None:
+            key = self.name
+        else:
+            key = f'{self.name}_{self.suffix}'
+        self.instances[key] = self
+        
+    """ Construction Methods """
+
+    @classmethod
+    def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
+        """Returns instance of first match of 'name' in stored catalogs.
+        
+        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        passed names in the order they are listed.
+        
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+            
+        Raises:
+            KeyError: [description]
+            
+        Returns:
+            Component: [description]
+            
+        """
+        names = amicus.tools.listify(name)
+        primary = names[0]
+        item = None
+        for key in names:
+            for library in ['instances', 'subclasses']:
+                try:
+                    item = getattr(cls, library)[key]
+                    break
+                except KeyError:
+                    pass
+            if item is not None:
+                break
+        if item is None:
+            raise KeyError(f'No matching item for {str(name)} was found') 
+        elif inspect.isclass(item):
+            return item(name = primary, **kwargs)
+        else:
+            instance = copy.deepcopy(item)
+            instance._add_attributes(attributes = kwargs)
+            return instance
+  
+    @classmethod
+    def from_outline(cls, 
+        outline: Outline, 
+        name: str = None, 
+        **kwargs) -> Component:
+        """[summary]
+
+        Args:
+            outline (Outline): [description]
+            name (str, optional): [description]. Defaults to None.
+
+        Returns:
+            Component: [description]
+        """        
+        if name is None:
+            name = outline.name     
+        lookups = [name, outline.designs[name]]
+        parameters = outline.initialization
+        parameters.update({'parameters': outline.implementation[name]}) 
+        parameters.update(kwargs)
+        instance = cls.from_name(name = lookups, **parameters)
+        if name in [outline.name]:
+            instance._add_attributes(attributes = outline.attributes) 
+        return instance                   
+        
+    """ Public Methods """
+    
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """
+        if self.contents not in [None, 'None', 'none']:
+            if self.parameters:
+                if isinstance(self.parameters, Parameters):
+                    self.parameters.finalize(project = project)
+                parameters = self.parameters
+                parameters.update(kwargs)
+            else:
+                parameters = kwargs
+            if self.iterations in ['infinite']:
+                while True:
+                    project = self.implement(project = project, **kwargs)
+            else:
+                for iteration in range(self.iterations):
+                    project = self.implement(project = project, **kwargs)
+        return project
+
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            amicus.Project: [description]
+            
+        """
+        
+        project = self.contents.execute(project = project, **kwargs)
+        return project
+
+    """ Private Methods """
+    
+    def _add_attributes(self, attributes: Dict[Any, Any]) -> None:
+        """[summary]
+
+        Args:
+            attributes (Dict[Any, Any]): [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        for key, value in attributes.items():
+            setattr(self, key, value)
+        return self
+    
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        return self.name
+    
+    
 @dataclasses.dataclass
 class Step(core.Component):
     """Wrapper for a Technique.
@@ -152,7 +345,7 @@ class Worker(core.Component):
                             
     """
     name: str = None
-    contents: Any = None
+    contents: core.Workflow = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
@@ -181,7 +374,7 @@ class Pipeline(Worker):
                         
     """
     name: str = None
-    contents: Any = None
+    contents: core.Workflow = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     parallel: ClassVar[bool] = False
@@ -212,7 +405,7 @@ class Contest(Worker):
                         
     """
     name: str = None
-    contents: Any = None
+    contents: core.Workflow = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
@@ -246,7 +439,7 @@ class Study(Worker):
                          
     """
     name: str = None
-    contents: Any = None
+    contents: core.Workflow = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None
@@ -280,7 +473,7 @@ class Survey(Worker):
                           
     """
     name: str = None
-    contents: Any = None
+    contents: core.Workflow = None
     iterations: Union[int, str] = 1
     parameters: Union[Mapping[str, Any], core.Parameters] = core.Parameters()
     criteria: Callable = None

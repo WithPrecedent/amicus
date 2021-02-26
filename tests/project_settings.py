@@ -2,7 +2,6 @@ configuration = {
     'general': {
         'verbose': True,
         'seed': 43,
-        'settings_priority': True,
         'conserve_memery': False,
         'parallelize': False},
     'files': {
@@ -12,7 +11,7 @@ configuration = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_workflow': 'graph',
+        'cool_project_design': 'pipeline',
         'cool_project_workers': ['reviewer', 'parser', 'munger']},
     'reviewer': {
         'reviewer_design': 'pipeline',
