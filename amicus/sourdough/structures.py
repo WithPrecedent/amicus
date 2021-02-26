@@ -66,8 +66,9 @@ class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
     def __init_subclass__(cls, **kwargs):
         """Forces subclasses to use the same hash methods as Node.
         
-        This is necessary because dataclasses do not automatically inherit the
-        hash and equivalance methods from their super classes.
+        This is necessary because dataclasses, by design, do not automatically 
+        inherit the hash and equivalance dunder methods from their super 
+        classes.
         
         """
         super().__init_subclass__(**kwargs)

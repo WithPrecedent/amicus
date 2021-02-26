@@ -232,9 +232,18 @@ class Bunch(collections.abc.Iterable, abc.ABC):
         """
         return iter(self.contents)
 
+    def __len__(self) -> int:
+        """Returns length of 'contents'.
+
+        Returns:
+            int: length of 'contents'.
+
+        """
+        return len(self.contents)
+    
 
 @dataclasses.dataclass
-class Progression(collections.abc.MutableSequence, Bunch):
+class Progression(Bunch, collections.abc.MutableSequence):
     """Basic amicus list replacement.
     
     A Progression differs from an ordinary python list only in ways inherited
@@ -262,13 +271,13 @@ class Progression(collections.abc.MutableSequence, Bunch):
                 additional parameters.
                 
         """
-        if isinstance(item, Iterable) and not isinstance(item, str):
-            self.contents.extend(item)
+        if isinstance(item, Sequence) and not isinstance(item, str):
+            self.contents.extend(item, **kwargs)
         else:
-            self.contents.append(item)
+            self.contents.append(item, **kwargs)
         return self  
 
-    def insert(self, index: int, item: Any) -> None:
+    def insert(self, index: int, item: Any, **kwargs) -> None:
         """Inserts 'item' at 'index' in 'contents'.
 
         Args:
@@ -276,7 +285,7 @@ class Progression(collections.abc.MutableSequence, Bunch):
             item (Any): object to be inserted.
             
         """
-        self.contents.insert(index, item)
+        self.contents.insert(index, item, **kwargs)
         return self
                         
     """ Dunder Methods """
@@ -313,23 +322,23 @@ class Progression(collections.abc.MutableSequence, Bunch):
         """
         del self.contents[key]
 
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'contents'.
+    # def __iter__(self) -> Iterable[Any]:
+    #     """Returns iterable of 'contents'.
 
-        Returns:
-            Iterable: of 'contents'.
+    #     Returns:
+    #         Iterable: of 'contents'.
 
-        """
-        return iter(self.contents)
+    #     """
+    #     return iter(self.contents)
 
-    def __len__(self) -> int:
-        """Returns length of iterable of 'contents'.
+    # def __len__(self) -> int:
+    #     """Returns length of iterable of 'contents'.
 
-        Returns:
-            int: length of iterable of 'contents'.
+    #     Returns:
+    #         int: length of iterable of 'contents'.
 
-        """
-        return len(self.contents)
+    #     """
+    #     return len(self.contents)
     
    
 @dataclasses.dataclass
@@ -341,13 +350,16 @@ class Hybrid(Progression):
     access methods of dictionaries. In order to support this hybrid approach to
     iterables, Hybrid can only store items with a 'name' attribute or property.
     
-    Hybrid is the primary iterable base class used in amicus composite objects.
+    Hybrid is used in 'amicus.structures.Tree' because amicus composite trees 
+    can have identically named nodes. 
     
     A Hybrid inherits the differences between a Progression and an ordinary 
     python list.
     
     A Hybrid differs from a Progression in 3 significant ways:
-        1) It only store items with 'name' attributes or properties.
+        1) It only store items with 'name' attributes or properties. Although 
+             any object with a 'name attribute works, using subclasses of 
+             'amicus.quirks.Element' ensures that this requirement is met.
         2) Hybrid has an interface of both a dict and a list, but stores a list. 
             Hybrid does this by taking advantage of the 'name' attribute of 
             stored items. A 'name' acts as a key to create the facade of a dict
@@ -377,14 +389,14 @@ class Hybrid(Progression):
         
     """ Public Methods """
 
-    def append(self, item: List[Any]) -> None:
+    def append(self, item: List[Any], **kwargs) -> None:
         """Appends 'item' to 'contents'.
         
         Args:
             items (List[Any]): items to append to 'contents'.
 
         """
-        self.contents.append(item)
+        self.contents.append(item, **kwargs)
         return self    
 
     def clear(self) -> None:
@@ -400,8 +412,6 @@ class Hybrid(Progression):
         Args:
             subset (Union[Any, Sequence[Any]]): name(s) for which items from 
                 'contents' should not be returned.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
 
         Returns:
             Hybrid: with items without names in 'subset'.
@@ -411,7 +421,7 @@ class Hybrid(Progression):
         contents = [c for c in self.contents if not c.name in subset]
         return self.__class__(contents = contents, **kwargs)  
            
-    def extend(self, item: Any) -> None:
+    def extend(self, item: Any, **kwargs) -> None:
         """Extends 'items' to 'contents'.
         
         Args:
@@ -421,7 +431,7 @@ class Hybrid(Progression):
             TypeError: if 'item' does not have a name attribute.
             
         """
-        self.contents.extend(item)
+        self.contents.extend(item, **kwargs)
         return self  
 
     def get(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
@@ -439,24 +449,28 @@ class Hybrid(Progression):
         except KeyError:
             return self.default
 
-    def items(self) -> Iterable:
+    def items(self) -> Tuple[Tuple[Any]]:
         """Emulates python dict 'items' method.
         
         Returns:
-            Iterable: tuple of Any names and Anys.
+            Tuple[Tuple[Any, Any]: an iterable equivalent to dict.items(). A 
+                Hybrid cannot actually create an ItemsView because that would 
+                eliminate any duplicate keys, which are permitted by Hybrid.
             
         """
-        return tuple(zip(self.keys(), self.values()))
+        return tuple(zip(self.keys, self.values))
 
-    def keys(self) -> Sequence[Any]:
+    def keys(self) -> Tuple(Any):
         """Emulates python dict 'keys' method.
         
         Returns:
-            Sequence[Any]: list of names of stored in 'contents'
+            Tuple[Any]: an iterable equivalent to dict.keys(). A Hybrid cannot
+                actually create an KeysView because that would eliminate any
+                duplicate keys, which are permitted by Hybrid.
             
         """
         return tuple([c.name for c in self.contents])
-
+        
     def pop(self, key: Union[Any, int]) -> Union[Any, Sequence[Any]]:
         """Pops item(s) from 'contents'.
 
@@ -489,6 +503,7 @@ class Hybrid(Progression):
             
         """
         self.default = value 
+        return self
             
     def subsetify(self, 
         subset: Union[Any, Sequence[Any]], 
@@ -498,49 +513,44 @@ class Hybrid(Progression):
         Args:
             subset (Union[Any, Sequence[Any]]): name(s) for which items from 
                 'contents' should be returned.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
 
         Returns:
             Hybrid: with items with names in 'subset'.
 
         """
         subset = more_itertools.always_iterable(subset)
-        return self.__class__(
-            contents = [c for c in self.contents if c.name in subset])     
+        contents = [c for c in self.contents if c.name in subset]
+        return self.__class__(contents = contents, **kwargs)     
      
-    def update(self, items: Any) -> None:
+    def update(self, items: Mapping[Any, Any], **kwargs) -> None:
         """Mimics the dict 'update' method by appending 'items'.
         
         Args:
-            items (Any): Any items to add to the 'contents' attribute. If a 
-                Mapping is passed, the values are added to 'contents' and the 
-                keys become the 'name' attributes of those values. To mimic 
-                'update', the passed 'items' are added to 'contents' by the 
-                'append' method.           
+            items (Dict[Any, Any]): items to add to the 'contents' attribute. 
+                The values of 'items' are added to 'contents' and the keys 
+                become the 'name' attributes of those values. As a result, the 
+                keys of 'items' are discarded. To mimic dict' update', the 
+                passed 'items' values are added to 'contents' by the 'extend' 
+                method which adds the values to the end of 'contents'.           
         
         """
-        if isinstance(items, Mapping):
-            for key, value in items.items():
-                new_item = value
-                new_item.name = key
-                self.append(item = new_item)
-        else:
-            self.append(item = items)
+        self.extend(item = list(items.values()), **kwargs)
         return self
 
-    def values(self) -> Sequence[Any]:
+    def values(self) -> Tuple[Any]:
         """Emulates python dict 'values' method.
         
         Returns:
-            Sequence[Any]: list of items stored in 'contents'
+            Tuple[Any]: an iterable equivalent to dict.values(). A Hybrid cannot
+                actually create an ValuesView because that would eliminate any
+                duplicate keys, which are permitted by Hybrid.
             
         """
         return tuple(self.contents)
           
     """ Dunder Methods """
 
-    def __getitem__(self, key: Union[Any, int]) -> Any:
+    def __getitem__(self, key: Union[Hashable, int]) -> Any:
         """Returns value(s) for 'key' in 'contents'.
         
         If 'key' is not an int type, this method looks for a matching 'name'
@@ -554,7 +564,8 @@ class Hybrid(Progression):
         is returned.
 
         Args:
-            key (Union[Any, int]): key or index to search for in 'contents'.
+            key (Union[Hashable, int]): name of an item or index to search for 
+                in 'contents'.
 
         Returns:
             Any: value(s) stored in 'contents' that correspond to 'key'. If 
@@ -608,23 +619,23 @@ class Hybrid(Progression):
             self.contents = [c for c in self.contents if c.name != key]
         return self
 
-    def __iter__(self) -> Iterable:
-        """Returns iterable of 'contents'.
+    # def __iter__(self) -> Iterable:
+    #     """Returns iterable of 'contents'.
 
-        Returns:
-            Iterable: 'contents'.
+    #     Returns:
+    #         Iterable: 'contents'.
 
-        """
-        return iter(self.contents)
+    #     """
+    #     return iter(self.contents)
 
-    def __len__(self) -> int:
-        """Returns length of iterable of 'contents'
+    # def __len__(self) -> int:
+    #     """Returns length of iterable of 'contents'
 
-        Returns:
-            int: length of iterable 'contents'.
+    #     Returns:
+    #         int: length of iterable 'contents'.
 
-        """
-        return len(self.contents)
+    #     """
+    #     return len(self.contents)
 
  
 @dataclasses.dataclass
@@ -641,34 +652,36 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             in the 'subset' argument.
     
     Args:
-        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
-            dict.
+        contents (Mapping[Hashable, Any]]): stored dictionary. Defaults to an 
+            empty dict.
         default (Any): default value to return when the 'get' method is used.
               
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[Hashable, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
 
     """ Public Methods """
      
-    def add(self, item: Mapping[Any, Any], **kwargs) -> None:
+    def add(self, item: Mapping[Hashable, Any], **kwargs) -> None:
         """Adds 'item' to the 'contents' attribute.
         
         Args:
-            item (Mapping[Any, Any]): items to add to 'contents' attribute.
+            item (Mapping[Hashable, Any]): items to add to 'contents' attribute.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
                 
         """
-        self.contents.update(item)
+        self.contents.update(item, **kwargs)
         return self
        
-    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
+    def excludify(self, 
+        subset: Union[Hashable, Sequence[Hashable]], 
+        **kwargs) -> Lexicon:
         """Returns a new instance without a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should not be returned.
+            subset (Union[Hashable, Sequence[Hashable]]): key(s) for which 
+                key/value pairs from 'contents' should not be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
 
@@ -683,11 +696,14 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
             setattr(instance, key, value)
         return instance
 
-    def fromkeys(self, keys: Sequence[str], value: Any) -> Lexicon:
+    def fromkeys(self, 
+        keys: Sequence[Hashable], 
+        value: Any, 
+        **kwargs) -> Lexicon:
         """Emulates the 'fromkeys' method from a python dict.
 
         Args:
-            keys (Sequence[str]): items to be keys in a new Lexicon.
+            keys (Sequence[Hashable]): items to be keys in a new Lexicon.
             value (Any): the value to use for all values in a new Lexicon.
 
         Returns:
@@ -696,13 +712,14 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         """
         return self.__class__(
             contents = dict.fromkeys(keys, value),
-            default = self.default)
+            default = self.default, 
+            **kwargs)
     
-    def get(self, key: Any) -> Any:
+    def get(self, key: Hashable) -> Any:
         """Returns value in 'contents' or value in 'default' attribute.
         
         Args:
-            key (Any): key for value in 'contents'.
+            key (Hashable): key for value in 'contents'.
                 
         Returns:
             Any: value matching key in 'contents' or 'default' value. 
@@ -722,12 +739,14 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         """
         self.default = value 
                    
-    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Lexicon:
+    def subsetify(self, 
+        subset: Union[Hashable, Sequence[Hashable]], 
+        **kwargs) -> Lexicon:
         """Returns a new instance with a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should be returned.
+            subset (Union[Hashable, Sequence[Hashable]]): key(s) for which 
+                key/value pairs from 'contents' should be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
 
@@ -744,11 +763,11 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
 
     """ Dunder Methods """
 
-    def __getitem__(self, key: Any) -> Any:
+    def __getitem__(self, key: Hashable) -> Any:
         """Returns value for 'key' in 'contents'.
 
         Args:
-            key (Any): key in 'contents' for which a value is sought.
+            key (Hashable): key in 'contents' for which a value is sought.
 
         Returns:
             Any: value stored in 'contents'.
@@ -756,44 +775,44 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         """
         return self.contents[key]
 
-    def __setitem__(self, key: Any, value: Any) -> None:
+    def __setitem__(self, key: Hashable, value: Any) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Any): key to set in 'contents'.
+            key (Hashable): key to set in 'contents'.
             value (Any): value to be paired with 'key' in 'contents'.
 
         """
         self.contents[key] = value
         return self
 
-    def __delitem__(self, key: Any) -> None:
+    def __delitem__(self, key: Hashable) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (Any): key in 'contents' to delete the key/value pair.
+            key (Hashable): key in 'contents' to delete the key/value pair.
 
         """
         del self.contents[key]
         return self
     
-    def __iter__(self) -> Iterable[Any]:
-        """Returns iterable of 'contents'.
+    # def __iter__(self) -> Iterable[Any]:
+    #     """Returns iterable of 'contents'.
 
-        Returns:
-            Iterable: of 'contents'.
+    #     Returns:
+    #         Iterable: of 'contents'.
 
-        """
-        return iter(self.contents)
+    #     """
+    #     return iter(self.contents)
 
-    def __len__(self) -> int:
-        """Returns length of iterable of 'contents'
+    # def __len__(self) -> int:
+    #     """Returns length of iterable of 'contents'
 
-        Returns:
-            int: length of iterable 'contents'.
+    #     Returns:
+    #         int: length of iterable 'contents'.
 
-        """
-        return len(self.contents)
+    #     """
+    #     return len(self.contents)
 
 
 @dataclasses.dataclass
@@ -822,8 +841,8 @@ class Catalog(Lexicon):
             when the iterator assumes a single datatype will be returned.
 
     Args:
-        contents (Mapping[Any, Any]]): stored dictionary. Defaults to an empty 
-            dict.
+        contents (Mapping[Hashable, Any]]): stored dictionary. Defaults to an 
+            empty dict.
         default (Any): default value to return when the 'get' method is used.
         standard (Sequence[Any]]): a list of keys in 'contents' which will be 
             used to return items when 'default' is sought. If not passed, 
@@ -834,7 +853,7 @@ class Catalog(Lexicon):
             Defaults to False.
                      
     """
-    contents: Mapping[Any, Any] = dataclasses.field(default_factory = dict)
+    contents: Mapping[Hashable, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
     standard: Sequence[Any] = dataclasses.field(default_factory = list)
     always_return_list: bool = False
@@ -848,17 +867,19 @@ class Catalog(Lexicon):
             super().__post_init__()
         except AttributeError:
             pass   
-        # Sets 'default' to all keys of 'contents', if not passed.
+        # Sets 'standard' to all keys of 'contents', if not passed.
         self.standard = self.standard or 'all'
 
     """ Public Methods """
 
-    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
+    def excludify(self, 
+        subset: Union[Hashable, Sequence[Hashable]], 
+        **kwargs) -> Catalog:
         """Returns a new instance without a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should not be returned.
+            subset (Union[Hashable, Sequence[Hashable]]): key(s) for which 
+                key/value pairs from 'contents' should not be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
 
@@ -877,12 +898,14 @@ class Catalog(Lexicon):
             always_return_list = self.always_return_list,
             **kwargs)
 
-    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Catalog:
+    def subsetify(self, 
+        subset: Union[Hashable, Sequence[Hashable]], 
+        **kwargs) -> Catalog:
         """Returns a new instance with a subset of 'contents'.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should be returned.
+            subset (Union[Hashable, Sequence[Hashable]]): key(s) for which 
+                key/value pairs from 'contents' should be returned.
             kwargs: creates a consistent interface even when subclasses have
                 additional parameters.
 
@@ -904,14 +927,14 @@ class Catalog(Lexicon):
     """ Dunder Methods """
 
     def __getitem__(self, 
-        key: Union[Any, Sequence[Any]]) -> Union[Any, Sequence[Any]]:
+        key: Union[Hashable, Sequence[Hashable]]) -> Union[Any, Sequence[Any]]:
         """Returns value(s) for 'key' in 'contents'.
 
         The method searches for 'all', 'default', and 'none' matching wildcard
         options before searching for direct matches in 'contents'.
 
         Args:
-            key (Union[Any, Sequence[Any]]): key(s) in 'contents'.
+            key (Union[Hashable, Sequence[Hashable]]): key(s) in 'contents'.
 
         Returns:
             Union[Any, Sequence[Any]]: value(s) stored in 'contents'.
@@ -944,12 +967,13 @@ class Catalog(Lexicon):
                 raise KeyError(f'{key} is not in {self.__class__.__name__}')
 
     def __setitem__(self,
-        key: Union[Any, Sequence[Any]], 
+        key: Union[Hashable, Sequence[Hashable]], 
         value: Union[Any, Sequence[Any]]) -> None:
         """Sets 'key' in 'contents' to 'value'.
 
         Args:
-            key (Union[Any, Sequence[Any]]): key(s) to set in 'contents'.
+            key (Union[Hashable, Sequence[Hashable]]): key(s) to set in 
+                'contents'.
             value (Union[Any, Sequence[Any]]): value(s) to be paired with 'key' 
                 in 'contents'.
 
@@ -963,12 +987,12 @@ class Catalog(Lexicon):
                 self.contents.update(dict(zip(key, value)))
         return self
 
-    def __delitem__(self, key: Union[Any, Sequence[Any]]) -> None:
+    def __delitem__(self, key: Union[Hashable, Sequence[Hashable]]) -> None:
         """Deletes 'key' in 'contents'.
 
         Args:
-            key (Union[Any, Sequence[Any]]): name(s) of key(s) in 'contents' to
-                delete the key/value pair.
+            key (Union[Hashable, Sequence[Hashable]]): name(s) of key(s) in 
+                'contents' to delete the key/value pair.
 
         """
         self.contents = {
@@ -980,14 +1004,21 @@ class Catalog(Lexicon):
 @dataclasses.dataclass
 class Quirk(abc.ABC):
     """Base class for amicus quirks (mixin-approximations).
-    
+
+    amicus quirks are not technically mixins because some have required 
+    attributes. Traditionally, mixins do not have any attributes and only add 
+    functionality. quirks are designed for multiple inheritance and easy 
+    addition to other classes like mixins but do not meet the formal definition. 
+    Despite that face, quirks are sometimes internally referred to as "mixins" 
+    because their design and goals are otherwise similar to mixins.
+
     Args:
-        quirks (ClassVar[Lexicon]): a dictionary of Quirk subclasses.
+        quirks (ClassVar[Catalog]): a catalog of Quirk subclasses.
         
     Namespaces: __init_subclass__
     
     """
-    quirks: ClassVar[Lexicon] = Lexicon()
+    quirks: ClassVar[Catalog] = Catalog()
     
     """ Initialization Methods """
     
@@ -998,5 +1029,14 @@ class Quirk(abc.ABC):
         if not abc.ABC in cls.__bases__:
             # Creates a snakecase key of the class name.
             key = amicus.tools.snakify(cls.__name__)
+            # Removes "_quirk" from class name if you choose to use 'Quirk' as
+            # a suffix to Quirk subclasses. Amicus doesn't follow this practice 
+            # but includes this adjustment for users that which to use that 
+            # naming convention and don't want to type "_quirk" at the end of
+            # a key when accessing 'quirks'.
+            try:
+                key = key.replace('_quirk', '')
+            except ValueError:
+                pass
             # Stores 'cls' in 'quirks'.
             cls.quirks[key] = cls

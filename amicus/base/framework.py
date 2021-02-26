@@ -6,13 +6,16 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 
 Contents:
-    Library
-    Keystone
-    Validator
-    Converter
+    Keystone (Quirk, ABC): base class to be used for all subclasses that wish 
+        to use amicus's automatic subclass registration system.
+    Validator (Quirk):
+    Converter (ABC):
 
 ToDo:
+    Update Workshop to the current amicus version.
     Support complex types like List[List[str]]
+    Automatically validate types from annotations using 'get_args' and 
+        'get_origin'
     
 """
 from __future__ import annotations
@@ -169,83 +172,6 @@ class Keystone(amicus.types.Quirk, abc.ABC):
                 setattr(instance, key, value)
             return instance
 
-
-
-@dataclasses.dataclass
-class Workshop(object):
-    """
-    """
-    bases: Library = Library()
-    quirks: Library = Quirk.quirks
-
-    """ Public Methods """
-    
-    def create_bases(self) -> None:
-        """[summary]
-
-        Returns:
-            [type]: [description]
-        """
-        quirks = self._get_settings_quirks()
-        for key, value in self.manager.project.bases.items():
-            self.contents[key] = self.create_class(
-                name = key, 
-                base = value, 
-                quirks = quirks)
-        return self
-            
-    def create_class(self, name: str, base: Callable, 
-                     quirks: Sequence[sourdough.Quirk]) -> Callable:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            base (Callable): [description]
-            quirks (Sequence[sourdough.Quirk])
-
-        Returns:
-            Callable: [description]
-            
-        """
-        if quirks:
-            bases = quirks.append(base)
-            new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
-            # Recursively adds quirks to items in the 'registry' of 'base'.
-            if hasattr(base, 'registry'):
-                newregistry = {}
-                for key, value in base.registry.items():
-                    newregistry[key] = self.create_class(
-                        name = key,
-                        base = value,
-                        quirks = quirks)
-                new_base.registry = newregistry
-        else:
-            new_base = base
-        return new_base
-             
-    """ Private Methods """
-    
-    def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
-        """[summary]
-
-        Returns:
-            Sequence[sourdough.Quirk]: [description]
-            
-        """
-        settings_keys = {
-            'verbose': 'talker', 
-            'early_validation': 'validator', 
-            'conserve_memory': 'conserver'}
-        quirks = []
-        for key, value in settings_keys.items():
-            try:
-                if self.manager.project.settings['general'][key]:
-                    quirks.append(sourdough.Quirk.options[value])
-            except KeyError:
-                pass
-        return quirks
-
- 
 
 @dataclasses.dataclass
 class Validator(amicus.types.Quirk):
@@ -430,6 +356,84 @@ class Converter(abc.ABC):
             return item
         else:
             return getattr(instance, attribute)
+        
+
+# @dataclasses.dataclass
+# class Workshop(object):
+#     """
+#     """
+#     bases: Library = Library()
+#     quirks: Library = Quirk.quirks
+
+#     """ Public Methods """
+    
+#     def create_bases(self) -> None:
+#         """[summary]
+
+#         Returns:
+#             [type]: [description]
+#         """
+#         quirks = self._get_settings_quirks()
+#         for key, value in self.manager.project.bases.items():
+#             self.contents[key] = self.create_class(
+#                 name = key, 
+#                 base = value, 
+#                 quirks = quirks)
+#         return self
+            
+#     def create_class(self, name: str, base: Callable, 
+#                      quirks: Sequence[sourdough.Quirk]) -> Callable:
+#         """[summary]
+
+#         Args:
+#             name (str): [description]
+#             base (Callable): [description]
+#             quirks (Sequence[sourdough.Quirk])
+
+#         Returns:
+#             Callable: [description]
+            
+#         """
+#         if quirks:
+#             bases = quirks.append(base)
+#             new_base = dataclasses.dataclass(type(name, tuple(bases), {}))
+#             # Recursively adds quirks to items in the 'registry' of 'base'.
+#             if hasattr(base, 'registry'):
+#                 newregistry = {}
+#                 for key, value in base.registry.items():
+#                     newregistry[key] = self.create_class(
+#                         name = key,
+#                         base = value,
+#                         quirks = quirks)
+#                 new_base.registry = newregistry
+#         else:
+#             new_base = base
+#         return new_base
+             
+#     """ Private Methods """
+    
+#     def _get_settings_quirks(self) -> Sequence[sourdough.Quirk]:
+#         """[summary]
+
+#         Returns:
+#             Sequence[sourdough.Quirk]: [description]
+            
+#         """
+#         settings_keys = {
+#             'verbose': 'talker', 
+#             'early_validation': 'validator', 
+#             'conserve_memory': 'conserver'}
+#         quirks = []
+#         for key, value in settings_keys.items():
+#             try:
+#                 if self.manager.project.settings['general'][key]:
+#                     quirks.append(sourdough.Quirk.options[value])
+#             except KeyError:
+#                 pass
+#         return quirks
+
+ 
+
 
 
 # @dataclasses.dataclass

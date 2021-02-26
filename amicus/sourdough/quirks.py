@@ -4,12 +4,8 @@ Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-amicus quirks are not technically mixins because some have required attributes. 
-Traditionally, mixins do not have any attributes and only add functionality. 
-quirks are designed for multiple inheritance and easy addition to other classes. 
-Despite not meeting the traditional definition of "mixin," they are internally 
-referred to as "mixins" because their design and goals are otherwise similar to 
-mixins.
+Not all amicus quirks are listed here. The 'framework' module also includes a
+couple of notable Quirk subclasses.
 
 Although python doesn't require the separation of interfaces in the same way
 that more structured languages do, some of the includes quirks in this module
@@ -20,14 +16,15 @@ alternate classes for use in amicus, these quirks show how to survive static
 type-checkers and other internal checks made by amicus.
 
 Contents:
-    Keystone (Quirk, ABC): base class to be used for all subclasses that wish 
-        to use amicus's automatic subclass registration system.
     Element (Quirk, ABC): quirk that automatically assigns a 'name' attribute if 
         none is passed. The default 'name' will be the snakecase name of the 
         class.
     Importer (Quirk): quirk that supports lazy importation of modules and items 
         stored within them.
-    Needy (Quirk):
+    Needy (Quirk): quirk that advertises the names of parameters needed in a 
+        'needs' class attribute and includes a universal 'create' classmethod 
+        that calls to the appropriate construction method following the form: 
+        "from_{first string listed in 'needs'}"
 
 ToDo:
     Fix ProxyMixin as explained in its docs.

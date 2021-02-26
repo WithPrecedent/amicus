@@ -8,13 +8,14 @@ Contents:
     Settings
     Filer
     Parameters
-    Outline
+    Directive
     Workflow
     Summary
 
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -49,15 +50,15 @@ class Settings(amicus.framework.Keystone, amicus.options.Configuration):
     Attributes:
         keystones (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
-            attribute) and allows implementation access and instancing of those stored 
+            attribute) and allows runtime access and instancing of those stored 
             subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
-            concrete subclasses and allows implementation access and instancing of 
+            concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
             instanced.
         instances (ClassVar[amicus.types.Catalog]): catalog that stores
-            subclass instances and allows implementation access of those stored 
+            subclass instances and allows runtime access of those stored 
             subclass instances. 'instances' is automatically created when a 
             direct Keystone subclass (Keystone is in its '__bases__') is 
             instanced. 
@@ -214,7 +215,7 @@ class Parameters(amicus.types.Lexicon):
 
     
 @dataclasses.dataclass
-class Outline(object):
+class Directive(object):
     """Information needed to construct and execute a Workflow.
 
     Args:
@@ -257,20 +258,18 @@ class Outline(object):
     def create(cls, 
         name: str, 
         settings: Settings, 
-        library: amicus.framework.Library) -> Outline:
+        keystones: amicus.framework.Library) -> Directive:
         """[summary]
 
         Args:
-            settings (Settings): [description]
             name (str): [description]
-
-        Raises:
-            ValueError: [description]
+            settings (Settings): [description]
+            keystones (amicus.framework.Library): [description]
 
         Returns:
-            Outline: [description]
+            Directive: [description]
             
-        """
+        """        
         edges = {}
         designs = {}
         initialization = {}
@@ -278,7 +277,7 @@ class Outline(object):
         section = settings[name]
         designs[name] = cls._get_design(name = name, settings = settings)
         lookups = [name, designs[name]]
-        dummy_component = library.component.create(name = lookups)
+        dummy_component = keystones.component.create(name = lookups)
         possible_initialization = tuple(
             i for i in list(dummy_component.__annotations__.keys()) 
             if i not in ['name', 'contents'])
@@ -287,7 +286,7 @@ class Outline(object):
             prefix = key[:-len(suffix) - 1]
             if suffix in ['design', 'workflow']:
                 pass
-            elif suffix in library.component.subclasses.suffixes:
+            elif suffix in keystones.component.subclasses.suffixes:
                 designs.update(dict.fromkeys(value, suffix[:-1]))
                 connections = amicus.tools.listify(value)
                 if prefix in edges:
@@ -371,7 +370,266 @@ class Outline(object):
                     implementation[name] = {}
         return implementation
 
- 
+    
+@dataclasses.dataclass
+class Outline(amicus.quirks.Needy, amicus.types.Lexicon):
+    """Creates and stores Directive instances derived from Settings.
+    
+    Args:
+        contents (Mapping[str, Directive]]): stored dictionary of Directive 
+            instances. Defaults to an empty dict.
+        default (Any): default value to return when the 'get' method is used.
+              
+    """
+    contents: Dict[str, Directive] = dataclasses.field(default_factory = dict)
+    default: Any = Directive()
+    general: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    files: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    package: Dict[str, Any] = dataclasses.field(default_factory = dict)
+    needs: ClassVar[Sequence[str]] = ['settings', 'keystones']
+    
+    """ Public Methods """
+    
+    def from_settings(cls, 
+        settings: Settings, 
+        keystones: amicus.framework.Library) -> Outline:
+        """[summary]
+
+        Args:
+            settings (Settings): [description]
+            name (str, optional): [description]. Defaults to None.
+            identification (str, optional): [description]. Defaults to None.
+
+        Raises:
+            ValueError: [description]
+
+        Returns:
+            Outline: [description]
+            
+        """
+        try:
+            general = settings['general']
+        except KeyError:
+            general = {}
+        try:
+            files = settings['files']
+        except KeyError:
+            try:
+                files = settings['filer']
+            except KeyError:
+                files = {}
+        try:
+            package = settings['amicus']
+        except KeyError:
+            package = {}
+        skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
+        keys = [k for k in settings.keys() if k not in skips] 
+        directives = {}
+        for key in keys:
+            directives[key] = Directive.create(
+                name = key,
+                settings = settings,
+                keystones = keystones)
+        return cls(
+            contents = directives,
+            general = general,
+            files = files,
+            package = package)
+
+
+@dataclasses.dataclass
+class Component(
+    amicus.framework.Keystone, 
+    amicus.quirks.Needy,
+    amicus.structures.Node, 
+    abc.ABC):
+    """Keystone class for nodes in a project Workflow.
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
+        contents (Any): stored item(s) to be used by the 'implement' method.
+        parameters (Union[Mapping[Hashable, Any], Parameters): parameters to be 
+            attached to 'contents' when the 'implement' method is called. 
+            Defaults to an empty dict.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+    
+    Attributes:
+        keystones (ClassVar[amicus.framework.Library]): library that stores 
+            direct subclasses (those with Keystone in their '__bases__' 
+            attribute) and allows runtime access and instancing of those 
+            stored subclasses.
+        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+            concrete subclasses and allows runtime access and instancing of 
+            those stored subclasses. 'subclasses' is automatically created when 
+            a direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced.
+        instances (ClassVar[amicus.types.Catalog]): catalog that stores
+            subclass instances and allows runtime access of those stored 
+            subclass instances. 'instances' is automatically created when a 
+            direct Keystone subclass (Keystone is in its '__bases__') is 
+            instanced. 
+                
+    """
+    name: str = None
+    contents: Any = None
+    parameters: Union[Mapping[Hashable, Any], Parameters] = dataclasses.field(
+        default_factory = dict)
+    iterations: Union[int, str] = 1
+    suffix: ClassVar[str] = None
+    needs: ClassVar[Union[Sequence[str], str]] = ['name']
+    
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        if self.suffix is None:
+            key = self.name
+        else:
+            key = f'{self.name}_{self.suffix}'
+        self.instances[key] = self
+        
+    """ Construction Methods """
+
+    @classmethod
+    def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
+        """Returns instance of first match of 'name' in stored catalogs.
+        
+        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        passed names in the order they are listed.
+        
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+            
+        Raises:
+            KeyError: [description]
+            
+        Returns:
+            Component: [description]
+            
+        """
+        names = amicus.tools.listify(name)
+        primary = names[0]
+        item = None
+        for key in names:
+            for library in ['instances', 'subclasses']:
+                try:
+                    item = getattr(cls, library)[key]
+                    break
+                except KeyError:
+                    pass
+            if item is not None:
+                break
+        if item is None:
+            raise KeyError(f'No matching item for {str(name)} was found') 
+        elif inspect.isclass(item):
+            return item(name = primary, **kwargs)
+        else:
+            instance = copy.deepcopy(item)
+            instance._add_attributes(attributes = kwargs)
+            return instance
+  
+    @classmethod
+    def from_directive(cls, 
+        directive: Directive, 
+        name: str = None, 
+        **kwargs) -> Component:
+        """[summary]
+
+        Args:
+            directive (Directive): [description]
+            name (str, optional): [description]. Defaults to None.
+
+        Returns:
+            Component: [description]
+        """        
+        if name is None:
+            name = directive.name     
+        lookups = [name, directive.designs[name]]
+        parameters = directive.initialization
+        parameters.update({'parameters': directive.implementation[name]}) 
+        parameters.update(kwargs)
+        instance = cls.from_name(name = lookups, **parameters)
+        if name in [directive.name]:
+            instance._add_attributes(attributes = directive.attributes) 
+        return instance                   
+        
+    """ Public Methods """
+    
+    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Calls the 'implement' method the number of times in 'iterations'.
+
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        if self.contents not in [None, 'None', 'none']:
+            if self.parameters:
+                if isinstance(self.parameters, Parameters):
+                    self.parameters.finalize(project = project)
+                parameters = self.parameters
+                parameters.update(kwargs)
+            else:
+                parameters = kwargs
+            if self.iterations in ['infinite']:
+                while True:
+                    project = self.implement(project = project, **kwargs)
+            else:
+                for iteration in range(self.iterations):
+                    project = self.implement(project = project, **kwargs)
+        return project
+
+    @abc.abstractmethod
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+
+        Subclasses must provide their own methods.
+
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        pass
+
+    """ Private Methods """
+    
+    def _add_attributes(self, attributes: Dict[Any, Any]) -> None:
+        """[summary]
+
+        Args:
+            attributes (Dict[Any, Any]): [description]
+
+        Returns:
+            [type]: [description]
+            
+        """
+        for key, value in attributes.items():
+            setattr(self, key, value)
+        return self
+    
+    # """ Dunder Methods """
+    
+    # def __str__(self) -> str:
+    #     return self.name
+    
+    
 @dataclasses.dataclass
 class Workflow(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
     """A workflow factory that can be constructed from a Settings instance.
@@ -388,13 +646,13 @@ class Workflow(amicus.framework.Keystone, amicus.quirks.Needy, abc.ABC):
                 
     Attributes:
         keystones (ClassVar[amicus.framework.Library]): library that stores 
-            amicus base classes and allows implementation access and instancing of 
+            amicus base classes and allows runtime access and instancing of 
             those stored subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
-            concrete subclasses and allows implementation access and instancing of 
+            concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 
         instances (ClassVar[amicus.types.Catalog]): catalog that stores
-            subclass instances and allows implementation access of those stored 
+            subclass instances and allows runtime access of those stored 
             subclass instances.
                        
     """
@@ -485,7 +743,6 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
     """
     contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
-    components: Dict[Component] = dataclasses.field(default_factory = dict)
     needs: ClassVar[Union[Sequence[str], str]] = ['settings', 'name']
     
     """ Public Class Methods """
@@ -495,38 +752,52 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
         """[summary]
 
         Args:
-            source (base.Settings): [description]
+            settings (Settings): [description]
+            name (str, optional): [description]. Defaults to None.
+
+        Raises:
+            ValueError: [description]
 
         Returns:
             Workflow: [description]
             
-        """  
-        skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
-        keys = [k for k in settings.keys() if k not in skips] 
-        if name is None:
-            try:
-                name = keys[0]
-            except IndexError:
-                raise ValueError(
-                    'No settings indicate how to construct a project workflow') 
-        outlines = {} 
+        """        
+        # skips = [k for k in settings.keys() if k.endswith(tuple(settings.skip))]
+        # keys = [k for k in settings.keys() if k not in skips] 
+        # if name is None:
+        #     try:
+        #         name = keys[0]
+        #     except IndexError:
+        #         raise ValueError(
+        #             'No settings indicate how to construct a project workflow') 
+        try:
+            primary = settings[name]
+        except (KeyError, TypeError):
+            first_key = list(settings.keys())[0]
+            primary = settings[first_key]
+        suffixes = cls.keystones.component.subclasses.suffixes
+        matches = [v for k, v in primary.items() if k.endswith(suffixes)]
+        keys = more_itertools.chain(matches)
+        
+            
+        directives = {} 
         for key in keys:
-            outlines[key] = Outline.create(
+            directives[key] = Directive.create(
                 name = key,
                 settings = settings, 
                 keystones = cls.keystones)
-        workflow = cls.from_outlines(outlines = outlines, name = name) 
+        workflow = cls.from_directives(directives = directives, name = name) 
         return workflow 
     
     @classmethod
-    def from_outlines(cls, outlines: Dict[str, Outline], name: str) -> Workflow:
+    def from_directives(cls, directives: Dict[str, Directive], name: str) -> Workflow:
         """
         """
         workflow = cls()
-        outlines.pop(name)
-        for outline in outlines.values():
-            component = cls.keystones.component.from_outline(outline = outline)
-            kwargs = {'outline': outline, 'component': component}
+        directives.pop(name)
+        for directive in directives.values():
+            component = cls.keystones.component.from_directive(directive = directive)
+            kwargs = {'directive': directive, 'component': component}
             if component.parallel:
                 workflow._add_parallel_components(**kwargs)
             else:
@@ -536,28 +807,28 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
     """ Private Methods """
     
     def _add_parallel_components(self, 
-            outline: Outline, 
+            directive: Directive, 
             component: Component) -> None:
         """[summary]
 
         Args:
-            outline (Outline): [description]
+            directive (Directive): [description]
 
         Returns:
         
         """
         self.append(component)
-        step_names = outline.edges[outline.name]
-        possible = [outline.edges[step] for step in step_names]
+        step_names = directive.edges[directive.name]
+        possible = [directive.edges[step] for step in step_names]
         nodes = []
         for i, step_options in enumerate(possible):
             permutation = []
             for option in step_options:
-                t_keys = [option, outline.designs[option]]
+                t_keys = [option, directive.designs[option]]
                 technique = self.keystones.component.from_name(
                     name = t_keys,
                     container = step_names[i])
-                s_keys = [step_names[i], outline.designs[step_names[i]]]    
+                s_keys = [step_names[i], directive.designs[step_names[i]]]    
                 step = self.keystones.component.select(name = s_keys)
                 step = step(name = option, contents = technique)
                 permutation.append(step)
@@ -567,28 +838,28 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
         return self
 
     def _add_serial_components(self, 
-            outline: Outline, 
+            directive: Directive, 
             component: Component) -> None:
         """[summary]
 
         Args:
-            outline (Outline): [description]
+            directive (Directive): [description]
 
         Returns:
         
         """
         self.append(component)
-        components = self._depth_first(name = outline.name, outline = outline)
+        components = self._depth_first(name = directive.name, directive = directive)
         collapsed = list(more_itertools.collapse(components))
         nodes = []
         for node in collapsed:
-            keys = [node, outline.designs[node]]
+            keys = [node, directive.designs[node]]
             component = self.keystones.component.from_name(name = keys)
             nodes.append(component)
         self.extend(nodes = nodes)
         return self
     
-    def _depth_first(self, name: str, outline: Outline) -> List:
+    def _depth_first(self, name: str, directive: Directive) -> List:
         """
 
         Args:
@@ -600,14 +871,14 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
             
         """
         organized = []
-        components = outline.edges[name]
+        components = directive.edges[name]
         for item in components:
             organized.append(item)
-            if item in outline.edges:
+            if item in directive.edges:
                 organized_subcomponents = []
                 subcomponents = self._depth_first(
                     name = item, 
-                    outline = outline)
+                    directive = directive)
                 organized_subcomponents.append(subcomponents)
                 if len(organized_subcomponents) == 1:
                     organized.append(organized_subcomponents[0])
@@ -615,24 +886,24 @@ class GraphWorkflow(Workflow, amicus.structures.Graph):
                     organized.append(organized_subcomponents)
         return organized
 
-    def _get_component(self, name: str, outline: Outline) -> Component:
+    def _get_component(self, name: str, directive: Directive) -> Component:
         """
         """
-        lookups = [name, outline.designs[name]]
+        lookups = [name, directive.designs[name]]
         kwargs = {}
         try:
-            kwargs.update(outline.initialization[name])
+            kwargs.update(directive.initialization[name])
         except KeyError:
             pass
         try:
-            kwargs.update({'parameters': outline.implementation[name]})
+            kwargs.update({'parameters': directive.implementation[name]})
         except KeyError:
             pass     
         component = self.keystones.component.from_name(name = name, **kwargs)
-        if name in [outline.name]:
+        if name in [directive.name]:
             component = self._add_attributes(
                 node = component,
-                attributes = outline.attributes)
+                attributes = directive.attributes)
         return component     
         
     """ Dunder Methods """

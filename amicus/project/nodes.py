@@ -54,15 +54,15 @@ class Component(
     Attributes:
         keystones (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
-            attribute) and allows implementation access and instancing of those stored 
-            subclasses.
+            attribute) and allows runtime access and instancing of those 
+            stored subclasses.
         subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
-            concrete subclasses and allows implementation access and instancing of 
+            concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
             instanced.
         instances (ClassVar[amicus.types.Catalog]): catalog that stores
-            subclass instances and allows implementation access of those stored 
+            subclass instances and allows runtime access of those stored 
             subclass instances. 'instances' is automatically created when a 
             direct Keystone subclass (Keystone is in its '__bases__') is 
             instanced. 
@@ -269,7 +269,22 @@ class Step(core.Component):
     def technique(self) -> None:
         self.contents = None
         return self
- 
+    
+    """ Public Methods """
+    
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        project = self.contents.execute(project = project, **kwargs)
+        return project 
                           
 @dataclasses.dataclass
 class Technique(core.Component):
