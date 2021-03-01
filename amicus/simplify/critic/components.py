@@ -12,7 +12,7 @@ from __future__ import annotations
 import dataclasses
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import amicus
 from . import base

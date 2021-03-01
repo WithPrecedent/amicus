@@ -24,7 +24,7 @@ __author__ = 'Corey Rayburn Yung'
 
 import importlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 """ 
 amicus imports are designed to allow key classes and functions to have first or 
@@ -70,7 +70,7 @@ importables: Dict[str, str] = {
     'Hybrid': 'sourdough.types.Hybrid',
     'Lexicon': 'sourdough.types.Lexicon',
     'Catalog': 'sourdough.types.Catalog',
-    'Configuration': 'sourdough.options.Configuration',
+    'Settings': 'sourdough.options.Settings',
     'Clerk': 'sourdough.options.Clerk',
     'Keystone': 'sourdough.framework.Keystone',
     'create_keystone': 'sourdough.framework.create_keystone',
@@ -78,7 +78,7 @@ importables: Dict[str, str] = {
     'Converter': 'sourdough.framework.Converter',
     'Structure': 'sourdough.structures.Structure',
     'Graph': 'sourdough.structures.Graph',
-    'Project': 'project.interface.Project'}
+    'Project': 'project.core.Project'}
 
 def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them.

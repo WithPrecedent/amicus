@@ -11,7 +11,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 import amicus
@@ -28,8 +28,8 @@ class SklearnModel(amicus.types.Quirk):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs options from a Configuration instance, 'name' should match 
-            the appropriate section name in a Configuration instance. Defaults to 
+            instance needs options from a Settings instance, 'name' should match 
+            the appropriate section name in a Settings instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -86,8 +86,8 @@ class SklearnSplitter(amicus.types.Quirk):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs options from a Configuration instance, 'name' should match 
-            the appropriate section name in a Configuration instance. Defaults to 
+            instance needs options from a Settings instance, 'name' should match 
+            the appropriate section name in a Settings instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 
@@ -145,8 +145,8 @@ class SklearnTransformer(amicus.types.Quirk):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs options from a Configuration instance, 'name' should match 
-            the appropriate section name in a Configuration instance. Defaults to 
+            instance needs options from a Settings instance, 'name' should match 
+            the appropriate section name in a Settings instance. Defaults to 
             None. 
         contents (Union[Callable, Type, object, str]): stored item(s) for use by 
             a Component subclass instance. If it is Type or str, an instance 

@@ -18,7 +18,7 @@ import dataclasses
 import datetime
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 import numpy as np
@@ -44,8 +44,8 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             dictionary.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
 
     """
@@ -83,7 +83,7 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             datatypes: Mapping[str, str] = lambda: {},
             prefixes: Mapping[str, str] = lambda: {},
             name: str = None,
-            settings: base.Configuration = None,
+            settings: base.Settings = None,
             filer: base.Filer = None) -> Dataset:
         """Creates an Dataset instance.
 
@@ -810,7 +810,7 @@ class DataTypes(collections.abc.Container):
         except KeyError:
             return self.inferables[str(column.dtype)]
 
-    def infer_and_downcast(self, column: pd.Series) -> Tuple[str, pd.Series]:
+    def infer_and_downcast(self, column: pd.Series) -> tuple[str, pd.Series]:
         proxy_type = self.infer(column = column)
         return (
             proxy_type,
@@ -928,10 +928,10 @@ class DataState(object):
     """A single state in data processing for an amicus project.
 
     Args:
-        train_set (Optional[Tuple[str, str]]): names of attributes in a
+        train_set (Optional[tuple[str, str]]): names of attributes in a
             'Dataset' instance to return when 'train' is accessed. Defaults to
             None.
-        test_set (Optional[Tuple[str, str]]): names of attributes in a
+        test_set (Optional[tuple[str, str]]): names of attributes in a
             'Dataset' instance to return when 'test' is accessed. Defaults to
             None.
         import_folder (Optional[str]): name of an attribute in an 'Clerk'
@@ -942,8 +942,8 @@ class DataState(object):
             from. Defaults to 'processed'.
 
     """
-    train_set: Optional[Tuple[str, str]] = None
-    test_set: Optional[Tuple[str, str]] = None
+    train_set: Optional[tuple[str, str]] = None
+    test_set: Optional[tuple[str, str]] = None
     import_folder: Optional[str] = 'processed'
     export_folder: Optional[str] = 'processed'
 

@@ -12,7 +12,7 @@ import functools
 import time
 import types
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import amicus
 

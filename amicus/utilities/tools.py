@@ -65,7 +65,7 @@ def classify(
         except AttributeError:
             return variable
 
-def deannotate(annotation: Any) -> Tuple[Any]:
+def deannotate(annotation: Any) -> tuple[Any]:
     """Returns type annotations as a tuple.
     
     This allows even complicated annotations with Union to be converted to a
@@ -75,7 +75,7 @@ def deannotate(annotation: Any) -> Tuple[Any]:
         annotation (Any): type annotation.
 
     Returns:
-        Tuple[Any]: base level of stored type in an annotation
+        tuple[Any]: base level of stored type in an annotation
     
     """
     origin = typing.get_origin(annotation)
@@ -361,7 +361,7 @@ def subsetify(
 
 def tuplify(
         variable: Any,
-        default_value: Any = None) -> Tuple[Any]:
+        default_value: Any = None) -> tuple[Any]:
     """Returns passed variable as a tuple (if not already a tuple).
 
     Args:
@@ -372,7 +372,7 @@ def tuplify(
             is set to ().
 
     Returns:
-        Tuple[Any]: a passed tuple, 'variable' converted to a tuple, or 
+        tuple[Any]: a passed tuple, 'variable' converted to a tuple, or 
             'default_value'.
 
     """
@@ -525,7 +525,7 @@ def deduplicate(
         return iterable
 
          
-def divide_string(item: str, divider: str = None) -> Tuple[str, str]:
+def divide_string(item: str, divider: str = None) -> tuple[str, str]:
     """[summary]
 
     Args:
@@ -533,7 +533,7 @@ def divide_string(item: str, divider: str = None) -> Tuple[str, str]:
 
     Returns:
         
-        Tuple[str, str]: [description]
+        tuple[str, str]: [description]
         
     """
     if divider is None:

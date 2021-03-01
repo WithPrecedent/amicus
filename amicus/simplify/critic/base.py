@@ -11,7 +11,7 @@ Contents:
 from __future__ import annotations
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import amicus
 
@@ -23,9 +23,9 @@ class Critic(base.SimpleManager):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a SimpleConfiguration
+            amicus instance needs settings from a SimpleSettings
             instance, 'name' should match the appropriate section name in a 
-            SimpleConfiguration instance. Defaults to None. 
+            SimpleSettings instance. Defaults to None. 
         workflow (base.SimpleWorkflow): a workflow of a project subpart derived 
             from 'outline'. Defaults to None.
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
@@ -180,7 +180,7 @@ class Anthology(Book):
             techniques to apply at each step. Defaults to an empty list.
         iterable(Optional[str]): name of property to store alternative proxy
             to 'reviews'.
-        steps (Optional[List[Tuple[str, str]]]): tuples of steps and
+        steps (Optional[List[tuple[str, str]]]): tuples of steps and
             techniques.
         techniques (Optional[List['Technique']]): 'Technique' instances to
             apply. In an ordinary project, 'techniques' are not passed to an
@@ -192,7 +192,7 @@ class Anthology(Book):
     name: Optional[str] = dataclasses.field(default_factory = lambda: 'anthology')
     chapters: Optional[List['Review']] = dataclasses.field(default_factory = list)
     iterable: Optional[str] = dataclasses.field(default_factory = lambda: 'reviews')
-    steps: Optional[List[Tuple[str, str]]] = dataclasses.field(default_factory = list)
+    steps: Optional[List[tuple[str, str]]] = dataclasses.field(default_factory = list)
     techniques: Optional[List['Technique']] = dataclasses.field(default_factory = list)
 
 

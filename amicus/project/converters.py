@@ -25,12 +25,12 @@ class SettingsConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """     
     base: str = 'settings'
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    alternatives: Tuple[Type] = tuple([pathlib.Path, Mapping])
+    alternatives: tuple[Type] = tuple([pathlib.Path, Mapping])
 
 
 @dataclasses.dataclass
@@ -40,13 +40,13 @@ class FilerConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """
     base: str = 'filer'
     parameters: Dict[str, Any] = dataclasses.field(
         default_factory = lambda: {'settings': 'settings'})
-    alternatives: Tuple[Type] = tuple([pathlib.Path, Mapping])
+    alternatives: tuple[Type] = tuple([pathlib.Path, Mapping])
     
     
 @dataclasses.dataclass
@@ -56,13 +56,13 @@ class WorkerConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """        
     base: str = 'component'
     parameters: Dict[str, Any] = dataclasses.field(
         default_factory = lambda: {'project': 'self'})
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
 
     
 @dataclasses.dataclass
@@ -72,13 +72,13 @@ class WorkersConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """        
     base: str = 'component'
     parameters: Dict[str, Any] = dataclasses.field(
         default_factory = lambda: {'project': 'self'})
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
 
 
     def validate(self, item: Any, instance: object) -> object:
@@ -116,12 +116,12 @@ class CreatorConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """         
     base: str = 'creator'
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
     
     
 @dataclasses.dataclass
@@ -131,12 +131,12 @@ class CreatorsConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """        
     base: str = 'creator'
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
 
 
     def validate(self, item: Any, instance: object) -> object:
@@ -160,13 +160,13 @@ class ComponentConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """         
     base: str = 'component'
     parameters: Dict[str, Any] = dataclasses.field(
         default_factory = lambda: {'name': 'str'})
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
 
 
 @dataclasses.dataclass
@@ -176,12 +176,12 @@ class WorkflowConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """         
     base: str = 'workflow'
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
     
 
 @dataclasses.dataclass
@@ -191,12 +191,12 @@ class ResultsConverter(amicus.Converter):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """         
     base: str = 'results'
     parameters: Dict[str, Any] = dataclasses.field(
         default_factory = lambda: {'name': 'name', 
                                    'identification': 'identification'})
-    alternatives: Tuple[Type] = None
+    alternatives: tuple[Type] = None
     

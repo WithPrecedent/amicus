@@ -15,7 +15,7 @@ import copy
 import dataclasses
 import functools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import numpy as np
 import pandas as pd

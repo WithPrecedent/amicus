@@ -12,7 +12,7 @@ from __future__ import annotations
 import dataclasses
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import amicus
 from . import base
@@ -25,8 +25,8 @@ class AnalystComponent(amicus.project.Component):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a SimpleConfiguration instance, 
-            'name' should match the appropriate section name in a SimpleConfiguration 
+            amicus instance needs settings from a SimpleSettings instance, 
+            'name' should match the appropriate section name in a SimpleSettings 
             instance. Defaults to None. 
         contents (Any): stored item(s) for use by a Component subclass instance.
         iterations (Union[int, str]): number of times the 'implement' method 

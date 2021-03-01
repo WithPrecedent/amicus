@@ -24,7 +24,7 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
@@ -39,11 +39,11 @@ class Registry(amicus.types.Catalog):
     """ Properties """
     
     @property
-    def suffixes(self) -> Tuple[str]:
+    def suffixes(self) -> tuple[str]:
         """Returns all subclass names with an 's' added to the end.
         
         Returns:
-            Tuple[str]: all subclass names with an 's' added in order to create
+            tuple[str]: all subclass names with an 's' added in order to create
                 simple plurals.
                 
         """
@@ -89,14 +89,14 @@ class Keystone(amicus.types.Quirk, abc.ABC):
     key.
     
     Any direct subclass will automatically store itself in the class attribute 
-    'keystones' using the snakecase name of the class as the key.
+    'library' using the snakecase name of the class as the key.
     
     Any instance of a subclass will be stored in the class attribute 'instances'
     as long as '__post_init__' is called (either by a 'super()' call or if the
     instance is a dataclass and '__post_init__' is not overridden).
     
     Args:
-        keystones (ClassVar[Library]): library that stores direct subclasses 
+        library (ClassVar[Library]): library that stores direct subclasses 
             (those with Keystone in their '__bases__' attribute) and allows 
             runtime access and instancing of those stored subclasses.
     
@@ -113,10 +113,10 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             instanced. 
                       
     Namespaces: 
-        keystones, subclasses, instances, select, instance, __init_subclass__
+        library, subclasses, instances, select, instance, __init_subclass__
     
     """
-    keystones: ClassVar[Library] = Library()
+    library: ClassVar[Library] = Library()
     
     """ Initialization Methods """
     
@@ -125,10 +125,10 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         super().__init_subclass__(**kwargs)
         # Creates a snakecase key of the class name.
         key = amicus.tools.snakify(cls.__name__)
-        # Adds class to 'keystones' if it is a base class.
+        # Adds class to 'library' if it is a base class.
         if Keystone in cls.__bases__:
             # Registers a new Keystone.
-            cls.keystones.register(name = key, keystone = cls)
+            cls.library.register(name = key, keystone = cls)
         # Adds concrete subclasses to 'library' using 'key'.
         if not abc.ABC in cls.__bases__:
             cls.subclasses[key] = cls
@@ -253,14 +253,14 @@ def create_keystone(
     if keystone is not object and name is None:
         raise ValueError('name must not be None is keystone is object')
     elif isinstance(keystone, str):
-        bases.append(Keystone.keystones[keystone])
+        bases.append(Keystone.library[keystone])
     elif isinstance(keystone, Keystone):
         bases.append(keystone)
     else:
         raise TypeError('keystone must be a str, Keystone type, or object')
     creation = dataclasses.dataclass(type(name, tuple(bases), {}))
     if keystone is object:
-        Keystone.keystones[name] = creation
+        Keystone.library[name] = creation
     return creation
         
 
@@ -310,7 +310,7 @@ class Validator(amicus.types.Quirk):
             setattr(self, name, validated)
         return self     
 
-#     def deannotate(self, annotation: Any) -> Tuple[Any]:
+#     def deannotate(self, annotation: Any) -> tuple[Any]:
 #         """Returns type annotations as a tuple.
         
 #         This allows even complicated annotations with Union to be converted to a
@@ -320,7 +320,7 @@ class Validator(amicus.types.Quirk):
 #             annotation (Any): type annotation.
 
 #         Returns:
-#             Tuple[Any]: base level of stored type in an annotation
+#             tuple[Any]: base level of stored type in an annotation
         
 #         """
 #         origin = get_origin(annotation)
@@ -358,12 +358,12 @@ class Converter(abc.ABC):
     Args:
         base (str): 
         parameters (Dict[str, Any]):
-        alternatives (Tuple[Type])
+        alternatives (tuple[Type])
         
     """
     base: str = None
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    alterantives: Tuple[Type] = dataclasses.field(default_factory = tuple)
+    alterantives: tuple[Type] = dataclasses.field(default_factory = tuple)
 
     """ Initialization Methods """
     
@@ -397,8 +397,8 @@ class Converter(abc.ABC):
             object: [description]
             
         """ 
-        if hasattr(instance, 'keystones') and instance.keystones is not None:
-            base = getattr(instance.keystones, self.base)
+        if hasattr(instance, 'library') and instance.library is not None:
+            base = getattr(instance.library, self.base)
             kwargs = {
                 k: self._kwargify(v, instance, item) 
                 for k, v in self.parameters.items()}
@@ -420,7 +420,7 @@ class Converter(abc.ABC):
                 raise TypeError(f'{item} could not be validated or converted')
         else:
             raise AttributeError(
-                f'Cannot validate or convert {item} without keystones')
+                f'Cannot validate or convert {item} without library')
         return validated
 
     """ Private Methods """

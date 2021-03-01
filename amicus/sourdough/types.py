@@ -34,7 +34,7 @@ import abc
 import collections.abc
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 
@@ -449,11 +449,11 @@ class Hybrid(Progression):
         except KeyError:
             return self.default
 
-    def items(self) -> Tuple[Tuple[Any]]:
+    def items(self) -> tuple[tuple[Any]]:
         """Emulates python dict 'items' method.
         
         Returns:
-            Tuple[Tuple[Any, Any]: an iterable equivalent to dict.items(). A 
+            tuple[tuple[Any, Any]: an iterable equivalent to dict.items(). A 
                 Hybrid cannot actually create an ItemsView because that would 
                 eliminate any duplicate keys, which are permitted by Hybrid.
             
@@ -464,7 +464,7 @@ class Hybrid(Progression):
         """Emulates python dict 'keys' method.
         
         Returns:
-            Tuple[Any]: an iterable equivalent to dict.keys(). A Hybrid cannot
+            tuple[Any]: an iterable equivalent to dict.keys(). A Hybrid cannot
                 actually create an KeysView because that would eliminate any
                 duplicate keys, which are permitted by Hybrid.
             
@@ -537,11 +537,11 @@ class Hybrid(Progression):
         self.extend(item = list(items.values()), **kwargs)
         return self
 
-    def values(self) -> Tuple[Any]:
+    def values(self) -> tuple[Any]:
         """Emulates python dict 'values' method.
         
         Returns:
-            Tuple[Any]: an iterable equivalent to dict.values(). A Hybrid cannot
+            tuple[Any]: an iterable equivalent to dict.values(). A Hybrid cannot
                 actually create an ValuesView because that would eliminate any
                 duplicate keys, which are permitted by Hybrid.
             

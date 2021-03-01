@@ -9,7 +9,7 @@ Contents:
 """
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import numpy as np
 import pandas as pd
@@ -27,8 +27,8 @@ class Reduce(amicus.project.Step):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
         contents (Technique): stored Technique instance used by the 'implement' 
             method.
@@ -63,7 +63,7 @@ class Reduce(amicus.project.Step):
         """
         if 'estimator' in self.parameters:
             key = self.parameters['estimator']
-            self.parameters['estimator'] = self.keystones.component[key]
+            self.parameters['estimator'] = self.library.component[key]
         return self
 
     def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
@@ -131,5 +131,5 @@ for reducer, algorithm in sklearn_reducers:
         'contents': algorithm,
         'module': 'sklearn.feature_selection',
         'parameters': sklearn_reducer_parameters[reducer]}
-    Reduce.keystones.component[reducer] = amicus.project.SklearnTransformer(
+    Reduce.library.component[reducer] = amicus.project.SklearnTransformer(
         **kwargs) 

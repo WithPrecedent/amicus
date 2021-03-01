@@ -30,7 +30,7 @@ import copy
 import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import more_itertools
 
@@ -53,8 +53,8 @@ class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. 
             Defaults to None. 
 
     """
@@ -130,8 +130,8 @@ class SimpleNode(Node):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. 
             Defaults to None. 
 
     """
@@ -150,8 +150,8 @@ class SmartNode(Node):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. 
             Defaults to None. 
 
     """
@@ -534,11 +534,11 @@ class Graph(amicus.types.Lexicon, Structure):
         return cls(contents = adjacency)
     
     @classmethod
-    def from_edges(cls, edges: List[Tuple[Hashable]]) -> Graph:
+    def from_edges(cls, edges: List[tuple[Hashable]]) -> Graph:
         """Creates a Graph instance from an edge list.
 
         Args:
-            edges (List[Tuple[Hashable]]): Edge list used to create a Graph 
+            edges (List[tuple[Hashable]]): Edge list used to create a Graph 
                 instance.
             
         """
@@ -581,11 +581,11 @@ class Graph(amicus.types.Lexicon, Structure):
     
     """ Public Methods """
     
-    def add(self, item: Union[Hashable, Tuple[Hashable]]) -> None:
+    def add(self, item: Union[Hashable, tuple[Hashable]]) -> None:
         """Adds nodes or edges to 'contents' depending on type.
         
         Args:
-            item (Union[Hashable, Tuple[Hashable]]): either a node or a tuple 
+            item (Union[Hashable, tuple[Hashable]]): either a node or a tuple 
                 containing the names of nodes for an edge to be created.
 
         """

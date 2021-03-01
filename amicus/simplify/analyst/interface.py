@@ -12,7 +12,7 @@ Contents:
 from __future__ import annotations
 import dataclasses
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-                    Mapping, Optional, Sequence, Tuple, Type, Union)
+    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,8 @@ class Analyst(amicus.project.Worker):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Configuration instance, 
-            'name' should match the appropriate section name in a Configuration 
+            amicus instance needs settings from a Settings instance, 
+            'name' should match the appropriate section name in a Settings 
             instance. Defaults to None.
         contents (Any): stored item for use by a Component subclass instance.
         workflow (amicus.project.Workflow): a workflow of a project subpart 
