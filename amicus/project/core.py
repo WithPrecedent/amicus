@@ -351,8 +351,27 @@ class Component(
         else:
             key = f'{self.name}_{self.suffix}'
         self.instances[key] = self
+
+    """ Required Subclass Methods """
+
+    @abc.abstractmethod
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+
+        Subclasses must provide their own methods.
+
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        pass
+
         
-    """ Construction Methods """
+    """ Public Methods """
 
     @classmethod
     def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
@@ -396,8 +415,6 @@ class Component(
             library = cls.library,
             **kwargs)                
         
-    """ Public Methods """
-    
     def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """Calls the 'implement' method the number of times in 'iterations'.
 
@@ -424,22 +441,6 @@ class Component(
                 for iteration in range(self.iterations):
                     project = self.implement(project = project, **kwargs)
         return project
-
-    @abc.abstractmethod
-    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'contents' to 'project'.
-
-        Subclasses must provide their own methods.
-
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        pass
 
 
 @dataclasses.dataclass
