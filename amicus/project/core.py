@@ -1,5 +1,5 @@
 """
-amicus.project.core: essential classes for an amicus project
+amicus.project.core: base classes for an amicus project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -211,12 +211,12 @@ class Directive(object):
     """ Public Methods """
     
     @classmethod   
-    def create(cls, name: str, settings: Settings) -> Directive:
+    def create(cls, name: str, settings: amicus.options.Settings) -> Directive:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (Settings): [description]
+            settings (amicus.options.Settings): [description]
 
         Returns:
             Directive: [description]
@@ -260,6 +260,7 @@ class Outline(amicus.quirks.Needy, amicus.types.Lexicon):
     
     """ Public Methods """
     
+    @classmethod
     def from_settings(cls, 
         settings: amicus.options.Settings, 
         name: str, 
@@ -605,7 +606,10 @@ class Summary(
 
 
 @dataclasses.dataclass
-class Project(amicus.quirks.Needy, amicus.framework.Validator):
+class Project(
+    amicus.quirks.Element, 
+    amicus.framework.Keystone, 
+    amicus.framework.Validator):
     """Directs construction and execution of an amicus project.
     
     Args:
@@ -675,12 +679,11 @@ class Project(amicus.quirks.Needy, amicus.framework.Validator):
     outline: Union[Type[Outline], str] = None
     workflow: Union[Type[Component], str] = None
     summary: Union[Type[Summary], str] = None
-    automatic: bool = True
     data: Any = None
-    needs: ClassVar[Sequence[str]] = ['settings']
+    automatic: bool = True
     stages: ClassVar[str] = ['draft', 'publish', 'execute']
     validations: ClassVar[Sequence[str]] = [
-        'name', 
+        'settings',
         'identification', 
         'filer']
     
@@ -696,21 +699,36 @@ class Project(amicus.quirks.Needy, amicus.framework.Validator):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods.
-        self.settings = self._validate_settings(settings = self.settings)
-        self.validate(validations = self.validations)
+        self.settings = amicus.options.Settings.create(
+            file_path = self.settings)
+        self.identification = self._validate_identification(
+            identification = self.identification)
+        self.filer = amicus.options.Clerk(settings = self.settings)
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
-        # Automatically creates 'workflow' from 'settings'.
-        self.workflow = self.library.workflow.from_settings(
-            settings = self.settings, 
-            name = self.name)
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
+            self.draft()
+            self.publish()
             self.execute()
 
-    """ Class Methods """
+    """ Public Methods """
+
+    @classmethod
+    def create(cls, 
+        settings: amicus.options.Settings, 
+        **kwargs) -> Project:
+        """[summary]
+
+        Args:
+            settings (amicus.options.Settings): [description]
+
+        Returns:
+            Project: [description]
+        """        
+        return cls.from_settings(settings = settings, **kwargs)
 
     @classmethod
     def from_settings(cls, 
@@ -728,55 +746,32 @@ class Project(amicus.quirks.Needy, amicus.framework.Validator):
         
     """ Public Methods """
     
-    # def advance(self) -> Any:
-    #     """Returns next product created in iterating a Director instance."""
-    #     return self.__next__()
+    def advance(self) -> Any:
+        """Iterates through next stage."""
+        return self.__next__()
 
     def draft(self) -> None:
-        """[summary]"""
+        """Creates 'outline' from 'settings'."""
         kwargs = Outline.needify(instance = self)
         self.outline = Outline.create(**kwargs)
         return self
     
     def publish(self) -> None:
-        """[summary]"""
-        kwargs = Component.needify(instance = self)
-        self.workflow = Component.create(**kwargs)
+        """Creates 'workflow' from 'outline'."""
+        print('test outline', self.outline)
+        self.workflow = amicus.project.builders.create_workflow(
+            name = self.name,
+            outline = self.outline,
+            library = self.library)
         return self
 
     def execute(self) -> None:
-        """[summary]"""
+        """Creates 'summary' from 'workflow'."""
         kwargs = Summary.needify(instance = self)
         self.summary = Summary.create(**kwargs)
         return self
                         
     """ Private Methods """
-
-    def _validate_settings(self, settings: Any) -> amicus.options.Settings:
-        return self.library.settings.create(file_path = settings)
-    
-    def _validate_name(self, name: str) -> str:
-        """Creates 'name' if one doesn't exist.
-        
-        If 'name' was not passed, this method first tries to infer 'name' as the 
-        first appropriate section name in 'settings'. If that doesn't work, it 
-        uses the snakecase name of the class.
-        
-        Args:
-            name (str): name of the project, if passed.
-            
-        Returns:
-            str: a default name, if none was passed. But if the passed 'name'
-                exists, it is returned unchanged. 
-            
-        """
-        if not name:
-            sections = self.settings.excludify(subset = self.settings.skip)
-            try:
-                name = sections.keys()[0]
-            except IndexError:
-                name = amicus.tools.snakify(self.__class__)
-        return name
 
     def _validate_identification(self, identification: str) -> str:
         """Creates unique 'identification' if one doesn't exist.
@@ -796,89 +791,25 @@ class Project(amicus.quirks.Needy, amicus.framework.Validator):
             identification = amicus.tools.datetime_string(prefix = self.name)
         return identification
 
-    def _validate_workflow(self, 
-        workflow: Union[str, Type[core.Workflow]]) -> core.Workflow:
-        """[summary]
+    """ Dunder Methods """
 
-        Args:
-            settings (Settings): [description]
-            name (str, optional): [description]. Defaults to None.
-
-        Raises:
-            ValueError: [description]
-
-        Returns:
-            Workflow: [description]
-            
-        """        
-        section = self._get_primary()
-        directive = Directive.create(
-            settings = self.settings,
-            name = self.name,
-            library = self.library)
-        suffixes = self.library.component.subclasses.suffixes
-        matches = [v for k, v in section.items() if k.endswith(suffixes)]
-        keys = more_itertools.chain(matches)  
-        directives = {} 
-        for key in keys:
-            directives[key] = core.Directive.create(
-                name = key,
-                settings = self.settings, 
-                library = cls.library)
-        workflow = cls.from_directives(directives = directives, name = name) 
-        return workflow 
+    def __iter__(self) -> Iterable:
+        """Returns iterable of a Project instance.
         
-    def _get_primary(self) -> Dict[str, Any]:
-        """[summary]
-
         Returns:
-            Dict[str, Any]: [description]
-        """        
-        try:
-            primary = self.settings[self.name]
-        except KeyError:
-            try:
-                first_key = list(self.settings.keys())[0]
-                primary = self.settings[first_key]
-            except IndexError:
-                ValueError(
-                    'No settings indicate how to construct a project workflow')
-        return primary
- 
-    # """ Dunder Methods """
-
-    # def __iter__(self) -> Iterable:
-    #     """Returns iterable of a Project instance.
-        
-    #     Returns:
-    #         Iterable: of the Project instance.
+            Iterable: of the Project instance.
             
-    #     """
-    #     return iter(self)
+        """
+        return iter(self)
  
-    # def __next__(self) -> None:
-    #     """Completes a Stage instance."""
-    #     if self.index < len(self.stages):
-    #         base = self.library.stage
-    #         current = self.stages[self.index]
-    #         if isinstance(current, str):
-    #             name = amicus.tools.snakify(current)
-    #             stage = base.select(name = name)
-    #         elif inspect.isclass(current) and issubclass(current, base):
-    #             stage = current
-    #             name = amicus.tools.snakify(stage.__name__)
-    #         else:
-    #             raise TypeError(
-    #                 f'Items in stages must be str or {base.__name__} '
-    #                 f'subclasses (not instances)') 
-    #         if hasattr(self, 'verbose') and self.verbose:
-    #             print(f'Creating {name}')
-    #         kwargs = stage.needify(instance = self)
-    #         setattr(self, name, stage.create(**kwargs))
-    #         if hasattr(self, 'verbose') and self.verbose:
-    #             print(f'Completed {name}')
-    #         self.index += 1
-    #     else:
-    #         raise IndexError()
-    #     return self
+    def __next__(self) -> None:
+        """Completes a Stage instance."""
+        if self.index < len(self.stages):
+            current = self.stages[self.index]
+            stage = getattr(self, current)
+            stage()
+            self.index += 1
+        else:
+            raise IndexError()
+        return self
     

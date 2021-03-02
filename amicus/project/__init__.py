@@ -22,10 +22,10 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import amicus
 
-from .core import *
 from .converters import *
-from .components import *
-from .interface import *
+from .core import *
+from .builders import *
+from .nodes import *
 
 """ 
 The keys of 'importables' are the attribute names of how users should access

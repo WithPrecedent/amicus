@@ -272,7 +272,7 @@ class Technique(core.Component):
 
                  
 @dataclasses.dataclass
-class Worker(amicus.structures.Graph, core.Component, abc.ABC):
+class Worker(amicus.structures.Graph, core.Component):
     """Keystone class for parts of an amicus workflow.
 
     Args:
@@ -469,7 +469,7 @@ class Process(amicus.structures.Pipeline, Worker):
         
 
 @dataclasses.dataclass
-class Nexus(core.Workflow, Worker, abc.ABC):
+class Nexus(Worker, abc.ABC):
     """Base class for branching and parallel Workers.
         
     Args:

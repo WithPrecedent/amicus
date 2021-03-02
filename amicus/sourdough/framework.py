@@ -364,6 +364,7 @@ class Converter(abc.ABC):
     base: str = None
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
     alterantives: tuple[Type] = dataclasses.field(default_factory = tuple)
+    default: Type = None
 
     """ Initialization Methods """
     
@@ -398,29 +399,38 @@ class Converter(abc.ABC):
             
         """ 
         if hasattr(instance, 'library') and instance.library is not None:
-            base = getattr(instance.library, self.base)
             kwargs = {
                 k: self._kwargify(v, instance, item) 
                 for k, v in self.parameters.items()}
-            if item is None:
-                validated = base(**kwargs)
-            elif isinstance(item, base):
-                validated = item
-                for key, value in kwargs.items():
-                    setattr(validated, key, value)
-            elif inspect.isclass(item) and issubclass(item, base):
-                validated = item(**kwargs)
-            elif (isinstance(item, str) 
-                    or isinstance(item, List)
-                    or isinstance(item, Tuple)):
-                validated = base.library.select(names = item)(**kwargs)
-            elif isinstance(item, self.alternatives) and self.alternatives:
-                validated = base(item, **kwargs)
-            else:
-                raise TypeError(f'{item} could not be validated or converted')
+            print('test item', item)
+            print('test kwargs', kwargs)
+            try:
+                base = getattr(instance.library, self.base)
+                if item is None:
+                    validated = base(**kwargs)
+                elif isinstance(item, base):
+                    validated = item
+                    for key, value in kwargs.items():
+                        setattr(validated, key, value)
+                elif inspect.isclass(item) and issubclass(item, base):
+                    validated = item(**kwargs)
+                elif (isinstance(item, str) 
+                        or isinstance(item, List)
+                        or isinstance(item, Tuple)):
+                    validated = base.library.select(names = item)(**kwargs)
+                elif isinstance(item, self.alternatives) and self.alternatives:
+                    validated = base(item, **kwargs)
+                else:
+                    raise TypeError(
+                        f'{item} could not be validated or converted')
+            except AttributeError:
+                validated = self.default(**kwargs)
         else:
-            raise AttributeError(
-                f'Cannot validate or convert {item} without library')
+            try:
+                validated = self.default(**kwargs)
+            except (TypeError, ValueError):
+                raise AttributeError(
+                    f'Cannot validate or convert {item} without library')
         return validated
 
     """ Private Methods """

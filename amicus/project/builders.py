@@ -41,16 +41,15 @@ def builder(func: Callable) -> Callable:
         
     """
     @functools.wraps(func)
-    def wrapper():
+    def wrapper(*args, **kwargs):
         name = func.__name__
         try:
             name = name.replace('create_', '')
         except ValueError:
             pass
         CREATORS[name] = func
-        return func
+        return func(*args, **kwargs)
     return wrapper
-
 
 def get_design(self, name: str, settings: amicus.options.Settings) -> str:
     """[summary]
@@ -78,7 +77,6 @@ def get_design(self, name: str, settings: amicus.options.Settings) -> str:
                                 f'must either be named "design" or '
                                 f'"{name}_design"')
     return design       
- 
  
 @builder
 def create_directive(
@@ -183,6 +181,8 @@ def create_outline(
         package = {}
     section = settings[name]
     suffixes = library.component.subclasses.suffixes
+    print('test section', section)
+    print('test suffixes', suffixes)
     keys = [v for k, v in section.items() if k.endswith(suffixes)][0]
     directives = {}
     for key in keys:
@@ -196,6 +196,35 @@ def create_outline(
         files = files,
         package = package,
         **kwargs)       
+
+def create_workflow(
+    name: str, 
+    outline: amicus.project.Outline,
+    library: amicus.framework.Library, 
+    **kwargs) -> amicus.project.Component:
+    """[summary]
+
+    Args:
+        name (str): [description]. Defaults to None.
+        outline (amicus.project.Outline): [description]. 
+            Defaults to None.
+        library (amicus.framework.Library): [description]. 
+            Defaults to None.
+
+    Returns:
+        amicus.project.Component: [description]
+        
+    """
+    directive = outline[name]
+    design = directive.designs[name]
+    component = create_component(
+        name = design, 
+        directive = directive, 
+        library = library,
+        **kwargs)
+    component.name = name
+    return component
+    
 
 def create_component(
     name: str = None, 
