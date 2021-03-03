@@ -150,6 +150,7 @@ def create_outline(
     name: str, 
     settings: amicus.project.Settings, 
     library: amicus.types.Library = None,
+    package: str = 'amicus',
     **kwargs) -> amicus.project.Outline:
     """[summary]
 
@@ -162,6 +163,7 @@ def create_outline(
         Outline: [description]
         
     """
+    print('test creating outline', name)
     if library is None:
         library = amicus.project.Component.library
     try:
@@ -176,15 +178,19 @@ def create_outline(
         except KeyError:
             files = {}
     try:
-        package = settings['amicus']
-    except KeyError:
+        package = settings[package]
+    except (KeyError, TypeError):
         package = {}
+    directives = {name: amicus.project.Directive.create(
+        name = name,
+        settings = settings)}
+    print('test directive', directives[name])
     section = settings[name]
     suffixes = library.component.subclasses.suffixes
     print('test section', section)
     print('test suffixes', suffixes)
     keys = [v for k, v in section.items() if k.endswith(suffixes)][0]
-    directives = {}
+    
     for key in keys:
         if key in settings:
             directives[key] = amicus.project.Directive.create(
@@ -215,8 +221,12 @@ def create_workflow(
         amicus.project.Component: [description]
         
     """
+    print('test outline keys', outline.keys())
     directive = outline[name]
-    design = directive.designs[name]
+    try:
+        design = directive.designs[name]
+    except KeyError:
+        design = name
     component = create_component(
         name = design, 
         directive = directive, 
@@ -251,8 +261,12 @@ def create_component(
         library = amicus.project.Component.library
     if directive is not None:
         if name is None:
-            name = directive.name     
-        lookups = [name, directive.designs[name]]
+            name = directive.name
+        lookups = [name]
+        try:
+            lookups.append(directive.designs[name])   
+        except KeyError:
+            pass
         parameters = directive.initialization
         parameters.update({'parameters': directive.implementation[name]}) 
         parameters.update(kwargs)

@@ -449,38 +449,11 @@ class Process(amicus.structures.Pipeline, Worker):
             amicus.Project: with possible changes made.
             
         """
-        if len(self.contents) > 1 and project.parallelize:
-            project = self._implement_in_parallel(project = project, **kwargs)
-        else:
-            project = self._implement_in_serial(project = project, **kwargs)
-        return project      
+        return self._implement_in_serial(project = project, **kwargs)    
 
-    """ Private Methods """
-   
-    def _implement_in_parallel(self, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """Applies 'implementation' to 'project' using multiple cores.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        if project.parallelize:
-            with multiprocessing.Pool() as pool:
-                project = pool.starmap(
-                    self._implement_in_serial, 
-                    project, 
-                    **kwargs)
-        return project 
-                    
     """ Private Methods """
     
-    def _serial_order(self, name: str, directive: Directive) -> List:
+    def _serial_order(self, name: str, directive: core.Directive) -> List:
         """
 
         Args:
@@ -596,6 +569,46 @@ class Nexus(Worker, abc.ABC):
             nodes.append(permutation)
         self.branchify(nodes = nodes)
         return self
+    
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+        
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        if len(self.contents) > 1 and project.parallelize:
+            project = self._implement_in_parallel(project = project, **kwargs)
+        else:
+            project = self._implement_in_serial(project = project, **kwargs)
+        return project      
+
+    """ Private Methods """
+   
+    def _implement_in_parallel(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if project.parallelize:
+            with multiprocessing.Pool() as pool:
+                project = pool.starmap(
+                    self._implement_in_serial, 
+                    project, 
+                    **kwargs)
+        return project 
 
 
 @dataclasses.dataclass
