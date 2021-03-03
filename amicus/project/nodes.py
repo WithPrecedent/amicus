@@ -1,5 +1,5 @@
 """
-components:
+amicus.project.nodes:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -19,6 +19,7 @@ import abc
 import copy
 import dataclasses
 import inspect
+import multiprocessing
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
     Mapping, Optional, Sequence, Set, Tuple, Type, Union)
 
@@ -81,10 +82,26 @@ class Leaf(core.Component, abc.ABC):
     iterations: Union[int, str] = 1
     suffix: ClassVar[str] = None
     needs: ClassVar[Union[Sequence[str], str]] = ['name']
-        
- 
+    
+    """ Public Methods """
+    
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        project = self.contents.execute(project = project, **kwargs)
+        return project        
+
+
 @dataclasses.dataclass
-class Step(Leaf):
+class Step(amicus.types.Proxy, Leaf):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement
@@ -158,24 +175,8 @@ class Step(Leaf):
     def technique(self) -> None:
         self.contents = None
         return self
-    
-    """ Public Methods """
-    
-    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'contents' to 'project'.
 
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        project = self.contents.execute(project = project, **kwargs)
-        return project 
-                          
-                          
+                                                  
 @dataclasses.dataclass
 class Technique(core.Component):
     """Keystone class for primitive objects in an amicus composite object.
@@ -250,27 +251,7 @@ class Technique(core.Component):
         self.contents = None
         return self
     
-    """ Public Methods """
-    
-    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'contents' to 'project'.
-
-        Generally, subclasses should provide their own methods. This is simply
-        a basic template that is compatible with some specific amicus 
-        algorithms.
-        
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        project = self.contents(project = project, **kwargs)
-        return project 
-
-                 
+         
 @dataclasses.dataclass
 class Worker(amicus.structures.Graph, core.Component):
     """Keystone class for parts of an amicus workflow.
@@ -346,6 +327,25 @@ class Worker(amicus.structures.Graph, core.Component):
             
         """   
         return self   
+
+    """ Private Methods """
+    
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies stored nodes to 'project' in order.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for node in self.paths[0]:
+            project = node.execute(project = project, **kwargs)
+        return project
     
     """ Dunder Methods """
     
@@ -361,8 +361,8 @@ class Worker(amicus.structures.Graph, core.Component):
         for node, edges in self.contents.items():
             representation.append(f'    {node.name}: {str(edges)}')
         return new_line.join(representation) 
-  
-
+ 
+ 
 @dataclasses.dataclass
 class Process(amicus.structures.Pipeline, Worker):
     """A Worker with a serial Workflow.
@@ -410,7 +410,7 @@ class Process(amicus.structures.Pipeline, Worker):
                                        
     """
     name: str = None
-    contents: Any = None
+    contents: Sequence[Any] = dataclasses.field(default_factory = list)   
     parameters: Union[Mapping[Hashable, Any], core.Parameters] = (
         dataclasses.field(default_factory = dict))
     iterations: Union[int, str] = 1
@@ -437,7 +437,47 @@ class Process(amicus.structures.Pipeline, Worker):
             nodes.append(self.from_name(name = [node, directive.designs[node]]))
         self.extend(nodes = nodes)
         return self      
-                 
+
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+        
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        if len(self.contents) > 1 and project.parallelize:
+            project = self._implement_in_parallel(project = project, **kwargs)
+        else:
+            project = self._implement_in_serial(project = project, **kwargs)
+        return project      
+
+    """ Private Methods """
+   
+    def _implement_in_parallel(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies 'implementation' to 'project' using multiple cores.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        if project.parallelize:
+            with multiprocessing.Pool() as pool:
+                project = pool.starmap(
+                    self._implement_in_serial, 
+                    project, 
+                    **kwargs)
+        return project 
+                    
     """ Private Methods """
     
     def _serial_order(self, name: str, directive: Directive) -> List:

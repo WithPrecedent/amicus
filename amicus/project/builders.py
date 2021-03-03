@@ -51,7 +51,7 @@ def builder(func: Callable) -> Callable:
         return func(*args, **kwargs)
     return wrapper
 
-def get_design(self, name: str, settings: amicus.options.Settings) -> str:
+def get_design(name: str, settings: amicus.options.Settings) -> str:
     """[summary]
 
     Args:
@@ -225,7 +225,6 @@ def create_workflow(
     component.name = name
     return component
     
-
 def create_component(
     name: str = None, 
     directive: amicus.project.Directive = None,
@@ -279,6 +278,7 @@ def create_component(
         if item is None:
             raise KeyError(f'No matching item for {str(name)} was found') 
         elif inspect.isclass(item):
+            print('test item', item)
             instance = item(name = primary, **kwargs)
         else:
             instance = copy.deepcopy(item)
