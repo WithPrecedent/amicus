@@ -17,6 +17,7 @@ from __future__ import annotations
 import abc
 import copy
 import dataclasses
+import functools
 import inspect
 import logging
 import multiprocessing
@@ -28,6 +29,9 @@ import warnings
 import more_itertools
 
 import amicus
+from . import draft
+from . import nodes
+from . import execute
 
 
 """Initializes the amicus project logger."""
@@ -41,407 +45,25 @@ file_handler.setLevel(logging.DEBUG)
 LOGGER.addHandler(file_handler)
 
 
-@dataclasses.dataclass    
-class Parameters(amicus.types.Lexicon):
-    """Creates and stores parameters for an amicus component.
-    
-    Parameters allows parameters to be drawn from several different sources, 
-    including those which only become apparent during execution of an amicus
-    project.
-    
-    Parameters can be unpacked with '**', which will turn the 'contents' 
-    attribute an ordinary set of kwargs. In this way, it can serve as a drop-in
-    replacement for a dict that would ordinarily be used for accumulating 
-    keyword arguments.
-    
-    If an amicus class uses a Parameters instance, the 'finalize' method should
-    be called before that instance's 'implement' method in order for each of the
-    parameter types to be incorporated.
+CREATORS: amicus.types.Catalog = amicus.types.Catalog()
+
+def builder(func: Callable) -> Callable:
+    """Decorator for creation functions that stores them in 'creators'.
     
     Args:
-        contents (Mapping[str, Any]): keyword parameters for use by an amicus
-            classes' 'implement' method. The 'finalize' method should be called
-            for 'contents' to be fully populated from all sources. Defaults to
-            an empty dict.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. To properly match parameters
-            in a Settings instance, 'name' should be the prefix to "_parameters"
-            as a section name in a Settings instance. Defaults to None. 
-        default (Mapping[str, Any]): default parameters that will be used if 
-            they are not overridden. Defaults to an empty dict.
-        implementation (Mapping[str, str]): parameters with values that can only 
-            be determined at runtime due to dynamic nature of amicus and its 
-            workflows. The keys should be the names of the parameters and the 
-            values should be attributes or items in 'contents' of 'project' 
-            passed to the 'finalize' method. Defaults to an emtpy dict.
-        selected (Sequence[str]): an exclusive list of parameters that are 
-            allowed. If 'selected' is empty, all possible parameters are 
-            allowed. However, if any are listed, all other parameters that are
-            included are removed. This is can be useful when including 
-            parameters in a Settings instance for an entire step, only some of
-            which might apply to certain techniques. Defaults to an empty list.
-
+        func (Callable)
+        
     """
-    contents: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    name: str = None
-    default: Mapping[str, Any] = dataclasses.field(default_factory = dict)
-    implementation: Mapping[str, str] = dataclasses.field(
-        default_factory = dict)
-    selected: Sequence[str] = dataclasses.field(default_factory = list)
-      
-    """ Public Methods """
-
-    def finalize(self, project: amicus.Project, **kwargs) -> None:
-        """Combines and selects final parameters into 'contents'.
-
-        Args:
-            project (amicus.Project): instance from which implementation and 
-                settings parameters can be derived.
-            
-        """
-        # Uses kwargs and 'default' parameters as a starting base.
-        parameters = self.default
-        parameters.update(kwargs)
-        # Adds any parameters from 'settings'.
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
         try:
-            parameters.update(self._from_settings(settings = project.settings))
-        except AttributeError:
+            name = name.replace('create_', '')
+        except ValueError:
             pass
-        # Adds any implementation parameters.
-        if self.implementation:
-            parameters.update(self._at_runtime(project = project))
-        # Adds any parameters already stored in 'contents'.
-        parameters.update(self.contents)
-        # Limits parameters to those in 'selected'.
-        if self.selected:
-            self.contents = {k: self.contents[k] for k in self.selected}
-        self.contents = parameters
-        return self
-
-    """ Private Methods """
-     
-    def _from_settings(self, 
-        settings: amicus.options.Settings) -> Dict[str, Any]: 
-        """Returns any applicable parameters from 'settings'.
-
-        Args:
-            settings (amicus.options.Settings): instance with possible 
-                parameters.
-
-        Returns:
-            Dict[str, Any]: any applicable settings parameters or an empty dict.
-            
-        """
-        try:
-            parameters = settings[f'{self.name}_parameters']
-        except KeyError:
-            suffix = self.name.split('_')[-1]
-            prefix = self.name[:-len(suffix) - 1]
-            try:
-                parameters = settings[f'{prefix}_parameters']
-            except KeyError:
-                try:
-                    parameters = settings[f'{suffix}_parameters']
-                except KeyError:
-                    parameters = {}
-        return parameters
-   
-    def _at_runtime(self, project: amicus.Project) -> Dict[str, Any]:
-        """Adds implementation parameters to 'contents'.
-
-        Args:
-            project (amicus.Project): instance from which implementation 
-                parameters can be derived.
-
-        Returns:
-            Dict[str, Any]: any applicable settings parameters or an empty dict.
-                   
-        """    
-        for parameter, attribute in self.implementation.items():
-            try:
-                self.contents[parameter] = getattr(project, attribute)
-            except AttributeError:
-                try:
-                    self.contents[parameter] = project.contents[attribute]
-                except (KeyError, AttributeError):
-                    pass
-        return self
-
-
-@dataclasses.dataclass
-class Directive(object):
-    """Information needed to construct a Worker.
-    
-    A Directive is typically created from a section of a Settings instance.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
-            to None.
-        edges (Dict[str, List]): a dictionary with keys that are names of
-            components and values that are lists of subcomponents for the keys.
-            However, these named connections are not necessarily the same as an 
-            adjacency list because of different design possiblities. Defaults to 
-            an empty dict.
-        designs (Dict[str, str]): keys are the names of nodes and values are the
-            base Node subclass of the named node. Defaults to None.
-        initialization (Dict[str, Dict[str, Any]]): a dictionary with keys that 
-            are the names of components and values which are dictionaries of 
-            pararmeters to use when created the component listed in the key. 
-            Defaults to an empty dict.
-        implementation (Dict[str, Dict[str, Any]]): a dictionary with keys that 
-            are the names of components and values which are dictionaries of 
-            pararmeters to use when calling the 'implement' method of the 
-            component listed in the key. Defaults to an empty dict.
-        attributes (Dict[str, Dict[str, Any]]): a dictionary with keys that 
-            are the names of components and values which are dictionaries of 
-            attributes to automatically add to the component constructed from
-            that key. Defaults to an empty dict.
-            
-    """
-    name: str = None
-    edges: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
-    designs: Dict[str, str] = dataclasses.field(default_factory = dict)
-    initialization: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    implementation: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    attributes: Dict[str, Any] = dataclasses.field(default_factory = dict)
-
-    """ Public Methods """
-    
-    @classmethod   
-    def create(cls, name: str, settings: amicus.options.Settings) -> Directive:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (amicus.options.Settings): [description]
-
-        Returns:
-            Directive: [description]
-            
-        """        
-        return amicus.project.create_directive(
-            name = name, 
-            settings = settings)
-
-    
-@dataclasses.dataclass
-class Outline(amicus.quirks.Needy, amicus.types.Lexicon):
-    """Creates and stores Directive instances.
-    
-    An Outline is typically derived from a Settings instance.
-    
-    Args:
-        contents (Mapping[str, Directive]]): stored dictionary of Directive 
-            instances. Defaults to an empty dict.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to an empty Directive.
-        general (Dict[str, Any]): general settings for an amicus project. This
-            is typically the 'general' section of a Settings instance. Defaults
-            to an empty dict.
-        files (Dict[str, Any]): general settings for an amicus project. This
-            is typically the 'files' or 'filer' section of a Settings instance. 
-            Defaults to an empty dict.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to a list with 'settings',
-            'name', and 'library'.
-                   
-    """
-    contents: Dict[str, Directive] = dataclasses.field(default_factory = dict)
-    default: Any = Directive()
-    general: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    files: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    package: Dict[str, Any] = dataclasses.field(default_factory = dict)
-    needs: ClassVar[Sequence[str]] = ['settings', 'name', 'library']
-    
-    """ Public Methods """
-    
-    @classmethod
-    def from_settings(cls, 
-        settings: amicus.options.Settings, 
-        name: str, 
-        library: amicus.types.Library) -> Outline:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (amicus.options.Settings): [description]
-            library (amicus.types.Library): [description]
-
-        Returns:
-            Outline: [description]
-            
-        """
-        return amicus.project.create_outline(
-            name = name, 
-            settings = settings, 
-            library = library)
-
-
-@dataclasses.dataclass
-class Component(
-    amicus.framework.Keystone, 
-    amicus.quirks.Needy,
-    amicus.structures.Node, 
-    abc.ABC):
-    """Keystone class for nodes in a project workflow.
-
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
-            to None. 
-        contents (Any): stored item(s) to be used by the 'implement' method.
-        parameters (Union[Mapping[Hashable, Any], Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.        
-    
-    Attributes:
-        library (ClassVar[amicus.framework.Library]): library that stores 
-            direct subclasses (those with Keystone in their '__bases__' 
-            attribute) and allows runtime access and instancing of those 
-            stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
-            concrete subclasses and allows runtime access and instancing of 
-            those stored subclasses. 'subclasses' is automatically created when 
-            a direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced.
-        instances (ClassVar[amicus.types.Catalog]): catalog that stores
-            subclass instances and allows runtime access of those stored 
-            subclass instances. 'instances' is automatically created when a 
-            direct Keystone subclass (Keystone is in its '__bases__') is 
-            instanced. 
-                
-    """
-    name: str = None
-    contents: Any = None
-    parameters: Union[Mapping[Hashable, Any], Parameters] = dataclasses.field(
-        default_factory = dict)
-    iterations: Union[int, str] = 1
-    suffix: ClassVar[str] = None
-    needs: ClassVar[Union[Sequence[str], str]] = ['name']
-    
-    def __post_init__(self) -> None:
-        """Initializes class instance attributes."""
-        # Calls parent and/or mixin initialization method(s).
-        try:
-            super().__post_init__()
-        except AttributeError:
-            pass
-        if self.suffix is None:
-            key = self.name
-        else:
-            key = f'{self.name}_{self.suffix}'
-        self.instances[key] = self
-
-    """ Required Subclass Methods """
-
-    @abc.abstractmethod
-    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'contents' to 'project'.
-
-        Subclasses must provide their own methods.
-
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        pass
-
-        
-    """ Public Methods """
-
-    @classmethod
-    def from_name(cls, name: Union[str, Sequence[str]], **kwargs) -> Component:
-        """Returns instance of first match of 'name' in stored catalogs.
-        
-        The method prioritizes the 'instances' catalog over 'subclasses' and any
-        passed names in the order they are listed.
-        
-        Args:
-            name (Union[str, Sequence[str]]): [description]
-            
-        Raises:
-            KeyError: [description]
-            
-        Returns:
-            Component: [description]
-            
-        """
-        return amicus.project.create_component(
-            name = name, 
-            library = cls.library,
-            **kwargs)       
-  
-    @classmethod
-    def from_directive(cls, 
-        directive: Directive, 
-        name: str = None, 
-        **kwargs) -> Component:
-        """[summary]
-
-        Args:
-            directive (Directive): [description]
-            name (str, optional): [description]. Defaults to None.
-
-        Returns:
-            Component: [description]
-        """        
-        return amicus.project.create_component(
-            name = name, 
-            directive = directive,
-            library = cls.library,
-            **kwargs)                
-        
-    def execute(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Calls the 'implement' method the number of times in 'iterations'.
-
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        if self.contents not in [None, 'None', 'none']:
-            if self.parameters:
-                if isinstance(self.parameters, Parameters):
-                    self.parameters.finalize(project = project)
-                parameters = self.parameters
-                parameters.update(kwargs)
-            else:
-                parameters = kwargs
-            if self.iterations in ['infinite']:
-                while True:
-                    project = self.implement(project = project, **kwargs)
-            else:
-                for iteration in range(self.iterations):
-                    project = self.implement(project = project, **kwargs)
-        return project
+        CREATORS[name] = func
+        return func(*args, **kwargs)
+    return wrapper
 
 
 @dataclasses.dataclass
@@ -608,6 +230,7 @@ class Project(
     outline: Union[Type[Outline], str] = None
     workflow: Union[Type[Component], str] = None
     summary: Union[Type[Summary], str] = None
+    workshop: nodes.Workshop = nodes.Workshop()
     data: Any = None
     automatic: bool = True
     stages: ClassVar[str] = ['draft', 'publish', 'execute']
@@ -639,9 +262,7 @@ class Project(
         self.index = 0
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
-            self.draft()
-            self.publish()
-            self.execute()
+            self.complete()
 
     """ Public Methods """
 
@@ -679,6 +300,12 @@ class Project(
         """Iterates through next stage."""
         return self.__next__()
 
+    def complete(self) -> Any:
+        """Iterates through all stages."""
+        for stage in self.stages:
+            self.advance()
+        return self
+    
     def draft(self) -> None:
         """Creates 'outline' from 'settings'."""
         kwargs = Outline.needify(instance = self)
@@ -687,7 +314,7 @@ class Project(
     
     def publish(self) -> None:
         """Creates 'workflow' from 'outline'."""
-        print('test outline', self.outline)
+        # print('test outline', self.outline)
         self.workflow = amicus.project.builders.create_workflow(
             name = self.name,
             outline = self.outline,

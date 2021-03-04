@@ -631,7 +631,8 @@ class Graph(amicus.types.Lexicon, Structure):
         # if node in self.contents:
         #     raise ValueError(f'node is already in {self._namify(node = self)}')
         # else:
-        self.contents[node] = []
+        if node not in self.contents:
+            self.contents[node] = []
         return self
 
     def append(self, 

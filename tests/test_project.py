@@ -72,8 +72,6 @@ class Dynamite(amicus.project.Technique):
     
     name: str = 'annihilate'
 
-    pass 
-    
 
 def test_project():
     project = amicus.Project.create(

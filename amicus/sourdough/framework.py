@@ -402,8 +402,6 @@ class Converter(abc.ABC):
             kwargs = {
                 k: self._kwargify(v, instance, item) 
                 for k, v in self.parameters.items()}
-            print('test item', item)
-            print('test kwargs', kwargs)
             try:
                 base = getattr(instance.library, self.base)
                 if item is None:
