@@ -62,3 +62,23 @@ def timer(process: str = None) -> Callable:
             return result
         return decorated
     return shell_timer
+
+REGISTRY = {}
+
+def register_function(func: Callable) -> Callable:
+    """Decorator for a function registry.
+    
+    Args:
+        func (Callable): any function.
+        
+    Returns:
+        Callable: with passed arguments.
+        
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        name = func.__name__
+        REGISTRY[name] = func
+        return func(*args, **kwargs)
+    return wrapper
+
