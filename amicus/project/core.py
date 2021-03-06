@@ -284,6 +284,25 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
+class Workflow(amicus.structures.Graph):
+    """Stores a graph workflow and corresponding Component instances.
+    
+    Args:
+        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
+            keys are nodes and the values are nodes which the key is connected 
+            to. Defaults to an empty dict.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        components (Dict[str, Component]): Component instances to be used in
+            the workflow.
+                  
+    """  
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    default: Any = dataclasses.field(default_factory = list)
+    components: Dict[str, Component] = dataclasses.field(default_factory = dict)
+    
+    
+@dataclasses.dataclass
 class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
     """Base Keystone class for nodes in a project workflow.
 
