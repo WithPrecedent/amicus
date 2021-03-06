@@ -24,7 +24,8 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 # from typing import get_args, get_origin
 
 import more_itertools
@@ -101,7 +102,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             runtime access and instancing of those stored subclasses.
     
     Attributes:
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 

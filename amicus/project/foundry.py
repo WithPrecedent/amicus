@@ -14,19 +14,13 @@ import copy
 import dataclasses
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 import more_itertools
 
 import amicus
 from . import core
-
-
-# DIRECTIVE: Type = Directive
-# OUTLINE: Type = Outline
-# COMPONENT: Type = Component
-# RESULT: Type = Result
-# SUMMARY: Type = Summary
 
 
 @dataclasses.dataclass

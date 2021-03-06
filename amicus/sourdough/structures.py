@@ -30,7 +30,8 @@ import copy
 import dataclasses
 import itertools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 import more_itertools
 
@@ -974,6 +975,23 @@ class Graph(amicus.types.Lexicon, Structure):
                         all_paths.extend(paths)
         return all_paths
 
+    """ Dunder Methods """
+    
+    def __str__(self) -> str:
+        """Returns prettier representation of the Graph.
+
+        Returns:
+            str: a formatted str of class information and the contained 
+                adjacency list.
+            
+        """
+        new_line = '\n'
+        representation = [f'{new_line}amicus {self.__class__.__name__}']
+        representation.append('adjacency list:')
+        for node, edges in self.contents.items():
+            representation.append(f'    {node}: {str(edges)}')
+        return new_line.join(representation) 
+
 
 @dataclasses.dataclass
 class Pipeline(amicus.types.Hybrid, Structure):
@@ -985,6 +1003,7 @@ class Pipeline(amicus.types.Hybrid, Structure):
             added to 'contents'. If a single item is passed, it will be placed 
             in a list. Defaults to an empty list.
         default (Any): default value to return when the 'get' method is used.
+            Defaults to None.
             
     """
     contents: Sequence[Any] = dataclasses.field(default_factory = list)

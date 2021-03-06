@@ -18,7 +18,8 @@ import dataclasses
 import datetime
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 import more_itertools
 import numpy as np

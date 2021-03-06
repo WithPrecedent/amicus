@@ -8,7 +8,8 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 from __future__ import annotations
 import sys
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 import amicus
 

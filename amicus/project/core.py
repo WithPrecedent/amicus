@@ -19,7 +19,8 @@ import dataclasses
 import multiprocessing
 import pathlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 import warnings
 
 import amicus
@@ -284,25 +285,6 @@ class Parameters(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Workflow(amicus.structures.Graph):
-    """Stores a graph workflow and corresponding Component instances.
-    
-    Args:
-        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
-            keys are nodes and the values are nodes which the key is connected 
-            to. Defaults to an empty dict.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to an empty list.
-        components (Dict[str, Component]): Component instances to be used in
-            the workflow.
-                  
-    """  
-    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
-    default: Any = dataclasses.field(default_factory = list)
-    components: Dict[str, Component] = dataclasses.field(default_factory = dict)
-    
-    
-@dataclasses.dataclass
 class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
     """Base Keystone class for nodes in a project workflow.
 
@@ -313,26 +295,21 @@ class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
-        parameters (Union[Mapping[Hashable, Any], Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+            Defaults to None.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.        
-    
+
     Attributes:
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        library (ClassVar[amicus.framework.Library]): library that stores 
+            direct subclasses (those with Keystone in their '__bases__' 
+            attribute) and allows runtime access and instancing of those 
+            stored subclasses.
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -346,10 +323,9 @@ class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
     """
     name: str = None
     contents: Any = None
-    parameters: Union[Mapping[Hashable, Any], Parameters] = dataclasses.field(
-        default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = Parameters)
     iterations: Union[int, str] = 1
-    suffix: str = None
     
     """ Required Subclass Methods """
 
@@ -392,40 +368,11 @@ class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
                 parameters = kwargs
             if self.iterations in ['infinite']:
                 while True:
-                    project = self.implement(project = project, **kwargs)
+                    project = self.implement(project = project, **parameters)
             else:
                 for iteration in range(self.iterations):
-                    project = self.implement(project = project, **kwargs)
+                    project = self.implement(project = project, **parameters)
         return project
-
-    """ Private Methods """
-
-    @classmethod
-    def _get_subclasses_catalog_key(cls) -> str:
-        """Returns a snakecase key of the class name.
-        
-        Returns:
-            str: the snakecase name of the class with 'suffix' possibly added.
-            
-        """
-        if cls.suffix is None:
-            key = amicus.tools.snakify(cls.__name__)
-        else: 
-            key = f'{amicus.tools.snakify(cls.__name__)}_{cls.suffix}' 
-        return key     
-
-    def _get_instances_catalog_key(self) -> str:
-        """Returns a snakecase key of the class name.
-        
-        Returns:
-            str: the snakecase name of the class.
-            
-        """
-        if self.suffix is None:
-            key = amicus.tools.snakify(self.name)
-        else: 
-            key = f'{amicus.tools.snakify(self.name)}_{self.suffix}' 
-        return key     
 
 
 @dataclasses.dataclass

@@ -5,13 +5,15 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Step
-    Technique
-    Worker
-    Pipeline
-    Contest
-    Study
-    Survey
+    Leaf (Component, ABC)
+    Step (Leaf)
+    Technique (Leaf)
+    Worker (Graph, Component)
+    Process (Worker)
+    Nexus (Worker, ABC)
+    Contest (Nexus)
+    Study (Nexus)
+    Survey (Nexus)
 
 """
 from __future__ import annotations
@@ -21,9 +23,8 @@ import dataclasses
 import inspect
 import multiprocessing
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
-
-import more_itertools
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 import amicus
 from . import core
@@ -40,26 +41,21 @@ class Leaf(core.Component, abc.ABC):
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+            Defaults to None.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
 
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -73,9 +69,9 @@ class Leaf(core.Component, abc.ABC):
     """
     name: str = None
     contents: Any = None
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
-    suffix: str = None
     
     """ Public Methods """
     
@@ -92,6 +88,21 @@ class Leaf(core.Component, abc.ABC):
         """
         project = self.contents.execute(project = project, **kwargs)
         return project        
+
+    """ Dunder Methods """
+    
+    def __call__(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'implement' method if an instance is called.
+        
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        return self.implement(project = project, **kwargs)
 
 
 @dataclasses.dataclass
@@ -111,26 +122,20 @@ class Step(amicus.types.Proxy, Leaf):
             to None. 
         contents (Technique): stored Technique instance to be used by the 
             'implement' method. Defaults to None.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
 
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -144,9 +149,9 @@ class Step(amicus.types.Proxy, Leaf):
     """
     name: str = None
     contents: Technique = None
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
-    suffix: str = None
                     
     """ Properties """
     
@@ -168,38 +173,29 @@ class Step(amicus.types.Proxy, Leaf):
 @dataclasses.dataclass
 class Technique(Leaf):
     """Keystone class for primitive objects in an amicus composite object.
-    
-    The 'contents' and 'parameters' attributes are combined at the last moment
-    to allow for runtime alterations.
-    
+
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Callable): stored callable algorithm to be used by the 
+        contents (Callable): stored Callable algorithm to be used by the 
             'implement' method. Defaults to None.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
 
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -213,9 +209,9 @@ class Technique(Leaf):
     """
     name: str = None
     contents: Callable = None
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
-    suffix: str = None
         
     """ Properties """
     
@@ -244,22 +240,16 @@ class Worker(amicus.structures.Graph, core.Component):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Dict[core.Component, List[str]]): an adjacency list where the 
-            keys are core.Component instances and the values are the names of nodes 
-            which the key is connected to. Defaults to an empty dict.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty list.
 
@@ -268,7 +258,7 @@ class Worker(amicus.structures.Graph, core.Component):
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -281,12 +271,11 @@ class Worker(amicus.structures.Graph, core.Component):
                                             
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
 
     """ Private Methods """
     
@@ -306,21 +295,6 @@ class Worker(amicus.structures.Graph, core.Component):
         for node in self.paths[0]:
             project = node.execute(project = project, **kwargs)
         return project
-    
-    """ Dunder Methods """
-    
-    # def __str__(self) -> str:
-    #     """[summary]
-
-    #     Returns:
-    #         str: [description]
-    #     """
-    #     new_line = '\n'
-    #     representation = [f'{new_line}amicus {self.__class__.__name__}']
-    #     representation.append('adjacency list:')
-    #     for node, edges in self.contents.items():
-    #         representation.append(f'    {node.name}: {str(edges)}')
-    #     return new_line.join(representation) 
  
  
 @dataclasses.dataclass
@@ -333,27 +307,25 @@ class Process(Worker):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Any): stored item(s) to be used by the 'implement' method.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
 
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -366,12 +338,11 @@ class Process(Worker):
                                        
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
   
     """ Public Methods """  
 
@@ -399,33 +370,27 @@ class Nexus(Worker, abc.ABC):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Dict[core.Component, List[str]]): an adjacency list where the 
-            keys are core.Component instances and the values are string names of 
-            Components which the key is connected to. Defaults to an empty dict.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.    
-    
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        criteria (Callable): algorithm to use to resolve the parallel branches
+            of the workflow. Defaults to None.
+
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -438,12 +403,14 @@ class Nexus(Worker, abc.ABC):
                                         
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
+    critera: Callable = None
+    
+    """ Public Methods """
     
     def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """Applies 'contents' to 'project'.
@@ -498,33 +465,27 @@ class Contest(Nexus):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Dict[core.Component, List[str]]): an adjacency list where the 
-            keys are core.Component instances and the values are string names of 
-            Components which the key is connected to. Defaults to an empty dict.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.    
-    
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        criteria (Callable): algorithm to use to resolve the parallel branches
+            of the workflow. Defaults to None.
+            
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -537,13 +498,13 @@ class Contest(Nexus):
                                         
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
-
+    critera: Callable = None
+ 
     
 @dataclasses.dataclass
 class Study(Nexus):
@@ -558,33 +519,27 @@ class Study(Nexus):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Dict[core.Component, List[str]]): an adjacency list where the 
-            keys are core.Component instances and the values are string names of 
-            core.Components which the key is connected to. Defaults to an empty dict.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.    
-    
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        criteria (Callable): algorithm to use to resolve the parallel branches
+            of the workflow. Defaults to None.
+            
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -597,13 +552,13 @@ class Study(Nexus):
                                          
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
- 
+    critera: Callable = None
+  
     
 @dataclasses.dataclass
 class Survey(Nexus):
@@ -618,33 +573,27 @@ class Survey(Nexus):
             instance needs settings from a Settings instance, 'name' should 
             match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        contents (Dict[core.Component, List[str]]): an adjacency list where the 
-            keys are core.Component instances and the values are string names of 
-            core.Components which the key is connected to. Defaults to an empty dict.
-        parameters (Union[Mapping[Hashable, Any], core.Parameters): parameters to be 
-            attached to 'contents' when the 'implement' method is called. 
-            Defaults to an empty dict.
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
         iterations (Union[int, str]): number of times the 'implement' method 
             should  be called. If 'iterations' is 'infinite', the 'implement' 
             method will continue indefinitely unless the method stops further 
             iteration. Defaults to 1.
-        suffix (ClassVar[str]): string to use at the end of 'name' when storing
-            an instance in the 'instances' class attribute. This is entirely
-            optional, but it can be useful when there are similarly named
-            instances in a large core.Component library. siMpLify uses this to
-            associate certain components with Worker instances without 
-            fragmenting the core.Component 'instances' catalog.
-        needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 
-            another instance for some method within a subclass. The first item
-            in 'needs' to correspond to an internal factory classmethod named
-            f'from_{first item in needs}'. Defaults to an empty list.    
-    
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+        criteria (Callable): algorithm to use to resolve the parallel branches
+            of the workflow. Defaults to None.
+            
     Attributes:
         library (ClassVar[amicus.framework.Library]): library that stores 
             direct subclasses (those with Keystone in their '__bases__' 
             attribute) and allows runtime access and instancing of those 
             stored subclasses.
-        subclasses (ClassVar[amicus.types.Catalog]): catalog that stores 
+        subclasses (ClassVar[amicus.framework.Registry]): catalog that stores 
             concrete subclasses and allows runtime access and instancing of 
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -657,10 +606,10 @@ class Survey(Nexus):
                                           
     """
     name: str = None
-    contents: Dict[core.Component, List[str]] = dataclasses.field(
-        default_factory = dict)
-    parameters: Union[Mapping[Hashable, Any], core.Parameters] = core.Parameters()
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = core.Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-    suffix: str = None
+    critera: Callable = None
     

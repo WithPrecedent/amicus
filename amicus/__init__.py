@@ -24,7 +24,8 @@ __author__ = 'Corey Rayburn Yung'
 
 import importlib
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
-    Mapping, Optional, Sequence, Set, Tuple, Type, Union)
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 """ 
 amicus imports are designed to allow key classes and functions to have first or 
