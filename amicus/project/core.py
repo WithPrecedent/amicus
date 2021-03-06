@@ -374,6 +374,21 @@ class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
                     project = self.implement(project = project, **parameters)
         return project
 
+    """ Dunder Methods """
+    
+    def __call__(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'implement' method if an instance is called.
+        
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        return self.implement(project = project, **kwargs)
+
 
 @dataclasses.dataclass
 class Result(amicus.types.Lexicon):            

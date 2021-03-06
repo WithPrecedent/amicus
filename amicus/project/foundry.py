@@ -21,6 +21,7 @@ import more_itertools
 
 import amicus
 from . import core
+from . import nodes
 
 
 @dataclasses.dataclass
@@ -228,8 +229,61 @@ class Publish(Workshop):
     """
     product: ClassVar[str] = 'workflow'
     action: ClassVar[str] = 'publishing'
+    hierarchy: ClassVar[Dict[str, core.Component]] = {
+        'nexus': core.Nexus,
+        'recipe': core.Recipe,
+        'step': core.Step,
+        'technique': core.Technique}
     
     """ Public Methods """
+
+    def create_step(self, 
+        name: Union[str, Sequence[str]], 
+        technique: Union[str, core.Technique],
+        **kwargs) -> nodes.Step:
+        """[summary]
+
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+            technique (Union[str, core.Technique]): [description]
+
+        Returns:
+            nodes.Step: [description]
+            
+        """
+        if isinstance(technique, str):
+            technique = self.create_technique(name = technique)
+        step = self._create_instance(
+            name = name, 
+            contents = technique, 
+            **kwargs)
+        step.name = technique.name
+        return step
+        
+    def create_technique(self, 
+        name: Union[str, Sequence[str]], 
+        **kwargs) -> nodes.Technique:
+        """[summary]
+
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+
+        Returns:
+            nodes.Technique: [description]
+            
+        """         
+        return self._create_instance(name = name, **kwargs)
+
+    
+    def create_nexus(self) -> nodes.Nexus:
+        return self
+    
+    def create_recipe(self) -> nodes.Recipe:
+        return self
+    
+    
+    
+    
     
     def create(self, project: amicus.Project, **kwargs) -> core.Component:
         """[summary]
@@ -257,7 +311,47 @@ class Publish(Workshop):
         workflow.contents = new_adjacency
         return workflow
 
-    def create_component(self, 
+    def create_contents(self, name: str, outline: core.Outline) -> Any:
+        return self
+
+
+    
+            # if isinstance(component, Iterable):
+            #     if isinstance(component, amicus.project.Nexus):
+            #         print('test is parallel', component.name)
+            #         method = self._organize_parallel
+            #     else:
+            #         print('test is serial', component.name)
+            #         method = self._organize_serial
+            #     component = method(
+            #         component = component,
+            #         directive = directive,
+            #         outline = outline)
+            # return component 
+
+    def create_parameters(self,
+        name: str,
+        settings: amicus.options.Settings,
+        **kwargs) -> core.Parameters:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            settings (amicus.options.Settings): [description]
+
+        Returns:
+            core.Parameters: [description]
+            
+        """
+        from_settings = self._parameters_from_settings(
+            name = name, 
+            settings = settings)      
+        parameters = core.Parameters(contents = from_settings)
+        return parameters
+        
+    """ Private Methods """
+
+    def _create_instance(self, 
         name: Union[str, Sequence[str]] = None,
         directive: core.Directive = None,
         outline: core.Outline = None,
@@ -288,7 +382,6 @@ class Publish(Workshop):
                 outline = outline)
             if directive is None:
                 component = self._from_name(name = name, **kwargs)
-                print('test is leaf', component.name)
             else:  
                 if name == directive.name:
                     initialization = directive.initialization
@@ -304,41 +397,8 @@ class Publish(Workshop):
                 except KeyError:
                     pass
                 component = self._from_name(name = lookups, **initialization)  
-            if isinstance(component, Iterable):
-                if isinstance(component, amicus.project.Nexus):
-                    print('test is parallel', component.name)
-                    method = self._organize_parallel
-                else:
-                    print('test is serial', component.name)
-                    method = self._organize_serial
-                component = method(
-                    component = component,
-                    directive = directive,
-                    outline = outline)
-            return component 
-
-    def create_parameters(self,
-        name: str,
-        settings: amicus.options.Settings,
-        **kwargs) -> core.Parameters:
-        """[summary]
-
-        Args:
-            name (str): [description]
-            settings (amicus.options.Settings): [description]
-
-        Returns:
-            core.Parameters: [description]
-            
-        """
-        from_settings = self._parameters_from_settings(
-            name = name, 
-            settings = settings)      
-        parameters = core.Parameters(contents = from_settings)
-        return parameters
-        
-    """ Private Methods """
-
+        return component
+    
     def _fix_arguments(self,         
         name: str, 
         directive: core.Directive,
@@ -440,6 +500,24 @@ class Publish(Workshop):
             return core.Outline(name = name, contents = {name: directive}) 
         else:
             return None
+
+    def _find_base(self, component: core.Component) -> str:
+        """[summary]
+
+        Args:
+            component (core.Component): [description]
+
+        Raises:
+            ValueError: [description]
+
+        Returns:
+            str: [description]
+            
+        """
+        for key, value in self.hierarchy.items():
+            if isinstance(component, value):
+                return key
+        raise ValueError('component is not a subclass instance in hierarchy')
 
     def _from_name(self, 
         name: Union[str, Sequence[str]], 

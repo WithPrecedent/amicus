@@ -9,7 +9,7 @@ Contents:
     Step (Leaf)
     Technique (Leaf)
     Worker (Graph, Component)
-    Process (Worker)
+    Recipe (Worker)
     Nexus (Worker, ABC)
     Contest (Nexus)
     Study (Nexus)
@@ -88,21 +88,6 @@ class Leaf(core.Component, abc.ABC):
         """
         project = self.contents.execute(project = project, **kwargs)
         return project        
-
-    """ Dunder Methods """
-    
-    def __call__(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'implement' method if an instance is called.
-        
-        Args:
-            project (amicus.Project): instance from which data needed for 
-                implementation should be derived and all results be added.
-
-        Returns:
-            amicus.Project: with possible changes made.
-            
-        """
-        return self.implement(project = project, **kwargs)
 
 
 @dataclasses.dataclass
@@ -298,7 +283,7 @@ class Worker(amicus.structures.Graph, core.Component):
  
  
 @dataclasses.dataclass
-class Process(Worker):
+class Recipe(Worker):
     """A Worker with a serial Workflow.
         
     Args:
