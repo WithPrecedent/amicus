@@ -38,10 +38,7 @@ LOGGER.addHandler(file_handler)
 """ Primary Interface and Access Point """
 
 @dataclasses.dataclass
-class Project(
-    amicus.quirks.Element, 
-    amicus.framework.Keystone, 
-    amicus.framework.Validator):
+class Project(amicus.quirks.Element, amicus.framework.Keystone):
     """Directs construction and execution of an amicus project.
     
     Args:
@@ -114,10 +111,10 @@ class Project(
     data: Any = None
     automatic: bool = True
     stages: ClassVar[str] = ['draft', 'publish', 'execute']
-    validations: ClassVar[Sequence[str]] = [
-        'settings',
-        'identification', 
-        'filer']
+    # validations: ClassVar[Sequence[str]] = [
+    #     'settings',
+    #     'identification', 
+    #     'filer']
     
     """ Initialization Methods """
 
@@ -226,6 +223,18 @@ class Project(
         return identification
 
     def _check_current(self, stage: str) -> bool:
+        """[summary]
+
+        Args:
+            stage (str): [description]
+
+        Raises:
+            IndexError: [description]
+
+        Returns:
+            bool: [description]
+            
+        """        
         current = self.stages[self.index]
         if current != stage:
             raise IndexError(
@@ -247,10 +256,10 @@ class Project(
         """Completes a Stage instance."""
         if self.index < len(self.stages):
             current = self.stages[self.index]
-            builder = amicus.framework.Keystone.workshop.instance(current)
+            builder = self.library.workshop.select(current)()
             if hasattr(self, 'verbose') and self.verbose:
                 print(f'{builder.action} {builder.product}')
-            kwargs = builder.needify(instance = self)
+            kwargs = {'project': self}
             setattr(self, builder.product, builder.create(**kwargs))
             self.index += 1
         else:

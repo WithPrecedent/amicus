@@ -1,5 +1,5 @@
 """
-amicus.project.builder:
+amicus.project.foundry:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -9,9 +9,9 @@ Contents:
 
 """
 from __future__ import annotations
+import abc
 import copy
 import dataclasses
-import functools
 import inspect
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
     Mapping, Optional, Sequence, Set, Tuple, Type, Union)
@@ -30,49 +30,70 @@ from . import core
 
 
 @dataclasses.dataclass
-class Workshop(amicus.quirks.Needy, amicus.framework.Keystone):
+class Workshop(amicus.framework.Keystone, abc.ABC):
     """Builds amicus project objects
     
     """
     """ Public Methods """
 
-    needs: ClassVar[Sequence[str]] = []
     product: ClassVar[str] = None
     action: ClassVar[str] = None   
+
+    """ Public Methods """
     
-    
+    @abc.abstractmethod
+    def create(self, project: amicus.Project, **kwargs) -> object:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            object
+            
+        """
+        pass
+
+ 
 @dataclasses.dataclass
 class Draft(Workshop):
     """Builds Outlines and Directives from Settings.
     
     """
-    needs: ClassVar[Sequence[str]] = ['settings', 'name']
     product: ClassVar[str] = 'outline'
     action: ClassVar[str] = 'drafting'
 
     """ Public Methods """
     
-    def create(self,
+    def create(self, project: amicus.Project, **kwargs) -> core.Outline:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            core.Outline: [description]
+            
+        """
+        return self.create_outline(
+            name = project.name, 
+            settings = project.settings,
+            **kwargs)
+
+    def create_outline(self,
         name: str, 
-        settings: amicus.project.Settings, 
-        library: amicus.types.Library = None,
-        package: str = 'amicus',
+        settings: amicus.options.Settings, 
         **kwargs) -> amicus.project.Outline:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (amicus.project.Settings): [description]
-            library (amicus.types.Library, optional): [description]. Defaults to 
-                None.
-            package (str, optional): [description]. Defaults to 'amicus'.
+            settings (amicus.options.Settings): [description]
 
         Returns:
             amicus.project.Outline: [description]
             
         """
-        if library is None:
-            library = amicus.project.Component.library
         try:
             general = settings['general']
         except KeyError:
@@ -85,13 +106,13 @@ class Draft(Workshop):
             except KeyError:
                 files = {}
         try:
-            package = settings[package]
+            package = settings['amicus']
         except (KeyError, TypeError):
             package = {}
-        directive = self.create_directive(settings = settings, name = name)
+        directive = self.create_directive(name = name, settings = settings)
         directives = {name: directive}
         section = settings[name]
-        suffixes = library.component.subclasses.suffixes
+        suffixes = self.library.component.subclasses.suffixes
         keys = [v for k, v in section.items() if k.endswith(suffixes)][0]
         for key in keys:
             if key in settings:
@@ -108,15 +129,14 @@ class Draft(Workshop):
             **kwargs)       
 
     def create_directive(self,
-        settings: amicus.project.Settings,
         name: str, 
-        library: amicus.types.Library = None,
-        **kwargs) -> amicus.project.Directive:
+        settings: amicus.options.Settings,
+        **kwargs) -> core.Directive:
         """[summary]
 
         Args:
             name (str): [description]
-            settings (amicus.project.Settings): [description]
+            settings (amicus.options.Settings): [description]
             library (amicus.types.Library, optional): [description]. 
                 Defaults to None.
 
@@ -124,15 +144,13 @@ class Draft(Workshop):
             amicus.project.Directive: [description]
             
         """
-        if library is None:
-            library = amicus.project.Component.library    
         edges = {}
         designs = {}
         initialization = {}
         attributes = {}        
         designs[name] = self.get_design(name = name, settings = settings)
         lookups = [name, designs[name]]
-        dummy_component = library.component.select(name = lookups)
+        dummy_component = self.library.component.select(name = lookups)
         possible_initialization = tuple(
             i for i in list(dummy_component.__annotations__.keys()) 
             if i not in ['name', 'contents'])
@@ -140,7 +158,7 @@ class Draft(Workshop):
             prefix, suffix = amicus.tools.divide_string(key, divider = '_')
             if suffix in ['design']:
                 pass
-            elif suffix in library.component.subclasses.suffixes:
+            elif suffix in self.library.component.subclasses.suffixes:
                 if prefix in edges:
                     edges[prefix].extend(amicus.tools.listify(value))
                 else:
@@ -180,8 +198,7 @@ class Draft(Workshop):
             attributes = attributes,
             **kwargs)
 
-    @staticmethod
-    def get_design(name: str, settings: amicus.options.Settings) -> str:
+    def get_design(self, name: str, settings: amicus.options.Settings) -> str:
         """[summary]
 
         Args:
@@ -214,13 +231,30 @@ class Publish(Workshop):
     """Builds Components and Parameters.
     
     """
-    needs: ClassVar[Sequence[str]] = ['outline', 'name']
     product: ClassVar[str] = 'workflow'
     action: ClassVar[str] = 'publishing'
     
     """ Public Methods """
+    
+    def create(self, project: amicus.Project, **kwargs) -> core.Component:
+        """[summary]
 
-    def create(self, 
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            core.Component: [description]
+            
+        """
+        workflow = self.create_component(
+            name = project.name,
+            directive = project.outline[project.name],
+            outline = project.outline,
+            **kwargs)
+        for node in workflow.nodes:
+            component = 
+
+    def create_component(self, 
         name: Union[str, Sequence[str]] = None,
         directive: core.Directive = None,
         outline: core.Outline = None,
@@ -228,22 +262,29 @@ class Publish(Workshop):
         """[summary]
 
         Args:
-            outline (core.Outline): [description]
-            directive (core.Directive): [description]
-            name (str): [description]
+            name (Union[str, Sequence[str]], optional): [description]. Defaults 
+                to None.
+            directive (core.Directive, optional): [description]. Defaults to 
+                None.
+            outline (core.Outline, optional): [description]. Defaults to None.
+
+        Raises:
+            ValueError: [description]
 
         Returns:
             core.Component: [description]
             
-        """
+        """        
+        print('test publish create name', name)
         if name is None and directive is None and outline is None:
             raise ValueError(
                 'create needs either a name, directive, or outline argument')
         else:
-            name = self._get_name(
+            names = self._get_names(
                 name = name, 
                 directive = directive, 
                 outline = outline)
+            name = names[0]
             directive = self._get_directive(
                 name = name, 
                 directive = directive, 
@@ -253,7 +294,7 @@ class Publish(Workshop):
                 directive = directive, 
                 outline = outline)
         if directive is None:
-            component = self.from_name(name = name, **kwargs)
+            component = self._from_name(name = name, **kwargs)
         else:  
             if name == directive.name:
                 parameters = directive.initialization
@@ -261,12 +302,12 @@ class Publish(Workshop):
                 parameters = {}   
             parameters.update({'parameters': directive.implementation[name]}) 
             parameters.update(kwargs)
-            lookups = [name]
+            lookups = names
             try:
                 lookups.append(directive.designs[name])   
             except KeyError:
                 pass
-            component = self.from_name(name = lookups, **parameters)  
+            component = self._from_name(name = lookups, **parameters)  
             if isinstance(component, Iterable):
                 if hasattr(component, 'criteria'):
                     method = self._organize_parallel
@@ -276,47 +317,7 @@ class Publish(Workshop):
                     component = component,
                     directive = directive,
                     outline = outline)
-        return component
-
-    def from_name(self, 
-        name: Union[str, Sequence[str]], 
-        **kwargs) -> core.Component:
-        """Returns instance of first match of 'name' in stored catalogs.
-        
-        The method prioritizes the 'instances' catalog over 'subclasses' and any
-        passed names in the order they are listed.
-        
-        Args:
-            name (Union[str, Sequence[str]]): [description]
-            
-        Raises:
-            KeyError: [description]
-            
-        Returns:
-            core.Component: [description]
-            
-        """
-        names = amicus.tools.listify(name)
-        primary = names[0]
-        item = None
-        for key in names:
-            for catalog in ['instances', 'subclasses']:
-                try:
-                    item = getattr(self.base, catalog)[key]
-                    break
-                except KeyError:
-                    pass
-            if item is not None:
-                break
-        if item is None:
-            raise KeyError(f'No matching item for {str(name)} was found') 
-        elif inspect.isclass(item):
-            instance = item(name = primary, **kwargs)
-        else:
-            instance = copy.deepcopy(item)
-            for key, value in kwargs.items():
-                setattr(instance, key, value)  
-        return instance  
+        return component 
 
     def create_parameters(self,
         name: str,
@@ -340,7 +341,7 @@ class Publish(Workshop):
         
     """ Private Methods """
     
-    def _get_name(self, 
+    def _get_names(self, 
         name: str, 
         directive: core.Directive,
         outline: core.Outline) -> str:
@@ -369,9 +370,9 @@ class Publish(Workshop):
         """[summary]
 
         Args:
-            outline (core.Outline): [description]
             name (str): [description]
             directive (core.Directive): [description]
+            outline (core.Outline): [description]
 
         Returns:
             core.Directive: [description]
@@ -397,9 +398,9 @@ class Publish(Workshop):
         """[summary]
 
         Args:
-            outline (core.Outline): [description]
             name (str): [description]
             directive (core.Directive): [description]
+            outline (core.Outline): [description]
 
         Returns:
             core.Outline: [description]
@@ -411,7 +412,47 @@ class Publish(Workshop):
             return core.Outline(name = name, contents = {name: directive}) 
         else:
             return None
-                                   
+
+    def _from_name(self, 
+        name: Union[str, Sequence[str]], 
+        **kwargs) -> core.Component:
+        """Returns instance of first match of 'name' in stored catalogs.
+        
+        The method prioritizes the 'instances' catalog over 'subclasses' and any
+        passed names in the order they are listed.
+        
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+            
+        Raises:
+            KeyError: [description]
+            
+        Returns:
+            core.Component: [description]
+            
+        """
+        names = amicus.tools.listify(name)
+        primary = names[0]
+        item = None
+        for key in names:
+            for catalog in ['instances', 'subclasses']:
+                try:
+                    item = getattr(self.library.component, catalog)[key]
+                    break
+                except KeyError:
+                    pass
+            if item is not None:
+                break
+        if item is None:
+            raise KeyError(f'No matching item for {names} was found') 
+        elif inspect.isclass(item):
+            instance = item(name = primary, **kwargs)
+        else:
+            instance = copy.deepcopy(item)
+            for key, value in kwargs.items():
+                setattr(instance, key, value)  
+        return instance 
+                                       
     def _organize_serial(self, 
         component: core.Component,
         directive: core.Directive,
@@ -433,7 +474,7 @@ class Publish(Workshop):
         collapsed = list(more_itertools.collapse(subcomponents))
         nodes = []
         for node in collapsed:
-            subnode = self.create(
+            subnode = self.create_component(
                 name = [node, directive.designs[node]],
                 directive = directive,
                 outline = outline)
@@ -494,6 +535,7 @@ class Publish(Workshop):
             
         """        
         organized = []
+        print('test directive serial order', directive)
         components = directive.edges[name]
         for item in components:
             organized.append(item)
@@ -542,8 +584,22 @@ class Execute(Workshop):
     """Builds Results and Summaries from workflows.
     
     """
-    needs: ClassVar[Sequence[str]] = ['workflow', 'outline', 'data']
     product: ClassVar[str] = 'summary'
     action: ClassVar[str] = 'preparing'
-    
 
+    """ Public Methods """
+    
+    def create(self, project: amicus.Project, **kwargs) -> core.Summary:
+        """[summary]
+
+        Args:
+            project (amicus.Project): [description]
+
+        Returns:
+            core.Summary: [description]
+            
+        """
+        return self.create_summary(
+            name = project.name,
+            settings = project.settings,
+            package = project.package)   

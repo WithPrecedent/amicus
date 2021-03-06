@@ -113,7 +113,8 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             instanced. 
                       
     Namespaces: 
-        library, subclasses, instances, select, instance, __init_subclass__
+        library, subclasses, instances, select, instance, __init_subclass__,
+        _get_subclasses_catalog_key, _get_instances_catalog_key
     
     """
     library: ClassVar[Library] = Library()
@@ -123,8 +124,8 @@ class Keystone(amicus.types.Quirk, abc.ABC):
     def __init_subclass__(cls, **kwargs):
         """Adds 'cls' to appropriate class libraries."""
         super().__init_subclass__(**kwargs)
-        # Creates a snakecase key of the class name.
-        key = amicus.tools.snakify(cls.__name__)
+        # Gets name of key to use for storing the cls.
+        key = cls._get_subclasses_catalog_key()
         # Adds class to 'library' if it is a base class.
         if Keystone in cls.__bases__:
             # Registers a new Keystone.
@@ -143,7 +144,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
         try:
             key = self.name
         except AttributeError:
-            key = amicus.tools.snakify(self.__class__.__name__)
+            key = self._get_instances_catalog_key()
         self.instances[key] = self
 
     """ Class Methods """
@@ -216,7 +217,34 @@ class Keystone(amicus.types.Quirk, abc.ABC):
                 setattr(instance, key, value)
             return instance
 
+    """ Private Methods """
+    
+    @classmethod
+    def _get_subclasses_catalog_key(cls) -> str:
+        """Returns a snakecase key of the class name.
+        
+        Returns:
+            str: the snakecase name of the class.
+            
+        """
+        return amicus.tools.snakify(cls.__name__)        
 
+    def _get_instances_catalog_key(self) -> str:
+        """Returns a snakecase key of the class name.
+        
+        Returns:
+            str: the snakecase name of the class.
+            
+        """
+        try:
+            key = self.name 
+        except AttributeError:
+            try:
+                key = amicus.tools.snakify(self.__name__) 
+            except AttributeError:
+                key = amicus.tools.snakify(self.__class__.__name__)
+        return key
+    
 def create_keystone(
         keystone: Union[str, Keystone] = object, 
         name: str = None, 

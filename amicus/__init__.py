@@ -78,7 +78,7 @@ importables: Dict[str, str] = {
     'Converter': 'sourdough.framework.Converter',
     'Structure': 'sourdough.structures.Structure',
     'Graph': 'sourdough.structures.Graph',
-    'Project': 'project.core.Project'}
+    'Project': 'project.interface.Project'}
 
 def __getattr__(name: str) -> Any:
     """Lazily imports modules and items within them.
