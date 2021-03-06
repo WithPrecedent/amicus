@@ -109,28 +109,21 @@ class Draft(Workshop):
             package = settings['amicus']
         except (KeyError, TypeError):
             package = {}
-        directive = self.create_directive(name = name, settings = settings)
-        directives = {name: directive}
-        section = settings[name]
-        suffixes = self.library.component.subclasses.suffixes
-        keys = [v for k, v in section.items() if k.endswith(suffixes)][0]
-        for key in keys:
-            if key in settings:
-                directives[key] = self.create_directive(
-                    settings = settings, 
-                    name = key)
-            else:
-                directives[key] = directives[name]
-        return amicus.project.Outline(
-            contents = directives,
+        outline = amicus.project.Outline(
             general = general,
             files = files,
             package = package,
-            **kwargs)       
-
-    def create_directive(self,
+            **kwargs) 
+        outline = self.add_directive(
+            name = name, 
+            settings = settings, 
+            outline = outline)
+        return outline
+    
+    def add_directive(self,
         name: str, 
         settings: amicus.options.Settings,
+        outline: amicus.project.Outline,
         **kwargs) -> core.Directive:
         """[summary]
 
@@ -164,6 +157,7 @@ class Draft(Workshop):
                 else:
                     edges[prefix] = amicus.tools.listify(value)  
                 for subcomponent in more_itertools.always_iterable(value):
+                    edges[subcomponent] = []
                     try:
                         subcomponent_design = self.get_design(
                             name = subcomponent, 
@@ -171,6 +165,11 @@ class Draft(Workshop):
                     except KeyError:
                         subcomponent_design = suffix[:-1]
                     designs.update({subcomponent: subcomponent_design})
+                    if subcomponent in settings:
+                        outline = self.add_directive(
+                            name = subcomponent,
+                            settings = settings,
+                            outline = outline)
             elif suffix in possible_initialization:
                 initialization[suffix] = value
             elif prefix in [name]:
@@ -189,7 +188,7 @@ class Draft(Workshop):
                         f'{component}_parameters']
                 except KeyError:
                     implementation[component] = {}
-        return amicus.project.Directive(
+        directive = amicus.project.Directive(
             name = name, 
             edges = edges,
             designs = designs,
@@ -197,6 +196,8 @@ class Draft(Workshop):
             implementation = implementation,
             attributes = attributes,
             **kwargs)
+        outline[name] = directive
+        return outline
 
     def get_design(self, name: str, settings: amicus.options.Settings) -> str:
         """[summary]
@@ -246,13 +247,21 @@ class Publish(Workshop):
             core.Component: [description]
             
         """
+        print('test outline', project.outline)
         workflow = self.create_component(
             name = project.name,
             directive = project.outline[project.name],
             outline = project.outline,
             **kwargs)
-        for node in workflow.nodes:
-            component = 
+        new_adjacency = {}
+        for node, edges in workflow.items():
+            if node != project.name:
+                new_node = self.create_component(
+                    name = node.name,
+                    outline = project.outline)
+                new_adjacency[new_node] = edges
+        workflow.contents = new_adjacency
+        return workflow
 
     def create_component(self, 
         name: Union[str, Sequence[str]] = None,
@@ -275,49 +284,44 @@ class Publish(Workshop):
             core.Component: [description]
             
         """        
-        print('test publish create name', name)
         if name is None and directive is None and outline is None:
             raise ValueError(
                 'create needs either a name, directive, or outline argument')
         else:
-            names = self._get_names(
-                name = name, 
-                directive = directive, 
+            names, name, directive, outline = self._fix_arguments(
+                name = name,
+                directive = directive,
                 outline = outline)
-            name = names[0]
-            directive = self._get_directive(
-                name = name, 
-                directive = directive, 
-                outline = outline)
-            outline = self._get_outline(
-                name = name, 
-                directive = directive, 
-                outline = outline)
-        if directive is None:
-            component = self._from_name(name = name, **kwargs)
-        else:  
-            if name == directive.name:
-                parameters = directive.initialization
-            else:
-                parameters = {}   
-            parameters.update({'parameters': directive.implementation[name]}) 
-            parameters.update(kwargs)
-            lookups = names
-            try:
-                lookups.append(directive.designs[name])   
-            except KeyError:
-                pass
-            component = self._from_name(name = lookups, **parameters)  
+            if directive is None:
+                component = self._from_name(name = name, **kwargs)
+                print('test is leaf', component.name)
+            else:  
+                if name == directive.name:
+                    initialization = directive.initialization
+                else:
+                    initialization = {}
+                implementation = directive.implementation[name]
+                initialization.update({'parameters': implementation}) 
+                initialization.update(kwargs)
+                lookups = names
+                try:
+                    if directive.designs[name] not in lookups:
+                        lookups.append(directive.designs[name])   
+                except KeyError:
+                    pass
+                component = self._from_name(name = lookups, **initialization)  
             if isinstance(component, Iterable):
-                if hasattr(component, 'criteria'):
+                if isinstance(component, amicus.project.Nexus):
+                    print('test is parallel', component.name)
                     method = self._organize_parallel
                 else:
+                    print('test is serial', component.name)
                     method = self._organize_serial
                 component = method(
                     component = component,
                     directive = directive,
                     outline = outline)
-        return component 
+            return component 
 
     def create_parameters(self,
         name: str,
@@ -340,6 +344,36 @@ class Publish(Workshop):
         return parameters
         
     """ Private Methods """
+
+    def _fix_arguments(self,         
+        name: str, 
+        directive: core.Directive,
+        outline: core.Outline) -> Tuple[List[str], str, str, str, str]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            directive (core.Directive): [description]
+            outline (core.Outline): [description]
+
+        Returns:
+            Tuple[List[str], str, str, str, str]: [description]
+            
+        """
+        names = self._get_names(
+            name = name, 
+            directive = directive, 
+            outline = outline)
+        name = names[0]
+        directive = self._get_directive(
+            name = name, 
+            directive = directive, 
+            outline = outline)
+        outline = self._get_outline(
+            name = name, 
+            directive = directive, 
+            outline = outline)
+        return names, name, directive, outline
     
     def _get_names(self, 
         name: str, 
@@ -478,8 +512,10 @@ class Publish(Workshop):
                 name = [node, directive.designs[node]],
                 directive = directive,
                 outline = outline)
-            core.append(subnode)
-        component.extend(nodes = nodes)
+            nodes.append(subnode)
+        if nodes:
+            print('test yes nodes about to extend')
+            component.extend(nodes = nodes)
         return component      
 
     def _organize_parallel(self, 
@@ -498,26 +534,29 @@ class Publish(Workshop):
             
         """ 
         step_names = directive.edges[directive.name]
+        print('test step names', step_names)
         possible = [directive.edges[step] for step in step_names]
         nodes = []
+        print('test possible', possible)
         for i, step_options in enumerate(possible):
             permutation = []
             for option in step_options:
                 t_keys = [option, directive.designs[option]]
-                technique = self.create(
+                technique = self.create_component(
                     name = t_keys,
                     directive = directive,
                     outline = outline,
                     suffix = step_names[i])
                 s_keys = [step_names[i], directive.designs[step_names[i]]]    
-                step = self.create(
+                step = self.create_component(
                     name = s_keys,
                     directive = directive,
                     outline = outline,
                     contents = technique)
                 step.name = option
                 permutation.append(step)
-            core.append(permutation)
+                print('test permutation', permutation)
+            nodes.append(permutation)
         component.branchify(nodes = nodes)
         return component
     
@@ -535,7 +574,6 @@ class Publish(Workshop):
             
         """        
         organized = []
-        print('test directive serial order', directive)
         components = directive.edges[name]
         for item in components:
             organized.append(item)
@@ -599,7 +637,12 @@ class Execute(Workshop):
             core.Summary: [description]
             
         """
+        print('test workflow', project.workflow.contents)
+        print('test parser', project.workflow.nodes['parser'].edges)
         return self.create_summary(
             name = project.name,
             settings = project.settings,
             package = project.package)   
+    
+     
+        

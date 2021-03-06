@@ -191,7 +191,6 @@ class Project(amicus.quirks.Element, amicus.framework.Keystone):
     
     def publish(self) -> None:
         """Creates 'workflow' from 'outline'."""
-        # print('test outline', self.outline)
         if self._check_current(stage = 'publish'):
             self.__next__()  
         return self

@@ -330,7 +330,7 @@ class Component(amicus.framework.Keystone, amicus.structures.Node, abc.ABC):
     parameters: Union[Mapping[Hashable, Any], Parameters] = dataclasses.field(
         default_factory = dict)
     iterations: Union[int, str] = 1
-    suffix: ClassVar[str] = None
+    suffix: str = None
     
     """ Required Subclass Methods """
 

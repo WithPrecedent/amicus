@@ -82,7 +82,6 @@ def test_project():
     assert 'parser' in amicus.project.Component.subclasses
     dynamite = Dynamite()
     assert 'annihilate' in amicus.project.Component.instances
-    
     # Tests workflow construction.
     print('test project workflow', project.workflow)
     print('test workflow paths', len(project.workflow.paths))

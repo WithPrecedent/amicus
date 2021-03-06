@@ -441,7 +441,21 @@ class Graph(amicus.types.Lexicon, Structure):
     default: Any = dataclasses.field(default_factory = list)
     
     """ Properties """
-           
+
+    @property
+    def edges(self) -> Dict[str, List[Hashable]]:
+        """Returns a dict of node names as keys and edges as values.
+        
+        This property creates a new dict with str keys derived from the nodes 
+        (looking first for a 'name' attribute) with values as edges.
+ 
+        Returns:
+            Dict[str, List[Hashable]]: dict with nodes as str as keys and lists
+                of edges as values.
+            
+        """
+        return {self._namify(n): e for n, e in self.contents.items()}
+               
     @property
     def endpoints(self) -> List[Hashable]:
         """Returns endpoint nodes in the Graph.
@@ -453,14 +467,20 @@ class Graph(amicus.types.Lexicon, Structure):
         return [k for k in self.contents.keys() if not self.contents[k]]
               
     @property
-    def nodes(self) -> List[Hashable]:
-        """Returns all nodes in the Graph.
-
+    def nodes(self) -> Dict[str, Hashable]:
+        """Returns a dict of node names as keys and nodes as values.
+        
+        Because Graph allows various Hashable objects to be used as keys,
+        including the Nodes class, there isn't an obvious way to access already
+        stored nodes. This property creates a new dict with str keys derived
+        from the nodes (looking first for a 'name' attribute) so that a user
+        can access a node. 
+ 
         Returns:
             List[Hashable]: all nodes.
             
         """
-        return list(self.keys())
+        return {self._namify(n): n for n in self.contents.keys()}
 
     @property
     def paths(self) -> List[List[Hashable]]:
@@ -628,11 +648,7 @@ class Graph(amicus.types.Lexicon, Structure):
             ValueError: if 'node' is already in 'contents'.
         
         """
-        # if node in self.contents:
-        #     raise ValueError(f'node is already in {self._namify(node = self)}')
-        # else:
-        if node not in self.contents:
-            self.contents[node] = []
+        self.contents[node] = []
         return self
 
     def append(self, 
@@ -677,6 +693,7 @@ class Graph(amicus.types.Lexicon, Structure):
                 will be used. Defaults to None.
                 
         """
+        print('test branching', nodes)
         if start is None:
             start = copy.deepcopy(self.endpoints) 
         paths = list(map(list, itertools.product(*nodes))) 
@@ -780,15 +797,16 @@ class Graph(amicus.types.Lexicon, Structure):
                 will be used. Defaults to None.
                 
         """
-        collapsed = tuple(more_itertools.collapse(nodes))
+        if any(isinstance(n, (list, tuple)) for n in nodes):
+            nodes = tuple(more_itertools.collapse(nodes))
         if start is None:
             start = self.endpoints
         if start:
             for starting in more_itertools.always_iterable(start):
-                self.add_edge(start = starting, stop = collapsed[0])
+                self.add_edge(start = starting, stop = nodes[0])
         else:
-            self.add_node(collapsed[0])
-        edges = more_itertools.windowed(collapsed, 2)
+            self.add_node(nodes[0])
+        edges = more_itertools.windowed(nodes, 2)
         for edge_pair in edges:
             self.add_edge(start = edge_pair[0], stop = edge_pair[1])
         return self  
@@ -827,7 +845,27 @@ class Graph(amicus.types.Lexicon, Structure):
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
-                  
+
+    def replace_node(self, node: Hashable) -> None:
+        """Replaces a node that already exists but leaves its edges intact.
+
+        Args:
+            node (Hashable): node to replace a current node with the same hash
+                value.
+
+        Raises:
+            ValueError: if a node with the same hash value is not in 'contents'.
+            
+        """
+        if node not in self.contents:
+            raise ValueError(
+                f'{self._namify(node)} cannot replace a node that does not '
+                f'currently exist')   
+        else:
+            edges = self.contents[node]
+            self.contents[node] = edges
+        return self
+           
     def search(self, 
         start: Hashable = None, 
         depth_first: bool = True) -> List[Hashable]:
