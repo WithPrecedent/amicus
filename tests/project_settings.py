@@ -11,10 +11,10 @@ configuration = {
         'analysis_format': 'csv',
         'file_encoding': 'windows-1252'},
     'cool_project': {
-        'cool_project_design': 'process',
+        'cool_project_design': 'recipe',
         'cool_project_workers': ['reviewer', 'parser', 'munger']},
     'reviewer': {
-        'reviewer_design': 'process',
+        'reviewer_design': 'recipe',
         'reviewer_techniques': ['scan', 'view'],
         'scan_techniques': ['spy', 'look', 'eye'],
         'look_techniques': ['peer', 'see']},

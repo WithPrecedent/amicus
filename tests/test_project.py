@@ -84,7 +84,6 @@ def test_project():
     assert 'annihilate' in amicus.project.Component.instances
     # Tests workflow construction.
     print('test project workflow', project.workflow)
-    print('test workflow paths', len(project.workflow.paths))
     print('test workflow endpoints', str(project.workflow.endpoints))
     print('test workflow roots', str(project.workflow.roots))
     return

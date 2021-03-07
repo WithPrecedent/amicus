@@ -24,6 +24,8 @@ import warnings
 
 import amicus
 from . import core
+from . import nodes
+from . import workshop
 
 
 """Initializes the amicus project logger."""
@@ -39,7 +41,7 @@ LOGGER.addHandler(file_handler)
 """ Primary Interface and Access Point """
 
 @dataclasses.dataclass
-class Project(amicus.quirks.Element, amicus.framework.Keystone):
+class Project(amicus.quirks.Element):
     """Directs construction and execution of an amicus project.
     
     Args:
@@ -140,6 +142,10 @@ class Project(amicus.quirks.Element, amicus.framework.Keystone):
         self.index = 0
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
+            self.workflow = workshop.settings_to_workflow(
+                name = self.name,
+                settings = self.settings,
+                library = nodes.Component.library)
             self.complete()
 
     """ Public Methods """

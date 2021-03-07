@@ -24,8 +24,8 @@ import amicus
 
 from .converters import *
 from .core import *
-from .foundry import *
 from .nodes import *
+from .workshop import *
 
 """ 
 The keys of 'importables' are the attribute names of how users should access
