@@ -412,7 +412,7 @@ class Converter(abc.ABC):
                        
     """ Public Methods """
 
-    def validate(self, item: Any, instance: object) -> object:
+    def validate(self, item: Any, instance: object, **kwargs) -> object:
         """[summary]
 
         Args:

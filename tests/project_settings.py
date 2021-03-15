@@ -2,7 +2,7 @@ configuration = {
     'general': {
         'verbose': True,
         'seed': 43,
-        'conserve_memery': False,
+        'conserve_memory': False,
         'parallelize': False},
     'files': {
         'source_format': 'csv',

@@ -1,5 +1,5 @@
 """
-amicus.project.core: base classes for an amicus project
+amicus.project.interface: access points for an amicus project
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -14,9 +14,12 @@ Contents:
 
 """
 from __future__ import annotations
+import collections.abc
 import dataclasses
+import inspect
 import logging
 import pathlib
+from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
     Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
     Type, Union)
@@ -28,6 +31,8 @@ from . import nodes
 from . import workshop
 
 
+CONFIGURATION: ModuleType = amicus.project.configuration
+
 """Initializes the amicus project logger."""
 
 LOGGER = logging.getLogger('amicus')
@@ -37,6 +42,131 @@ LOGGER.addHandler(console_handler)
 file_handler = logging.FileHandler('amicus.log')
 file_handler.setLevel(logging.DEBUG)
 LOGGER.addHandler(file_handler)
+
+
+""" Iterator for Constructing Project Stages """
+ 
+@dataclasses.dataclass
+class Builder(collections.abc.Iterator):
+    
+    project: Project = None
+    stages: Sequence[str] = dataclasses.field(default_factory = list)
+    workshop: ModuleType = amicus.project.workshop
+
+    """ Properties """
+    
+    @property
+    def current(self) -> str:
+        return self.stages[self.index]
+    
+    
+    @property
+    def subsequent(self) -> str:
+        try:
+            return self.stages[self.index + 1]
+        except IndexError:
+            return None
+       
+    """ Public Methods """
+    
+    def advance(self) -> None:
+        """Iterates through next stage."""
+        return self.__next__()
+
+    def complete(self) -> None:
+        """Iterates through all stages."""
+        for stage in self.stages:
+            self.advance()
+        return self
+        
+    def functionify(self, source: str, product: str) -> str:
+        """[summary]
+
+        Args:
+            source (str): [description]
+            product (str): [description]
+
+        Returns:
+            str: [description]
+            
+        """        
+        name = f'{source}_to_{product}'
+        return getattr(self.workshop, name)
+
+    def kwargify(self, func: Callable) -> Dict[Hashable, Any]:
+        """[summary]
+
+        Args:
+            func (Callable): [description]
+
+        Returns:
+            Dict[Hashable, Any]: [description]
+            
+        """        
+        parameters = inspect.signature(func).parameters.keys()
+        kwargs = {}
+        for parameter in parameters:
+            try:
+                kwargs[parameter] = getattr(self.project, parameter)
+            except AttributeError:
+                pass
+        return kwargs
+    
+    """ Dunder Methods """
+
+    def __getattr__(self, attribute: str) -> Any:
+        """[summary]
+
+        Args:
+            attribute (str): [description]
+
+        Raises:
+            IndexError: [description]
+
+        Returns:
+            Any: [description]
+            
+        """
+        if attribute in self.stages:
+            if attribute == self.subsequent:
+                self.__next__()
+            else:
+                raise IndexError(
+                    f'You cannot call {attribute} because the current stage is '
+                    f'{self.current} and the next callable stage is '
+                    f'{self.subsequent}')  
+        else:
+            raise KeyError(f'{attribute} is not in {self.__class__.__name__}')             
+            
+    def __iter__(self) -> Iterable:
+        """Returns iterable of a Project instance.
+        
+        Returns:
+            Iterable: of the Project instance.
+            
+        """
+        return iter(self)
+ 
+    def __next__(self) -> None:
+        """Completes a Stage instance."""
+        if self.index + 1 < len(self.stages):
+            builder = self.functionify(
+                source = self.current, 
+                product = self.subsequent)
+            if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
+                print(f'Creating {self.subsequent}')
+            kwargs = {'project': self.project}
+            setattr(self.project, self.subsequent, builder.create(**kwargs))
+            self.index += 1
+            if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
+                print(f'Completed {self.subsequent}')
+        else:
+            raise IndexError()
+        return getattr(self.project, self.current)
+
+
+basic_builder = Builder(stages = ['settings', 'workflow', 'summary'])
+
 
 """ Primary Interface and Access Point """
 
@@ -66,12 +196,7 @@ class Project(amicus.quirks.Element):
             Project. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
-        outline (core.Stage): an outline of a project workflow derived from 
-            'settings'. Defaults to None.
-        workflow (core.Stage): a workflow of a project derived from 'outline'. 
-            Defaults to None.
-        summary (core.Stage): a summary of a project execution derived from 
-            'workflow'. Defaults to None.
+
         automatic (bool): whether to automatically iterate through the project
             stages (True) or whether it must be iterating manually (False). 
             Defaults to True.
@@ -93,7 +218,11 @@ class Project(amicus.quirks.Element):
             attribute is inherited from Keystone. Changing this attribute will 
             entirely replace the existing links between this instance and all 
             other base classes.
-        
+        workflow (core.Stage): a workflow of a project derived from 'outline'. 
+            Defaults to None.
+        summary (core.Stage): a summary of a project execution derived from 
+            'workflow'. Defaults to None.
+            
     """
     name: str = None
     settings: Union[
@@ -108,16 +237,9 @@ class Project(amicus.quirks.Element):
         pathlib.Path, 
         str] = None
     identification: str = None
-    outline: Union[Type[core.Outline], str] = None
-    workflow: Union[Type[core.Component], str] = None
-    summary: Union[Type[core.Summary], str] = None
+    builder: Builder = basic_builder
     data: Any = None
     automatic: bool = True
-    stages: ClassVar[str] = ['draft', 'publish', 'execute']
-    # validations: ClassVar[Sequence[str]] = [
-    #     'settings',
-    #     'identification', 
-    #     'filer']
     
     """ Initialization Methods """
 
@@ -136,16 +258,14 @@ class Project(amicus.quirks.Element):
         self.identification = self._validate_identification(
             identification = self.identification)
         self.filer = amicus.options.Clerk(settings = self.settings)
+        self.builder.project = self
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
         # Sets index for iteration.
         self.index = 0
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
-            self.workflow = workshop.settings_to_workflow(
-                name = self.name,
-                settings = self.settings,
-                library = nodes.Component.library)
+            self.draft()
             self.complete()
 
     """ Public Methods """
@@ -189,24 +309,6 @@ class Project(amicus.quirks.Element):
         for stage in self.stages:
             self.advance()
         return self
-    
-    def draft(self) -> None:
-        """Creates 'outline' from 'settings'."""
-        if self._check_current(stage = 'draft'):
-            self.__next__()       
-        return self
-    
-    def publish(self) -> None:
-        """Creates 'workflow' from 'outline'."""
-        if self._check_current(stage = 'publish'):
-            self.__next__()  
-        return self
-
-    def execute(self) -> None:
-        """Creates 'summary' from 'workflow'."""
-        if self._check_current(stage = 'summary'):
-            self.__next__()  
-        return self
                         
     """ Private Methods """
 
@@ -228,47 +330,45 @@ class Project(amicus.quirks.Element):
             identification = amicus.tools.datetime_string(prefix = self.name)
         return identification
 
-    def _check_current(self, stage: str) -> bool:
+    def _draft(self) -> None:
+        """Creates 'outline' from 'settings'."""
+        self.workflow = workshop.settings_to_workflow(
+            name = self.name,
+            settings = self.settings,
+            library = nodes.Component.library)
+        return self
+           
+    """ Dunder Methods """
+
+    def __getattr__(self, attribute: str) -> Any:
         """[summary]
 
         Args:
-            stage (str): [description]
+            attribute (str): [description]
 
         Raises:
-            IndexError: [description]
+            KeyError: [description]
 
         Returns:
-            bool: [description]
-            
-        """        
-        current = self.stages[self.index]
-        if current != stage:
-            raise IndexError(
-                f'You cannot call {stage} because the current stage is '
-                f'{current}')
-        
-    """ Dunder Methods """
-
-    def __iter__(self) -> Iterable:
-        """Returns iterable of a Project instance.
-        
-        Returns:
-            Iterable: of the Project instance.
+            Any: [description]
             
         """
-        return iter(self)
+        if attribute in self.builder.stages:
+            getattr(self.builder, attribute)
+        else:
+            raise KeyError(f'{attribute} is not in {self.name}') 
+            
+    def __iter__(self) -> Iterable:
+        """Returns iterable of a Project's Builder instance.
+        
+        Returns:
+            Iterable: of a Project's Builder instance.
+            
+        """
+        return iter(self.builder)
  
     def __next__(self) -> None:
-        """Completes a Stage instance."""
-        if self.index < len(self.stages):
-            current = self.stages[self.index]
-            builder = self.library.workshop.select(current)()
-            if hasattr(self, 'verbose') and self.verbose:
-                print(f'{builder.action} {builder.product}')
-            kwargs = {'project': self}
-            setattr(self, builder.product, builder.create(**kwargs))
-            self.index += 1
-        else:
-            raise IndexError()
+        """Completes a stage in 'builder'."""
+        next(self.builder)
         return self
-    
+
