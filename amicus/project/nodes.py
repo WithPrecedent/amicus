@@ -25,32 +25,6 @@ import amicus
 
 
 @dataclasses.dataclass
-class Workshop(amicus.framework.Keystone, abc.ABC):
-    """Builds amicus project objects
-    
-    """
-    """ Public Methods """
-
-    product: ClassVar[str] = None
-    action: ClassVar[str] = None   
-
-    """ Public Methods """
-    
-    @abc.abstractmethod
-    def create(self, project: amicus.Project, **kwargs) -> object:
-        """[summary]
-
-        Args:
-            project (amicus.Project): [description]
-
-        Returns:
-            object
-            
-        """
-        pass
-    
-
-@dataclasses.dataclass
 class Registry(amicus.types.Catalog):
     """A Catalog of Component subclasses or instances."""
 
@@ -74,12 +48,6 @@ class Library(object):
     
     subclasses: Registry = Registry()
     instances: Registry = Registry()
-    
-    """ Properties """
-    
-    @property
-    def default_leaf(self) -> str:
-        return list(self.hierarchy.keys())[-1]
         
     """ Public Methods """
 
@@ -185,6 +153,19 @@ class Library(object):
         else:
             component = item.__class__  
         return component 
+
+    def parameterify(self, name: Union[str, Sequence[str]]) -> List[str]:
+        """[summary]
+
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+
+        Returns:
+            List[str]: [description]
+            
+        """        
+        component = self.select(name = name)
+        return list(component.__annotations__.keys())
            
     """ Private Methods """
     
@@ -218,6 +199,7 @@ class Library(object):
         except AttributeError:
             key = amicus.tools.snakify(component.__class__.__name__)
         return key      
+
 
 @dataclasses.dataclass    
 class Parameters(amicus.types.Lexicon):

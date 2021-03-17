@@ -1,5 +1,5 @@
 """
-amicus.project.foundry:
+amicus.project.workshop:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -30,18 +30,19 @@ def settings_to_workflow(
         name (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library): [description]
+        design (str, optional): [description]. Defaults to None.
 
     Returns:
         nodes.Worker: [description]
         
-    """
+    """    
     if design is None:
         design: str = get_design(
             name = name, 
             section = name, 
             settings = settings,
             library = library)
-    component: nodes.Component = component_from_section(
+    component: nodes.Component = worker_from_section(
         name = name,
         section = name,
         settings = settings,
@@ -117,13 +118,53 @@ def get_design(
                 else:
                     design = 'technique'
     return design  
+
+def worker_from_section(
+    name: str, 
+    section: str,
+    settings: amicus.options.Settings,
+    library: nodes.Library = None,
+    design: str = None, 
+    recursive: bool = True,
+    **kwargs) -> nodes.Worker:
+    """[summary]
+
+    Args:
+        name (str): [description]
+        section (str): [description]
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library): [description]
+        design (str, optional): [description]. Defaults to None.
+        recursive (bool, optional): [description]. Defaults to True.
+
+    Returns:
+        nodes.Component: [description]
         
+    """
+    if design is None:
+        design = get_design(name = name, section = section, settings = settings)
+    if library is None:
+        library = nodes.Component.library
+    initialization = get_initialization(
+        name = name, 
+        design = design,
+        section = section, 
+        settings = settings,
+        library = library)
+    initialization.update(kwargs)
+    initialization['parameters'] = get_implementation(
+        name = name, 
+        design = design,
+        settings = settings)
+    return library.instance(name = [name, design], **initialization)
+       
 def component_from_section(
     name: str, 
     section: str,
     settings: amicus.options.Settings,
-    library: nodes.Library,
+    library: nodes.Library = None,
     design: str = None, 
+    recursive: bool = True,
     **kwargs) -> nodes.Component:
     """[summary]
 
@@ -132,27 +173,29 @@ def component_from_section(
         section (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library): [description]
-        
+        design (str, optional): [description]. Defaults to None.
+        recursive (bool, optional): [description]. Defaults to True.
+
     Returns:
         nodes.Component: [description]
         
     """
     if design is None:
         design = get_design(name = name, section = section, settings = settings)
-    parameters = get_initialization(
+    if library is None:
+        library = nodes.Component.library
+    initialization = get_initialization(
         name = name, 
         design = design,
         section = section, 
         settings = settings,
         library = library)
-    parameters.update(kwargs)
-    implementation = get_implementation(
+    initialization.update(kwargs)
+    initialization['parameters'] = get_implementation(
         name = name, 
         design = design,
         settings = settings)
-    parameters['parameters'] = implementation
-    print('test parameters', parameters)
-    return library.instance(name = [name, design], **parameters)
+    return library.instance(name = [name, design], **initialization)
 
 def get_subcomponents(
     name: str, 
@@ -163,13 +206,14 @@ def get_subcomponents(
 
     Args:
         name (str): [description]
-        section (Dict[str, Any]): [description]
-        ignore_prefixes (bool, optional): [description]. Defaults to False.
+        section (str): [description]
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library): [description]
 
     Returns:
         Dict[str, str]: [description]
         
-    """
+    """    
     subsettings = settings[section]
     suffixes = library.subclasses.suffixes
     component_keys = [k for k in subsettings.keys() if k.endswith(suffixes)]
@@ -190,29 +234,26 @@ def get_initialization(
     """Gets parameters for a specific Component from 'settings'.
 
     Args:
-        name (str): name of the Component.
-        settings (amicus.options.Settings): Settings instance that possibly
-            contains initialization parameters.
+        name (str): [description]
+        section (str): [description]
+        design (str): [description]
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library): [description]
 
     Returns:
-        Dict[Hashable, Any]: any matching parameters.
+        Dict[Hashable, Any]: [description]
         
     """
     subsettings = settings[section]
-    print('test name for init', name, design)
-    print('test library', library.subclasses, library.instances)
-    dummy_component = library.select(name = [name, design])
-    possible = tuple(
-        i for i in list(dummy_component.__annotations__.keys()) 
-        if i not in ['name', 'contents', 'design'])
-    print('test possible parameters', possible)
+    parameters = library.parameterify(name = [name, design])
+    possible = tuple(i for i in parameters if i not in ['name', 'contents'])
     parameter_keys = [k for k in subsettings.keys() if k.endswith(possible)]
-    parameters = {}
+    kwargs = {}
     for key in parameter_keys:
         prefix, suffix = amicus.tools.divide_string(key)
         if key.startswith(name) or (name == section and prefix == suffix):
-            parameters[suffix] = subsettings[key]
-    return parameters   
+            kwargs[suffix] = subsettings[key]
+    return kwargs  
         
 def get_implementation(
     name: str, 
@@ -223,7 +264,6 @@ def get_implementation(
     Args:
         name (str): [description]
         design (str): [description]
-        base (str): [description]
         settings (amicus.options.Settings): [description]
 
     Returns:
