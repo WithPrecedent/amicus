@@ -127,7 +127,7 @@ def component_from_section(
     section: str,
     settings: amicus.options.Settings,
     library: nodes.Library,
-    edges: Dict[Hashable, List[Hashable]] = None,
+    edges: Dict[str, List[str]] = None,
     design: str = None, 
     recursive: bool = True,
     **kwargs) -> nodes.Worker:
@@ -175,45 +175,6 @@ def component_from_section(
         except AttributeError:
             pass
     return component
-       
-def component_from_section(
-    name: str, 
-    section: str,
-    settings: amicus.options.Settings,
-    library: nodes.Library = None,
-    design: str = None, 
-    recursive: bool = True,
-    **kwargs) -> nodes.Component:
-    """[summary]
-
-    Args:
-        name (str): [description]
-        section (str): [description]
-        settings (amicus.options.Settings): [description]
-        library (nodes.Library): [description]
-        design (str, optional): [description]. Defaults to None.
-        recursive (bool, optional): [description]. Defaults to True.
-
-    Returns:
-        nodes.Component: [description]
-        
-    """
-    if design is None:
-        design = get_design(name = name, section = section, settings = settings)
-    if library is None:
-        library = nodes.Component.library
-    initialization = get_initialization(
-        name = name, 
-        design = design,
-        section = section, 
-        settings = settings,
-        library = library)
-    initialization.update(kwargs)
-    initialization['parameters'] = get_implementation(
-        name = name, 
-        design = design,
-        settings = settings)
-    return library.instance(name = [name, design], **initialization)
 
 def get_subcomponents(
     name: str, 
@@ -303,7 +264,6 @@ def settings_to_edges(
     """[summary]
 
     Args:
-        section (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library): [description]
 
