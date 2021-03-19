@@ -40,12 +40,13 @@ importables: Dict[str, str] = {
     'Worker': 'core.Worker',
     'Creator': 'core.Creator',
     'Results': 'core.Results',
-    'Step': 'components.Step',
-    'Technique': 'components.Technique',
+    'Step': 'nodes.Step',
+    'Technique': 'nodes.Technique',
     'interface': 'interface',
-    'components': 'components',
+    'configuration': 'configuration',
+    'nodes': 'nodes',
     'core': 'core',
-    'workbench': 'workbench'}
+    'workshop': 'workshop'}
 
 
 def __getattr__(name: str) -> Any:

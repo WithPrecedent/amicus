@@ -738,6 +738,7 @@ class Recipe(Worker):
             edges (Dict[str, List[str]]): [description]
 
         """
+        print('test edges', edges)
         subcomponents = self._serial_order(name = self.name, edges = edges)
         nodes = list(more_itertools.collapse(subcomponents))
         if nodes:

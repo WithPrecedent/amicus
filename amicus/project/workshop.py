@@ -6,7 +6,6 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
 
-
 """
 from __future__ import annotations
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
@@ -19,73 +18,25 @@ import amicus
 from . import nodes
 
 
-def settings_to_workflow(
-    name: str,
-    settings: amicus.options.Settings, 
-    library: nodes.Library = None,
-    design: str = None,
-    recursive: bool = True,) -> nodes.Worker:
+DEFAULT_DESIGN = 'technique'
+
+
+def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
     """[summary]
 
     Args:
-        name (str): [description]
-        settings (amicus.options.Settings): [description]
-        library (nodes.Library): [description]
-        design (str, optional): [description]. Defaults to None.
+        project (amicus.Project): [description]
 
     Returns:
-        nodes.Worker: [description]
+        nodes.Component: [description]
         
-    """    
-    # if design is None:
-    #     design: str = get_design(
-    #         name = name, 
-    #         section = name, 
-    #         settings = settings,
-    #         library = library)
-    # component: nodes.Component = worker_from_section(
-    #     name = name,
-    #     section = name,
-    #     settings = settings,
-    #     library = library,
-    #     design = design)
-    # subcomponents: Dict[str, str] = get_subcomponents(
-    #     name = name, 
-    #     section = name, 
-    #     settings = settings,
-    #     library = library)
-    # instances: Dict[str, nodes.Component] = {}
-    # for subcomponent, subcomponent_base in subcomponents.items():
-    #     subcomponent_design: str = get_design(
-    #         name = subcomponent, 
-    #         section = name, 
-    #         settings = settings,
-    #         library = library)
-    #     subcomponent_design = subcomponent_design or subcomponent_base
-    #     if subcomponent in settings:
-    #         instance: nodes.Component = settings_to_workflow(
-    #             name = subcomponent, 
-    #             settings = settings,
-    #             library = library,
-    #             design = subcomponent_design)
-    #     else:
-    #         instance: nodes.Component = component_from_section(
-    #             name = subcomponent,
-    #             section = name,
-    #             settings = settings,
-    #             library = library,
-    #             design = subcomponent_design)
-    #     instances[subcomponent] = instance
-    if library is None:
-        library = nodes.Component.library
-    component = component_from_section(
-        name = name,
-        seciton = name,
-        settings = settings,
-        library = library,
-        design = design,
-        recursive = recursive)
-    return component
+    """        
+    return component_from_settings(
+        name = project.name,
+        section = project.name,
+        settings = project.settings,
+        library = project.library,
+        **kwargs)
      
 def get_design(
     name: str, 
@@ -119,14 +70,14 @@ def get_design(
                 if name == section:
                     design = settings['amicus']['default_design']
                 else:
-                    design = 'technique'
+                    design = DEFAULT_DESIGN
     return design  
 
-def component_from_section(
+def component_from_settings(
     name: str, 
     section: str,
     settings: amicus.options.Settings,
-    library: nodes.Library,
+    library: nodes.Library = None,
     edges: Dict[str, List[str]] = None,
     design: str = None, 
     recursive: bool = True,
@@ -145,6 +96,8 @@ def component_from_section(
         nodes.Component: [description]
         
     """
+    if library is None:
+        library = nodes.Component.library
     if design is None:
         design = get_design(name = name, section = section, settings = settings)
     if edges is None:
@@ -162,47 +115,51 @@ def component_from_section(
         settings = settings)
     component = library.instance(name = [name, design], **initialization)
     if isinstance(component, amicus.structures.Structure) and recursive:
-        for node in component.nodes.keys():
-            subsection = settings.get(node, section)
-            subcomponent = component_from_section(
-                name = node,
-                section = subsection,
-                settings = settings,
-                library = library,
-                edges = edges)
         try:
             component.organize(edges = edges)
         except AttributeError:
             pass
+        for node in component.keys():
+            if node not in library.instances:
+                if node in settings:
+                    subsection = node
+                else: 
+                    subsection = section
+                subcomponent = component_from_settings(
+                    name = node,
+                    section = subsection,
+                    settings = settings,
+                    library = library,
+                    edges = edges)
     return component
 
-def get_subcomponents(
-    name: str, 
-    section: str,
-    settings: amicus.options.Settings,
-    library: nodes.Library) -> Dict[str, str]:
-    """[summary]
+# def get_subcomponents(
+#     name: str, 
+#     section: str,
+#     settings: amicus.options.Settings,
+#     library: nodes.Library) -> Dict[str, str]:
+#     """[summary]
 
-    Args:
-        name (str): [description]
-        section (str): [description]
-        settings (amicus.options.Settings): [description]
-        library (nodes.Library): [description]
+#     Args:
+#         name (str): [description]
+#         section (str): [description]
+#         settings (amicus.options.Settings): [description]
+#         library (nodes.Library): [description]
 
-    Returns:
-        Dict[str, str]: [description]
+#     Returns:
+#         Dict[str, str]: [description]
         
-    """    
-    subsettings = settings[section]
-    suffixes = library.subclasses.suffixes
-    component_keys = [k for k in subsettings.keys() if k.endswith(suffixes)]
-    subcomponents = {}
-    for key in component_keys:
-        prefix, suffix = amicus.tools.divide_string(key)
-        if key.startswith(name) or (name == section and prefix == suffix):
-            edges = subsettings[key]
-            subcomponents.update(dict.fromkeys(edges, suffix[:-1]))
-    return subcomponents
+#     """    
+#     subsettings = settings[section]
+#     suffixes = library.subclasses.suffixes
+#     component_keys = [k for k in subsettings.keys() if k.endswith(suffixes)]
+#     subcomponents = {}
+#     for key in component_keys:
+#         prefix, suffix = amicus.tools.divide_string(key)
+#         if key.startswith(name) or (name == section and prefix == suffix):
+#             edges = subsettings[key]
+#             subcomponents.update(dict.fromkeys(edges, suffix[:-1]))
+#     return subcomponents
 
 def get_initialization(
     name: str, 
@@ -273,16 +230,16 @@ def settings_to_edges(
     """
     suffixes = library.subclasses.suffixes
     edges = {}
-    for section in settings.items():
+    for name, section in settings.items():
         component_keys = [k for k in section.keys() if k.endswith(suffixes)]
         for key in component_keys:
             prefix, suffix = amicus.tools.divide_string(key)
             values = amicus.tools.listify(section[key])
             if prefix == suffix:
-                if section in edges:
-                    edges[section].extend(values)
+                if name in edges:
+                    edges[name].extend(values)
                 else:
-                    edges[section] = values
+                    edges[name] = values
             else:
                 if prefix in edges:
                     edges[prefix].extend(values)

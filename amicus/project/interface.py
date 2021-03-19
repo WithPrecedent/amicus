@@ -33,6 +33,7 @@ from . import workshop
 
 CONFIGURATION: ModuleType = amicus.project.configuration
 
+
 """Initializes the amicus project logger."""
 
 LOGGER = logging.getLogger('amicus')
@@ -50,20 +51,31 @@ LOGGER.addHandler(file_handler)
 class Builder(collections.abc.Iterator):
     
     project: Project = None
-    stages: Sequence[str] = dataclasses.field(default_factory = list)
+    stages: Sequence[str] = dataclasses.field(default_factory = dict)
     workshop: ModuleType = amicus.project.workshop
 
+    """ Initialization Methods """
+
+    def __post_init__(self) -> None:
+        """Initializes class instance attributes."""
+        # Calls parent and/or mixin initialization method(s).
+        try:
+            super().__post_init__()
+        except AttributeError:
+            pass
+        # Sets index for iteration.
+        self.index = 0
+        
     """ Properties """
     
     @property
     def current(self) -> str:
-        return self.stages[self.index]
-    
+        return list(self.stages.keys())[self.index]
     
     @property
     def subsequent(self) -> str:
         try:
-            return self.stages[self.index + 1]
+            return list(self.stages.keys())[self.index + 1]
         except IndexError:
             return None
        
@@ -114,29 +126,29 @@ class Builder(collections.abc.Iterator):
     
     """ Dunder Methods """
 
-    def __getattr__(self, attribute: str) -> Any:
-        """[summary]
+    # def __getattr__(self, attribute: str) -> Any:
+    #     """[summary]
 
-        Args:
-            attribute (str): [description]
+    #     Args:
+    #         attribute (str): [description]
 
-        Raises:
-            IndexError: [description]
+    #     Raises:
+    #         IndexError: [description]
 
-        Returns:
-            Any: [description]
+    #     Returns:
+    #         Any: [description]
             
-        """
-        if attribute in self.stages:
-            if attribute == self.subsequent:
-                self.__next__()
-            else:
-                raise IndexError(
-                    f'You cannot call {attribute} because the current stage is '
-                    f'{self.current} and the next callable stage is '
-                    f'{self.subsequent}')  
-        else:
-            raise KeyError(f'{attribute} is not in {self.__class__.__name__}')             
+    #     """
+    #     if attribute in self.stages:
+    #         if attribute == self.subsequent:
+    #             self.__next__()
+    #         else:
+    #             raise IndexError(
+    #                 f'You cannot call {attribute} because the current stage is '
+    #                 f'{self.current} and the next callable stage is '
+    #                 f'{self.subsequent}')  
+    #     else:
+    #         raise KeyError(f'{attribute} is not in {self.__class__.__name__}')             
             
     def __iter__(self) -> Iterable:
         """Returns iterable of a Project instance.
@@ -151,12 +163,12 @@ class Builder(collections.abc.Iterator):
         """Completes a Stage instance."""
         if self.index + 1 < len(self.stages):
             builder = self.functionify(
-                source = self.current, 
-                product = self.subsequent)
+                source = self.stages[self.current], 
+                product = self.stages[self.subsequent])
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Creating {self.subsequent}')
             kwargs = {'project': self.project}
-            setattr(self.project, self.subsequent, builder.create(**kwargs))
+            setattr(self.project, self.subsequent, builder(**kwargs))
             self.index += 1
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Completed {self.subsequent}')
@@ -165,7 +177,10 @@ class Builder(collections.abc.Iterator):
         return getattr(self.project, self.current)
 
 
-basic_builder = Builder(stages = ['settings', 'workflow', 'summary'])
+basic_builder = Builder(stages = {
+    'initialize': 'settings', 
+    'draft': 'workflow', 
+    'execute': 'summary'})
 
 
 """ Primary Interface and Access Point """
@@ -196,7 +211,6 @@ class Project(amicus.quirks.Element):
             Project. The name is used for creating file folders related to the 
             project. If it is None, a str will be created from 'name' and the 
             date and time. Defaults to None.   
-
         automatic (bool): whether to automatically iterate through the project
             stages (True) or whether it must be iterating manually (False). 
             Defaults to True.
@@ -240,6 +254,7 @@ class Project(amicus.quirks.Element):
     builder: Builder = basic_builder
     data: Any = None
     automatic: bool = True
+    library: nodes.Library = nodes.Component.library
     
     """ Initialization Methods """
 
@@ -261,11 +276,8 @@ class Project(amicus.quirks.Element):
         self.builder.project = self
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
-        # Sets index for iteration.
-        self.index = 0
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
-            self.draft()
             self.complete()
 
     """ Public Methods """
@@ -306,7 +318,7 @@ class Project(amicus.quirks.Element):
 
     def complete(self) -> Any:
         """Iterates through all stages."""
-        for stage in self.stages:
+        for stage in self.builder.stages:
             self.advance()
         return self
                         
@@ -340,23 +352,23 @@ class Project(amicus.quirks.Element):
            
     """ Dunder Methods """
 
-    def __getattr__(self, attribute: str) -> Any:
-        """[summary]
+    # def __getattr__(self, attribute: str) -> Any:
+    #     """[summary]
 
-        Args:
-            attribute (str): [description]
+    #     Args:
+    #         attribute (str): [description]
 
-        Raises:
-            KeyError: [description]
+    #     Raises:
+    #         KeyError: [description]
 
-        Returns:
-            Any: [description]
+    #     Returns:
+    #         Any: [description]
             
-        """
-        if attribute in self.builder.stages:
-            getattr(self.builder, attribute)
-        else:
-            raise KeyError(f'{attribute} is not in {self.name}') 
+    #     """
+    #     if attribute in self.builder.stages:
+    #         getattr(self.builder, attribute)
+    #     else:
+    #         raise KeyError(f'{attribute} is not in {self.name}') 
             
     def __iter__(self) -> Iterable:
         """Returns iterable of a Project's Builder instance.
