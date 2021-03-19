@@ -45,7 +45,7 @@ def settings_to_component(
     section: str,
     settings: amicus.options.Settings,
     library: nodes.Library = None,
-    edges: Dict[str, List[str]] = None,
+    subcomponents: Dict[str, List[str]] = None,
     design: str = None, 
     recursive: bool = True,
     overwrite: bool = False,
@@ -57,7 +57,8 @@ def settings_to_component(
         section (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
-        edges (Dict[str, List[str]], optional): [description]. Defaults to None.
+        subcomponents (Dict[str, List[str]], optional): [description]. Defaults to 
+            None.
         design (str, optional): [description]. Defaults to None.
         recursive (bool, optional): [description]. Defaults to True.
         overwrite (bool, optional): [description]. Defaults to False.
@@ -67,7 +68,9 @@ def settings_to_component(
     
     """
     library = library or configuration.LIBRARY
-    edges = edges or settings_to_edges(settings = settings, library = library)
+    subcomponents = subcomponents or settings_to_subcomponents(
+        settings = settings, 
+        library = library)
     design = design or settings_to_design(
         name = name, 
         section = section, 
@@ -87,7 +90,7 @@ def settings_to_component(
     component = library.instance(name = [name, design], **initialization)
     if isinstance(component, amicus.structures.Structure) and recursive:
         try:
-            component.organize(edges = edges)
+            component.organize(subcomponents = subcomponents)
         except AttributeError:
             pass
         for node in component.keys():
@@ -104,10 +107,10 @@ def settings_to_component(
                     section = subsection,
                     settings = settings,
                     library = library,
-                    edges = edges)
+                    subcomponents = subcomponents)
     return component
 
-def settings_to_edges(
+def settings_to_subcomponents(
     settings: amicus.options.Settings,
     library: nodes.Library) -> Dict[str, List[str]]:
     """[summary]
@@ -121,23 +124,23 @@ def settings_to_edges(
         
     """
     suffixes = library.subclasses.suffixes
-    edges = {}
+    subcomponents = {}
     for name, section in settings.items():
         component_keys = [k for k in section.keys() if k.endswith(suffixes)]
         for key in component_keys:
             prefix, suffix = amicus.tools.divide_string(key)
             values = amicus.tools.listify(section[key])
             if prefix == suffix:
-                if name in edges:
-                    edges[name].extend(values)
+                if name in subcomponents:
+                    subcomponents[name].extend(values)
                 else:
-                    edges[name] = values
+                    subcomponents[name] = values
             else:
-                if prefix in edges:
-                    edges[prefix].extend(values)
+                if prefix in subcomponents:
+                    subcomponents[prefix].extend(values)
                 else:
-                    edges[prefix] = values
-    return edges
+                    subcomponents[prefix] = values
+    return subcomponents
   
 def settings_to_design(
     name: str, 
@@ -249,30 +252,26 @@ def workflow_to_summary(project: amicus.Project, **kwargs) -> nodes.Component:
             data = project.data)})
         
 def workflow_to_result(
-    name: str, 
     path: Sequence[str],
     project: amicus.Project,
     data: Any = None,
     library: nodes.Library = None,
     result: products.Result = None,
-    recursive: bool = True,
-    **kwargs) -> nodes.Component:
+    **kwargs) -> object:
     """[summary]
 
     Args:
         name (str): [description]
-        section (str): [description]
-        settings (amicus.options.Settings): [description]
+        path (Sequence[str]): [description]
+        project (amicus.Project): [description]
+        data (Any, optional): [description]. Defaults to None.
         library (nodes.Library, optional): [description]. Defaults to None.
-        edges (Dict[str, List[str]], optional): [description]. Defaults to None.
-        design (str, optional): [description]. Defaults to None.
-        recursive (bool, optional): [description]. Defaults to True.
-        overwrite (bool, optional): [description]. Defaults to False.
+        result (products.Result, optional): [description]. Defaults to None.
 
     Returns:
-        nodes.Component: [description]
-    
-    """
+        object: [description]
+        
+    """    
     library = library or configuration.LIBRARY
     result = result or configuration.RESULT
     data = data or project.data

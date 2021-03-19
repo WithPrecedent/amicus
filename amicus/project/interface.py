@@ -170,13 +170,14 @@ class Builder(collections.abc.Iterator):
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Creating {self.subsequent}')
             kwargs = {'project': self.project}
-            setattr(self.project, self.subsequent, builder(**kwargs))
+            attribute = self.stages[self.subsequent]
+            setattr(self.project, attribute, builder(**kwargs))
             self.index += 1
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Completed {self.subsequent}')
         else:
             raise IndexError()
-        return getattr(self.project, self.current)
+        return self
 
 
 basic_builder = Builder(stages = {
@@ -276,10 +277,10 @@ class Project(amicus.quirks.Element):
             identification = self.identification)
         self.filer = amicus.options.Clerk(settings = self.settings)
         self.builder.project = self
-        # Adds 'general' section attributes from 'settings'.
-        self.settings.inject(instance = self)
+        # Reconciles 'settings' with 'configuration'
+        self.harmonize()
         # Sets multiprocessing technique, if necessary.
-        if configuration.parallelize:
+        if configuration.PARALLELIZE:
             multiprocessing.set_start_method('spawn')
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
@@ -317,16 +318,36 @@ class Project(amicus.quirks.Element):
         
     """ Public Methods """
     
-    def advance(self) -> Any:
+    def advance(self) -> None:
         """Iterates through next stage."""
         return self.__next__()
 
-    def complete(self) -> Any:
+    def complete(self) -> None:
         """Iterates through all stages."""
         for stage in self.builder.stages:
             self.advance()
         return self
-                        
+    
+    def harmonize(self) -> None:
+        """Reconciles internal and external configuration settings.
+        
+        If there is any discrepany between the external settings in 'settings'
+        and the default settings in 'configuration', the external settings will
+        override the default internal settings.
+        
+        Following python conventions, all settings in 'configuration' are in all
+        caps and so, the names of the external settings are checked and applied
+        by converting the external settings keys into all uppercase.
+        
+        """
+        sections = ['general', 'files', 'filer', 'amicus']
+        for name in sections:
+            if name in self.settings:
+                for key, value in self.settings[name].items():
+                    if key.upper() in dir(configuration):
+                        setattr(configuration, key.upper(), value)
+        return self
+                     
     """ Private Methods """
 
     def _validate_identification(self, identification: str) -> str:
@@ -346,14 +367,6 @@ class Project(amicus.quirks.Element):
         if not identification:
             identification = amicus.tools.datetime_string(prefix = self.name)
         return identification
-
-    def _draft(self) -> None:
-        """Creates 'outline' from 'settings'."""
-        self.workflow = workshop.settings_to_workflow(
-            name = self.name,
-            settings = self.settings,
-            library = nodes.Component.library)
-        return self
            
     """ Dunder Methods """
 

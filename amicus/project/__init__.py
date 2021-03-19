@@ -22,10 +22,9 @@ from typing import (Any, Callable, ClassVar, Dict, Iterable, List, Mapping,
 
 import amicus
 
-from .converters import *
-from .core import *
-from .nodes import *
-from .workshop import *
+# from .converters import *
+# from .nodes import *
+# from .workshop import *
 
 """ 
 The keys of 'importables' are the attribute names of how users should access
@@ -33,20 +32,26 @@ the modules and other items listed in values. 'importables' is necessary for
 the lazy importation system used throughout amicus.
 """
 importables: Dict[str, str] = {
-    'Settings': 'amicus.options.Settings',
-    'Filer': 'core.Filer',
-    'Workflow': 'core.Workflow',
-    'Component': 'core.Component',
-    'Worker': 'core.Worker',
-    'Creator': 'core.Creator',
-    'Results': 'core.Results',
-    'Step': 'nodes.Step',
-    'Technique': 'nodes.Technique',
     'interface': 'interface',
     'configuration': 'configuration',
     'nodes': 'nodes',
-    'core': 'core',
-    'workshop': 'workshop'}
+    'products': 'products',
+    'workshop': 'workshop',
+    'Component': 'nodes.Component',
+    'Parameters': 'nodes.Parameters',
+    'Leaf': 'nodes.Leaf',
+    'Technique': 'nodes.Technique',
+    'Step': 'nodes.Step',
+    'Worker': 'nodes.Worker',
+    'Recipe': 'nodes.Recipe',
+    'Hub': 'nodes.Hub',
+    'Contest': 'nodes.Contest',
+    'Study': 'nodes.Study',
+    'Survey': 'nodes.Survey',
+    'Summary': 'products.Summary',
+    'Result': 'products.Result',
+    'Builder': 'interface.Builder',
+    }
 
 
 def __getattr__(name: str) -> Any:

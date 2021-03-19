@@ -731,15 +731,16 @@ class Recipe(Worker):
   
     """ Public Methods """  
 
-    def organize(self, edges: Dict[str, List[str]]) -> None:
+    def organize(self, subcomponents: Dict[str, List[str]]) -> None:
         """[summary]
 
         Args:
-            edges (Dict[str, List[str]]): [description]
+            subcomponents (Dict[str, List[str]]): [description]
 
         """
-        print('test edges', edges)
-        subcomponents = self._serial_order(name = self.name, edges = edges)
+        subcomponents = self._serial_order(
+            name = self.name, 
+            subcomponents = subcomponents)
         nodes = list(more_itertools.collapse(subcomponents))
         if nodes:
             self.extend(nodes = nodes)
@@ -762,7 +763,7 @@ class Recipe(Worker):
     
     def _serial_order(self, 
         name: str,
-        edges: Dict[str, List[str]]) -> List[Hashable]:
+        subcomponents: Dict[str, List[str]]) -> List[Hashable]:
         """[summary]
 
         Args:
@@ -774,14 +775,14 @@ class Recipe(Worker):
             
         """   
         organized = []
-        components = edges[name]
+        components = subcomponents[name]
         for item in components:
             organized.append(item)
-            if item in edges:
+            if item in subcomponents:
                 organized_subcomponents = []
                 subcomponents = self._serial_order(
                     name = item, 
-                    edges = edges)
+                    subcomponents = subcomponents)
                 organized_subcomponents.append(subcomponents)
                 if len(organized_subcomponents) == 1:
                     organized.append(organized_subcomponents[0])
@@ -831,15 +832,15 @@ class Hub(Worker, abc.ABC):
               
     """ Public Methods """
 
-    def organize(self, edges: Dict[str, List[str]]) -> None:
+    def organize(self, subcomponents: Dict[str, List[str]]) -> None:
         """[summary]
 
         Args:
-            edges (Dict[str, List[str]]): [description]
+            subcomponents (Dict[str, List[str]]): [description]
 
         """
-        step_names = edges[self.name]
-        nodes = [edges[step] for step in step_names]
+        step_names = subcomponents[self.name]
+        nodes = [subcomponents[step] for step in step_names]
         self.branchify(nodes = nodes)
         return self  
        
