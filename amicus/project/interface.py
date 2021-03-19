@@ -18,6 +18,7 @@ import collections.abc
 import dataclasses
 import inspect
 import logging
+import multiprocessing
 import pathlib
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
@@ -26,8 +27,9 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 import warnings
 
 import amicus
-from . import core
+from . import configuration
 from . import nodes
+from . import products
 from . import workshop
 
 
@@ -276,6 +278,9 @@ class Project(amicus.quirks.Element):
         self.builder.project = self
         # Adds 'general' section attributes from 'settings'.
         self.settings.inject(instance = self)
+        # Sets multiprocessing technique, if necessary.
+        if configuration.parallelize:
+            multiprocessing.set_start_method('spawn')
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
             self.complete()

@@ -9,7 +9,16 @@ module-level constants.
  
 """
 
+from . import nodes
+from . import products
+
+
 VERBOSE: bool = True
 SEED: int = 42
 CONSERVE_MEMORY: bool = False
 PARALLELIZE: bool = False
+
+DESIGN = 'technique'
+LIBRARY = nodes.Component.library
+SUMMARY = products.Summary
+RESULT = products.Result

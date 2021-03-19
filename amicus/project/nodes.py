@@ -772,7 +772,7 @@ class Recipe(Worker):
         Returns:
             List[Hashable]: [description]
             
-        """        
+        """   
         organized = []
         components = edges[name]
         for item in components:
@@ -781,13 +781,14 @@ class Recipe(Worker):
                 organized_subcomponents = []
                 subcomponents = self._serial_order(
                     name = item, 
-                    edges = edges[item])
+                    edges = edges)
                 organized_subcomponents.append(subcomponents)
                 if len(organized_subcomponents) == 1:
                     organized.append(organized_subcomponents[0])
                 else:
                     organized.append(organized_subcomponents)
         return organized   
+
 
 @dataclasses.dataclass
 class Hub(Worker, abc.ABC):
