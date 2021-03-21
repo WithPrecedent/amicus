@@ -57,8 +57,8 @@ def settings_to_component(
         section (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
-        subcomponents (Dict[str, List[str]], optional): [description]. Defaults to 
-            None.
+        subcomponents (Dict[str, List[str]], optional): [description]. Defaults 
+            to None.
         design (str, optional): [description]. Defaults to None.
         recursive (bool, optional): [description]. Defaults to True.
         overwrite (bool, optional): [description]. Defaults to False.
@@ -233,7 +233,7 @@ def settings_to_implementation(
 
 """ Workflow Executing Functions """
 
-def workflow_to_summary(project: amicus.Project, **kwargs) -> nodes.Component:
+def workflow_to_summary(project: amicus.Project, **kwargs) -> amicus.Project:
     """[summary]
 
     Args:
@@ -243,10 +243,10 @@ def workflow_to_summary(project: amicus.Project, **kwargs) -> nodes.Component:
         nodes.Component: [description]
         
     """
-    summary = configuration.SUMMARY()
+    project.summary = configuration.SUMMARY()
     for i, path in enumerate(project.workflow.paths):
-        name = f'{summary.prefix}_{i + 1}'
-        summary.add({name: workflow_to_result(
+        name = f'{project.summary.prefix}_{i + 1}'
+        project.summary.add({name: workflow_to_result(
             path = path,
             project = project,
             data = project.data)})

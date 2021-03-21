@@ -164,17 +164,16 @@ class Builder(collections.abc.Iterator):
     def __next__(self) -> None:
         """Completes a Stage instance."""
         if self.index + 1 < len(self.stages):
-            builder = self.functionify(
-                source = self.stages[self.current], 
-                product = self.stages[self.subsequent])
+            source = self.stages[self.current]
+            product = self.stages[self.subsequent]
+            builder = self.functionify(source = source, product = product)
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
-                print(f'Creating {self.subsequent}')
+                print(f'Creating {product}')
             kwargs = {'project': self.project}
-            attribute = self.stages[self.subsequent]
-            setattr(self.project, attribute, builder(**kwargs))
+            setattr(self.project, product, builder(**kwargs))
             self.index += 1
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
-                print(f'Completed {self.subsequent}')
+                print(f'Completed {product}')
         else:
             raise IndexError()
         return self

@@ -180,9 +180,17 @@ class Structure(amicus.Bunch, abc.ABC):
     
     Args:
         contents (Iterable): stored iterable. Defaults to None.
-              
+        consistent_interface (bool): whether to ensure that all subclass
+            properties and methods return the same datatypes regardless of the
+            internally stored data (True) or whether the properties and methods
+            try to intelligently return the datatype based on the internally
+            stored data. For example, a Pipleine has only one endpoint, but the
+            'endpoints' property will return a list with that one endpoint if 
+            'consistent_interface' is True to maintain consistency with other
+            Structure subclasses. Defaults to True.
     """
     contents: Iterable = None
+    consistent_interface: bool = True
 
     """ Properties """
            
@@ -253,7 +261,7 @@ class Structure(amicus.Bunch, abc.ABC):
                 
         """
         raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'{__name__} is not implemented for a {cls.__class__.__name__} '
             f'structure')
  
     """ Public Methods """
@@ -423,7 +431,7 @@ class Graph(amicus.types.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG) as an adjacency list.
 
     Despite being called an adjacency "list," the typical and most efficient
-    way to store one is using a python dict. A amicus Graph inherits from a 
+    way to store one is using a python dict. An amicus Graph inherits from a 
     Lexicon in order to allow use of its extra functionality over a plain dict.
     
     Graph also supports autovivification where a list is created as a value for
@@ -509,7 +517,7 @@ class Graph(amicus.types.Lexicon, Structure):
     
     @classmethod
     def create(cls, **kwargs) -> Graph:
-        """Creates an instance of a Graph subclass from 'source'.
+        """Creates an instance of a Graph subclass from kwargs
         
         kwargs must include an adjacency list (at kwargs['adjacency']), 
         adjacency matrix (at kwargs['matrix']), or edge list (at 
@@ -519,9 +527,8 @@ class Graph(amicus.types.Lexicon, Structure):
         If the source is an adjacency matrix, 'names' should also be passed as a
         list of node names corresponding with the adjacency matrix.
                 
-        Raises:
-            TypeError: if source is not an adjacency list, adjacency matrix, or
-                edge list.
+        Returns:
+            Graph: a Graph instance created based on 'kwargs'.
                 
         """
         if ('adjacency' in kwargs 
@@ -539,18 +546,22 @@ class Graph(amicus.types.Lexicon, Structure):
                 and all(isinstance(i, List) for i in kwargs['matrix'])):
             return cls.from_matrix(**kwargs)
         else:
-            return cls()
-        # raise TypeError(
-        #     'create requires an adjacency list, adjacency matrix, or edge list')
+            return cls(**kwargs)
            
     @classmethod
     def from_adjacency(cls, adjacency: Dict[Hashable, List[Hashable]]) -> Graph:
         """Creates a Graph instance from an adjacency list.
+        
+        'adjacency' should be formatted with nodes as keys and values as lists
+        of names of nodes to which the node in the key is connected.
 
         Args:
             adjacency (Dict[Hashable, List[Hashable]]): adjacency list used to 
                 create a Graph instance.
-            
+
+        Returns:
+            Graph: a Graph instance created based on 'adjacent'.
+              
         """
         return cls(contents = adjacency)
     
@@ -558,10 +569,17 @@ class Graph(amicus.types.Lexicon, Structure):
     def from_edges(cls, edges: List[tuple[Hashable]]) -> Graph:
         """Creates a Graph instance from an edge list.
 
+        'edges' should be a list of tuples, where the first item in the tuple
+        is the node and the second item is the node (or name of node) to which
+        the first item is connected.
+        
         Args:
             edges (List[tuple[Hashable]]): Edge list used to create a Graph 
                 instance.
-            
+                
+        Returns:
+            Graph: a Graph instance created based on 'edges'.
+
         """
         contents = {}
         for edge_pair in edges:
@@ -585,7 +603,10 @@ class Graph(amicus.types.Lexicon, Structure):
                 (indicating an edge) and 0 (indicating no edge).
             names (List[Hashable]): names of nodes in the order of the rows and
                 columns in 'matrix'.
-            
+ 
+        Returns:
+            Graph: a Graph instance created based on 'matrix' and 'names'.
+                        
         """
         name_mapping = dict(zip(range(len(matrix)), names))
         raw_adjacency = {
@@ -997,6 +1018,11 @@ class Graph(amicus.types.Lexicon, Structure):
 class Pipeline(amicus.types.Hybrid, Structure):
     """Stores a pipeline structure using an amicus Hybrid.
     
+    Unlike a Graph, items stored do not need to be hashable, even though the
+    Pipeline, by virtue of inheriting from Hybrid, provides a dict interface.
+    However, to offer this functionality, all items stored in Pipeline should
+    have a 'name' attribute to provide pseudo-keys for the dict interface.
+    
     Args:
         contents (Sequence[Any]): items with 'name' attributes to store. If a 
             dict is passed, the keys will be ignored and only the values will be 
@@ -1014,22 +1040,22 @@ class Pipeline(amicus.types.Hybrid, Structure):
     @property
     def endpoints(self) -> List[Any]:
         """Returns endpoint nodes in the Pipeline.
-        
-        For a consistent interface among structures, 'endpoints' returns a list 
-        even though a Pipeline has only one enpoint.
 
         Returns:
-            List[Any] nodes in the stored data structure.
+            List[Any] nodes at the end of the stored data structure.
             
         """
-        return [self.contents[-1]]
+        if self.consistent_interface:
+            return [self.contents[-1]]
+        else:
+            return self.contents[-1]
            
     @property             
     def nodes(self) -> List[Any]:
         """Returns all nodes in the Graph.
 
         Returns:
-            List[Any]: names of all nodes in the stored data structure.
+            List[Any]: nodes in the stored data structure.
             
         """
         return self.contents
@@ -1037,37 +1063,47 @@ class Pipeline(amicus.types.Hybrid, Structure):
     @property
     def paths(self) -> List[List[Any]]:
         """Returns all paths through the stored data structure.
-     
+            
         Returns:
             List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
-                list of lists of names of nodes.
+                list of lists of nodes.
                 
         """
-        return self.contents
+        if self.consistent_interface:
+            return [self.contents]
+        else:
+            return self.contents
            
     @property
     def roots(self) -> List[Any]:
         """Returns root nodes in Pipeline
-
-        For a consistent interface among structures, 'roots' returns a list even 
-        though a Pipeline has only one root.
         
         Returns:
             List[Any]: names of root nodes in the stored data structure.
             
         """
-        return [self.contents[0]]
+        if self.consistent_interface:
+            return [self.contents[0]]
+        else:
+            return self.contents[0]
 
     """ Class Methods """
     
     @classmethod
-    def create(cls, **kwargs) -> Structure:
-        """Creates an instance of a Structure subclass from 'source'.
+    def create(cls, **kwargs) -> Pipeline:
+        """Creates an instance of a Graph subclass from kwargs.
         
+        Returns:
+            Pipeline: a Pipline instance created using kwargs.
+            
         """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
+        if ('nodes' in kwargs 
+                and isinstance(kwargs['nodes'], Sequence) 
+                and (all(isinstance(n, str) for n in kwargs['nodes'])
+                     or (all(hasattr(n, 'name') for n in kwargs['nodes'])))):
+            return cls.from_nodes(**kwargs)
+        else:
+            return cls(**kwargs)
  
     @classmethod
     def from_nodes(cls, nodes: Union[Any, Sequence[Any]]) -> Pipeline:
