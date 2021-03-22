@@ -690,10 +690,6 @@ class Worker(amicus.structures.Graph, Component):
         
         """
         for node in self.paths[0]:
-            try:
-                print('test node name', node.name)
-            except AttributeError:
-                print('test node', node)
             project = node.execute(project = project, **kwargs)
         return project
  

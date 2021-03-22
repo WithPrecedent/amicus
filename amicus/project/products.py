@@ -60,4 +60,3 @@ class Summary(amicus.types.Lexicon):
     contents: Mapping[str, Result] = dataclasses.field(default_factory = dict)
     default: Any = Result()
     prefix: str = 'path'
-

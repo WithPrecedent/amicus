@@ -159,7 +159,7 @@ class Builder(collections.abc.Iterator):
             Iterable: of the Project instance.
             
         """
-        return iter(self)
+        return self
  
     def __next__(self) -> None:
         """Completes a Stage instance."""
@@ -175,7 +175,7 @@ class Builder(collections.abc.Iterator):
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Completed {product}')
         else:
-            raise IndexError()
+            raise StopIteration
         return self
 
 
@@ -398,6 +398,9 @@ class Project(amicus.quirks.Element):
  
     def __next__(self) -> None:
         """Completes a stage in 'builder'."""
-        next(self.builder)
+        try:
+            next(self.builder)
+        except StopIteration:
+            pass
         return self
 

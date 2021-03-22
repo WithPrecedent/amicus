@@ -79,9 +79,9 @@ def test_project():
         settings = pathlib.Path('tests') / 'project_settings.py',
         automatic = True)
     # Tests base libraries.
-    assert 'parser' in amicus.project.Component.subclasses
+    assert 'parser' in amicus.project.Component.library.subclasses
     dynamite = Dynamite()
-    assert 'annihilate' in amicus.project.Component.instances
+    assert 'annihilate' in amicus.project.Component.library.instances
     # Tests workflow construction.
     print('test project workflow', project.workflow)
     print('test workflow endpoints', str(project.workflow.endpoints))

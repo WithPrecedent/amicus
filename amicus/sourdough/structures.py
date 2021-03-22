@@ -715,12 +715,18 @@ class Graph(amicus.types.Lexicon, Structure):
                 will be used. Defaults to None.
                 
         """
-        print('test branching', nodes)
         if start is None:
             start = copy.deepcopy(self.endpoints) 
         paths = list(map(list, itertools.product(*nodes))) 
         for path in paths:
-            self.extend(nodes = path, start = start) 
+            if start:
+                for starting in more_itertools.always_iterable(start):
+                    self.add_edge(start = starting, stop = path[0])
+            elif path[0] not in self.contents:
+                self.add_node(path[0])
+            edges = more_itertools.windowed(path, 2)
+            for edge_pair in edges:
+                self.add_edge(start = edge_pair[0], stop = edge_pair[1]) 
         return self    
 
     def combine(self, structure: Graph) -> None:
@@ -986,9 +992,7 @@ class Graph(amicus.types.Lexicon, Structure):
         all_paths = []
         for start in more_itertools.always_iterable(starts):
             for end in more_itertools.always_iterable(ends):
-                paths = self.find_paths(
-                    start = start, 
-                    end = end)
+                paths = self.find_paths(start = start, end = end)
                 if paths:
                     if all(isinstance(path, Hashable) for path in paths):
                         all_paths.append(paths)

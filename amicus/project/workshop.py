@@ -243,13 +243,20 @@ def workflow_to_summary(project: amicus.Project, **kwargs) -> amicus.Project:
         nodes.Component: [description]
         
     """
-    project.summary = configuration.SUMMARY()
-    for i, path in enumerate(project.workflow.paths):
-        name = f'{project.summary.prefix}_{i + 1}'
-        project.summary.add({name: workflow_to_result(
-            path = path,
-            project = project,
-            data = project.data)})
+    # summary = None
+    # print('test workflow', project.workflow)
+    # print('test paths', project.workflow.paths)
+    # print('test parser contents', project.library.instances['parser'].contents)
+    # print('test parser paths', project.library.instances['parser'].paths)
+    summary = configuration.SUMMARY()
+    print('test project paths', project.workflow.paths)
+    # for path in enumerate(project.workflow.paths):
+    #     name = f'{summary.prefix}_{i + 1}'
+    #     summary.add({name: workflow_to_result(
+    #         path = path,
+    #         project = project,
+    #         data = project.data)})
+    return summary
         
 def workflow_to_result(
     path: Sequence[str],
@@ -277,9 +284,10 @@ def workflow_to_result(
     data = data or project.data
     result = result()
     for node in path:
+        print('test node in path', node)
         try:
             component = library.instance(name = node)
             result.add(component.execute(project = project, **kwargs))
-        except KeyError:
+        except (KeyError, AttributeError):
             pass
     return result
