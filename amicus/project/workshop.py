@@ -32,15 +32,72 @@ def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
         nodes.Component: [description]
         
     """
-    graph = settings_to_graph(settings = project.settings)
-    return settings_to_component(
-        name = project.name,
-        section = project.name,
+    subcomponents, designs, sections = settings_to_subcomponents(
+        settings = project.settings,
+        library = project.library)
+    names = [subcomponents.keys()]
+    names += [more_itertools.collapse(subcomponents.values())]
+    names = amicus.tools.deduplicate(names)
+    for name in names:
+        _ = settings_to_component(
+            name = name,
+            designs = designs,
+            sections = sections,
+            settings = project.settings,
+            library = project.library,
+            recursive = True)
+    return settings_to_graph(
         settings = project.settings,
         library = project.library,
-        recursive = True,
+        subcomponents = subcomponents,
         **kwargs)
 
+def settings_to_subcomponents(
+    settings: amicus.options.Settings,
+    library: nodes.Library) -> Tuple[
+        Dict[str, List[str]], 
+        Dict[str, str], 
+        Dict[str, str]]:
+    """[summary]
+
+    Args:
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library): [description]
+
+    Returns:
+        Tuple[Dict[str, List[str]], Dict[str, str], Dict[str, str]]: 
+            [description]
+        
+    """
+    suffixes = library.subclasses.suffixes
+    subcomponents = {}
+    designs = {}
+    sections = {}
+    for name, section in settings.items():
+        component_keys = [k for k in section.keys() if k.endswith(suffixes)]
+        if component_keys:
+            sections[name] = name
+            for key in component_keys:
+                prefix, suffix = amicus.tools.divide_string(key)
+                values = amicus.tools.listify(section[key])
+                if suffix.endswith('s'):
+                    design = suffix[:-1]
+                else:
+                    design = suffix            
+                designs.update(dict.fromkeys(values, design))
+                sections.update(dict.fromkeys(values, section))
+                if prefix == suffix:
+                    if name in subcomponents:
+                        subcomponents[name].extend(values)
+                    else:
+                        subcomponents[name] = values
+                else:
+                    if prefix in subcomponents:
+                        subcomponents[prefix].extend(values)
+                    else:
+                        subcomponents[prefix] = values
+    return subcomponents, designs, sections
+  
 def settings_to_graph(
     settings: amicus.options.Settings,
     library: nodes.Library = None,
@@ -75,10 +132,10 @@ def settings_to_graph(
 
 def settings_to_component(
     name: str, 
-    section: str,
+    designs: Dict[str, str],
+    sections: Dict[str, str],
     settings: amicus.options.Settings,
     library: nodes.Library = None,
-    
     design: str = None, 
     recursive: bool = True,
     overwrite: bool = False,
@@ -101,7 +158,6 @@ def settings_to_component(
     
     """
     library = library or configuration.LIBRARY
-
     design = design or settings_to_design(
         name = name, 
         section = section, 
@@ -141,42 +197,11 @@ def settings_to_component(
                     subcomponents = subcomponents)
     return component
 
-def settings_to_subcomponents(
-    settings: amicus.options.Settings,
-    library: nodes.Library) -> Dict[str, List[str]]:
-    """[summary]
-
-    Args:
-        settings (amicus.options.Settings): [description]
-        library (nodes.Library): [description]
-
-    Returns:
-        Dict[str, List[str]]: [description]
-        
-    """
-    suffixes = library.subclasses.suffixes
-    subcomponents = {}
-    for name, section in settings.items():
-        component_keys = [k for k in section.keys() if k.endswith(suffixes)]
-        for key in component_keys:
-            prefix, suffix = amicus.tools.divide_string(key)
-            values = amicus.tools.listify(section[key])
-            if prefix == suffix:
-                if name in subcomponents:
-                    subcomponents[name].extend(values)
-                else:
-                    subcomponents[name] = values
-            else:
-                if prefix in subcomponents:
-                    subcomponents[prefix].extend(values)
-                else:
-                    subcomponents[prefix] = values
-    return subcomponents
-  
 def settings_to_design(
     name: str, 
     section: str, 
-    settings: amicus.options.Settings) -> str:
+    settings: amicus.options.Settings,
+    designs: Dict[str, str] = None) -> str:
     """Gets name of a Component design.
 
     Args:
@@ -184,6 +209,9 @@ def settings_to_design(
         section (str):
         settings (amicus.options.Settings): Settings instance that contains
             either the design corresponding to 'name' or a default design.
+        designs (Dict[str, str]): a set of default designs if one is not found
+             in 'settings'. This might be separately created by the
+             'settings_to_subcomponents' method from 'settings'.
 
     Raises:
         KeyError: if there is neither a design matching 'name' nor a default
@@ -202,8 +230,8 @@ def settings_to_design(
             try:
                 design = settings[section][f'{name}_design']
             except KeyError:
-                if name == section:
-                    design = settings['amicus']['default_design']
+                if designs is not None and name in designs:
+                    design = designs[name]
                 else:
                     design = configuration.DESIGN
     return design  
