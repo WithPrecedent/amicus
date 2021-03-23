@@ -31,7 +31,8 @@ def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
     Returns:
         nodes.Component: [description]
         
-    """        
+    """
+    graph = settings_to_graph(settings = project.settings)
     return settings_to_component(
         name = project.name,
         section = project.name,
@@ -39,13 +40,45 @@ def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
         library = project.library,
         recursive = True,
         **kwargs)
-  
+
+def settings_to_graph(
+    settings: amicus.options.Settings,
+    library: nodes.Library = None,
+    subcomponents: Dict[str, List[str]] = None) -> amicus.structures.Graph:
+    """[summary]
+
+    Args:
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library, optional): [description]. Defaults to None.
+        subcomponents (Dict[str, List[str]], optional): [description]. Defaults 
+            to None.
+
+    Returns:
+        amicus.structures.Graph: [description]
+        
+    """    
+    
+    library = library or configuration.LIBRARY
+    subcomponents = subcomponents or settings_to_subcomponents(
+        settings = settings, 
+        library = library)
+    graph = amicus.structures.Graph()
+    for node in subcomponents.keys():
+        kind = library.classify(component = node)
+        method = locals()[f'finalize_{kind}']
+        graph = method(
+            node = node, 
+            subcomponents = subcomponents,
+            library = library, 
+            graph = graph)     
+    return graph
+
 def settings_to_component(
     name: str, 
     section: str,
     settings: amicus.options.Settings,
     library: nodes.Library = None,
-    subcomponents: Dict[str, List[str]] = None,
+    
     design: str = None, 
     recursive: bool = True,
     overwrite: bool = False,
@@ -68,9 +101,7 @@ def settings_to_component(
     
     """
     library = library or configuration.LIBRARY
-    subcomponents = subcomponents or settings_to_subcomponents(
-        settings = settings, 
-        library = library)
+
     design = design or settings_to_design(
         name = name, 
         section = section, 
@@ -230,6 +261,61 @@ def settings_to_implementation(
         except KeyError:
             parameters = {}
     return parameters
+
+def finalize_serial(
+    node: str,
+    subcomponents: Dict[str, List[str]],
+    library: nodes.Library,
+    graph: amicus.structures.Graph) -> amicus.structures.Graph:
+    """[summary]
+
+    Args:
+        node (str): [description]
+        subcomponents (Dict[str, List[str]]): [description]
+        library (nodes.Library): [description]
+        graph (amicus.structures.Graph): [description]
+
+    Returns:
+        amicus.structures.Graph: [description]
+        
+    """    
+    subcomponents = _serial_order(
+        name = node, 
+        subcomponents = subcomponents)
+    nodes = list(more_itertools.collapse(subcomponents))
+    if nodes:
+        graph.extend(nodes = nodes)
+    return graph      
+
+def _serial_order(
+    name: str,
+    subcomponents: Dict[str, List[str]]) -> List[Hashable]:
+    """[summary]
+
+    Args:
+        name (str): [description]
+        directive (core.Directive): [description]
+
+    Returns:
+        List[Hashable]: [description]
+        
+    """   
+    organized = []
+    components = subcomponents[name]
+    for item in components:
+        organized.append(item)
+        if item in subcomponents:
+            organized_subcomponents = []
+            subcomponents = _serial_order(
+                name = item, 
+                subcomponents = subcomponents)
+            organized_subcomponents.append(subcomponents)
+            if len(organized_subcomponents) == 1:
+                organized.append(organized_subcomponents[0])
+            else:
+                organized.append(organized_subcomponents)
+    return organized   
+
 
 """ Workflow Executing Functions """
 

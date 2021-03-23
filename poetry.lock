@@ -1,10 +1,10 @@
 [[package]]
-category = "dev"
-description = "An abstract syntax tree for Python with inference support."
 name = "astroid"
+version = "2.4.2"
+description = "An abstract syntax tree for Python with inference support."
+category = "dev"
 optional = false
 python-versions = ">=3.5"
-version = "2.4.2"
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0,<1.5.0"
@@ -12,35 +12,34 @@ six = ">=1.12,<2.0"
 wrapt = ">=1.11,<2.0"
 
 [[package]]
-category = "dev"
-description = "Atomic file writes."
-marker = "sys_platform == \"win32\""
 name = "atomicwrites"
+version = "1.4.0"
+description = "Atomic file writes."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.4.0"
 
 [[package]]
-category = "main"
-description = "Classes Without Boilerplate"
 name = "attrs"
+version = "20.3.0"
+description = "Classes Without Boilerplate"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.3.0"
 
 [package.extras]
-dev = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "furo", "sphinx", "pre-commit"]
+dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "furo", "sphinx", "pre-commit"]
 docs = ["furo", "sphinx", "zope.interface"]
-tests = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
-tests_no_zope = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six"]
+tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
+tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six"]
 
 [[package]]
-category = "main"
-description = "A collection sklearn transformers to encode categorical variables as numeric"
 name = "category-encoders"
+version = "2.2.2"
+description = "A collection sklearn transformers to encode categorical variables as numeric"
+category = "main"
 optional = false
 python-versions = "*"
-version = "2.2.2"
 
 [package.dependencies]
 numpy = ">=1.14.0"
@@ -51,32 +50,31 @@ scipy = ">=1.0.0"
 statsmodels = ">=0.9.0"
 
 [[package]]
-category = "dev"
-description = "Cross-platform colored terminal text."
-marker = "sys_platform == \"win32\""
 name = "colorama"
+version = "0.4.4"
+description = "Cross-platform colored terminal text."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "0.4.4"
 
 [[package]]
-category = "main"
-description = "Composable style cycles"
 name = "cycler"
+version = "0.10.0"
+description = "Composable style cycles"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.10.0"
 
 [package.dependencies]
 six = "*"
 
 [[package]]
-category = "main"
-description = "Debug machine learning classifiers and explain their predictions"
 name = "eli5"
+version = "0.10.1"
+description = "Debug machine learning classifiers and explain their predictions"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.10.1"
 
 [package.dependencies]
 attrs = ">16.0.0"
@@ -89,12 +87,12 @@ six = "*"
 tabulate = ">=0.7.7"
 
 [[package]]
-category = "main"
-description = "Simple Python interface for Graphviz"
 name = "graphviz"
+version = "0.16"
+description = "Simple Python interface for Graphviz"
+category = "main"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*"
-version = "0.16"
 
 [package.extras]
 dev = ["tox (>=3)", "flake8", "pep8-naming", "wheel", "twine"]
@@ -102,12 +100,12 @@ docs = ["sphinx (>=1.8)", "sphinx-rtd-theme"]
 test = ["mock (>=3)", "pytest (>=4)", "pytest-mock (>=2)", "pytest-cov"]
 
 [[package]]
-category = "main"
-description = "Toolbox for imbalanced dataset in machine learning."
 name = "imbalanced-learn"
+version = "0.7.0"
+description = "Toolbox for imbalanced dataset in machine learning."
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.7.0"
 
 [package.dependencies]
 joblib = ">=0.11"
@@ -120,25 +118,25 @@ docs = ["sphinx", "sphinx-gallery", "sphinx-rtd-theme", "sphinxcontrib-bibtex", 
 tests = ["pytest", "pytest-cov"]
 
 [[package]]
-category = "dev"
-description = "A Python utility / library to sort Python imports."
 name = "isort"
+version = "5.7.0"
+description = "A Python utility / library to sort Python imports."
+category = "dev"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "5.7.0"
 
 [package.extras]
-colors = ["colorama (>=0.4.3,<0.5.0)"]
 pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
 requirements_deprecated_finder = ["pipreqs", "pip-api"]
+colors = ["colorama (>=0.4.3,<0.5.0)"]
 
 [[package]]
-category = "main"
-description = "A very fast and expressive template engine."
 name = "jinja2"
+version = "2.11.3"
+description = "A very fast and expressive template engine."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "2.11.3"
 
 [package.dependencies]
 MarkupSafe = ">=0.23"
@@ -147,44 +145,44 @@ MarkupSafe = ">=0.23"
 i18n = ["Babel (>=0.8)"]
 
 [[package]]
-category = "main"
-description = "Lightweight pipelining: using Python functions as pipeline jobs."
 name = "joblib"
-optional = false
-python-versions = ">=3.6"
 version = "0.17.0"
-
-[[package]]
+description = "Lightweight pipelining: using Python functions as pipeline jobs."
 category = "main"
-description = "A fast implementation of the Cassowary constraint solver"
-name = "kiwisolver"
 optional = false
 python-versions = ">=3.6"
-version = "1.3.1"
 
 [[package]]
-category = "dev"
-description = "A fast and thorough lazy object proxy."
+name = "kiwisolver"
+version = "1.3.1"
+description = "A fast implementation of the Cassowary constraint solver"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "lazy-object-proxy"
+version = "1.4.3"
+description = "A fast and thorough lazy object proxy."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.4.3"
 
 [[package]]
-category = "main"
-description = "Safely add untrusted strings to HTML/XML markup."
 name = "markupsafe"
+version = "1.1.1"
+description = "Safely add untrusted strings to HTML/XML markup."
+category = "main"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
-version = "1.1.1"
 
 [[package]]
-category = "main"
-description = "Python plotting package"
 name = "matplotlib"
+version = "3.3.4"
+description = "Python plotting package"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "3.3.4"
 
 [package.dependencies]
 cycler = ">=0.10"
@@ -195,20 +193,20 @@ pyparsing = ">=2.0.3,<2.0.4 || >2.0.4,<2.1.2 || >2.1.2,<2.1.6 || >2.1.6"
 python-dateutil = ">=2.1"
 
 [[package]]
-category = "dev"
-description = "McCabe checker, plugin for flake8"
 name = "mccabe"
+version = "0.6.1"
+description = "McCabe checker, plugin for flake8"
+category = "dev"
 optional = false
 python-versions = "*"
-version = "0.6.1"
 
 [[package]]
-category = "main"
-description = "Machine Learning Library Extensions"
 name = "mlxtend"
+version = "0.18.0"
+description = "Machine Learning Library Extensions"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.18.0"
 
 [package.dependencies]
 joblib = ">=0.13.2"
@@ -217,58 +215,57 @@ numpy = ">=1.16.2"
 pandas = ">=0.24.2"
 scikit-learn = ">=0.20.3"
 scipy = ">=1.2.1"
-setuptools = "*"
 
 [package.extras]
 docs = ["mkdocs"]
 testing = ["pytest"]
 
 [[package]]
-category = "main"
-description = "More routines for operating on iterables, beyond itertools"
 name = "more-itertools"
+version = "8.7.0"
+description = "More routines for operating on iterables, beyond itertools"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "8.7.0"
 
 [[package]]
-category = "main"
-description = "Python library for arbitrary-precision floating-point arithmetic"
 name = "mpmath"
+version = "1.2.1"
+description = "Python library for arbitrary-precision floating-point arithmetic"
+category = "main"
 optional = false
 python-versions = "*"
-version = "1.2.1"
 
 [package.extras]
 develop = ["pytest (>=4.6)", "pycodestyle", "pytest-cov", "codecov", "wheel"]
 tests = ["pytest (>=4.6)"]
 
 [[package]]
-category = "main"
-description = "NumPy is the fundamental package for array computing with Python."
 name = "numpy"
+version = "1.19.5"
+description = "NumPy is the fundamental package for array computing with Python."
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "1.19.5"
 
 [[package]]
-category = "dev"
-description = "Core utilities for Python packages"
 name = "packaging"
+version = "20.9"
+description = "Core utilities for Python packages"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.9"
 
 [package.dependencies]
 pyparsing = ">=2.0.2"
 
 [[package]]
-category = "main"
-description = "Powerful data structures for data analysis, time series, and statistics"
 name = "pandas"
+version = "1.2.2"
+description = "Powerful data structures for data analysis, time series, and statistics"
+category = "main"
 optional = false
 python-versions = ">=3.7.1"
-version = "1.2.2"
 
 [package.dependencies]
 numpy = ">=1.16.5"
@@ -279,102 +276,102 @@ pytz = ">=2017.3"
 test = ["pytest (>=5.0.1)", "pytest-xdist", "hypothesis (>=3.58)"]
 
 [[package]]
-category = "main"
-description = "A Python package for describing statistical models and for building design matrices."
 name = "patsy"
+version = "0.5.1"
+description = "A Python package for describing statistical models and for building design matrices."
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.5.1"
 
 [package.dependencies]
 numpy = ">=1.4"
 six = "*"
 
 [[package]]
-category = "main"
-description = "Python Imaging Library (Fork)"
 name = "pillow"
+version = "8.1.0"
+description = "Python Imaging Library (Fork)"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "8.1.0"
 
 [[package]]
-category = "main"
-description = "An open-source, interactive data visualization library for Python"
 name = "plotly"
+version = "4.14.3"
+description = "An open-source, interactive data visualization library for Python"
+category = "main"
 optional = false
 python-versions = "*"
-version = "4.14.3"
 
 [package.dependencies]
 retrying = ">=1.3.3"
 six = "*"
 
 [[package]]
-category = "dev"
-description = "plugin and hook calling mechanisms for python"
 name = "pluggy"
+version = "0.13.1"
+description = "plugin and hook calling mechanisms for python"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.13.1"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
 
 [[package]]
-category = "dev"
-description = "library with cross-python path, ini-parsing, io, code, log facilities"
 name = "py"
+version = "1.10.0"
+description = "library with cross-python path, ini-parsing, io, code, log facilities"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.10.0"
 
 [[package]]
-category = "main"
-description = "PyYAML-based module to produce pretty and readable YAML-serialized data"
 name = "pyaml"
+version = "20.4.0"
+description = "PyYAML-based module to produce pretty and readable YAML-serialized data"
+category = "main"
 optional = false
 python-versions = "*"
-version = "20.4.0"
 
 [package.dependencies]
 PyYAML = "*"
 
 [[package]]
-category = "dev"
-description = "python code static checker"
 name = "pylint"
+version = "2.6.2"
+description = "python code static checker"
+category = "dev"
 optional = false
 python-versions = ">=3.5.*"
-version = "2.6.2"
 
 [package.dependencies]
 astroid = ">=2.4.0,<2.5"
-colorama = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
 isort = ">=4.2.5,<6"
 mccabe = ">=0.6,<0.7"
 toml = ">=0.7.1"
 
 [[package]]
-category = "main"
-description = "Python parsing module"
 name = "pyparsing"
+version = "2.4.7"
+description = "Python parsing module"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "2.4.7"
 
 [[package]]
-category = "dev"
-description = "pytest: simple powerful testing with Python"
 name = "pytest"
+version = "5.4.3"
+description = "pytest: simple powerful testing with Python"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
-version = "5.4.3"
 
 [package.dependencies]
-atomicwrites = ">=1.0"
+atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
 attrs = ">=17.4.0"
-colorama = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
@@ -382,54 +379,54 @@ py = ">=1.5.0"
 wcwidth = "*"
 
 [package.extras]
-checkqa-mypy = ["mypy (v0.761)"]
+checkqa-mypy = ["mypy (==v0.761)"]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xmlschema"]
 
 [[package]]
-category = "main"
-description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
+version = "2.8.1"
+description = "Extensions to the standard Python datetime module"
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-version = "2.8.1"
 
 [package.dependencies]
 six = ">=1.5"
 
 [[package]]
-category = "main"
-description = "World timezone definitions, modern and historical"
 name = "pytz"
+version = "2021.1"
+description = "World timezone definitions, modern and historical"
+category = "main"
 optional = false
 python-versions = "*"
-version = "2021.1"
 
 [[package]]
-category = "main"
-description = "YAML parser and emitter for Python"
 name = "pyyaml"
+version = "5.4.1"
+description = "YAML parser and emitter for Python"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
-version = "5.4.1"
 
 [[package]]
-category = "main"
-description = "Retrying"
 name = "retrying"
+version = "1.3.3"
+description = "Retrying"
+category = "main"
 optional = false
 python-versions = "*"
-version = "1.3.3"
 
 [package.dependencies]
 six = ">=1.7.0"
 
 [[package]]
-category = "main"
-description = "A set of python modules for machine learning and data mining"
 name = "scikit-learn"
+version = "0.23.2"
+description = "A set of python modules for machine learning and data mining"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "0.23.2"
 
 [package.dependencies]
 joblib = ">=0.11"
@@ -441,12 +438,12 @@ threadpoolctl = ">=2.0.0"
 alldeps = ["numpy (>=1.13.3)", "scipy (>=0.19.1)"]
 
 [[package]]
-category = "main"
-description = "Sequential model-based optimization toolbox."
 name = "scikit-optimize"
+version = "0.8.1"
+description = "Sequential model-based optimization toolbox."
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.8.1"
 
 [package.dependencies]
 joblib = ">=0.11"
@@ -459,23 +456,23 @@ scipy = ">=0.19.1"
 plots = ["matplotlib (>=2.0.0)"]
 
 [[package]]
-category = "main"
-description = "SciPy: Scientific Library for Python"
 name = "scipy"
+version = "1.6.0"
+description = "SciPy: Scientific Library for Python"
+category = "main"
 optional = false
 python-versions = ">=3.7"
-version = "1.6.0"
 
 [package.dependencies]
 numpy = ">=1.16.5"
 
 [[package]]
-category = "main"
-description = "seaborn: statistical data visualization"
 name = "seaborn"
+version = "0.11.1"
+description = "seaborn: statistical data visualization"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "0.11.1"
 
 [package.dependencies]
 matplotlib = ">=2.2"
@@ -484,20 +481,20 @@ pandas = ">=0.23"
 scipy = ">=1.0"
 
 [[package]]
-category = "main"
-description = "Python 2 and 3 compatibility utilities"
 name = "six"
+version = "1.15.0"
+description = "Python 2 and 3 compatibility utilities"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "1.15.0"
 
 [[package]]
-category = "main"
-description = "Statistical computations and models for Python"
 name = "statsmodels"
+version = "0.12.2"
+description = "Statistical computations and models for Python"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "0.12.2"
 
 [package.dependencies]
 numpy = ">=1.15"
@@ -511,66 +508,66 @@ develop = ["cython (>=0.29)"]
 docs = ["sphinx", "nbconvert", "jupyter-client", "ipykernel", "matplotlib", "nbformat", "numpydoc", "pandas-datareader"]
 
 [[package]]
-category = "main"
-description = "Computer algebra system (CAS) in Python"
 name = "sympy"
+version = "1.7.1"
+description = "Computer algebra system (CAS) in Python"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "1.7.1"
 
 [package.dependencies]
 mpmath = ">=0.19"
 
 [[package]]
-category = "main"
-description = "Pretty-print tabular data"
 name = "tabulate"
+version = "0.8.8"
+description = "Pretty-print tabular data"
+category = "main"
 optional = false
 python-versions = "*"
-version = "0.8.8"
 
 [package.extras]
 widechars = ["wcwidth"]
 
 [[package]]
-category = "main"
-description = "threadpoolctl"
 name = "threadpoolctl"
+version = "2.1.0"
+description = "threadpoolctl"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "2.1.0"
 
 [[package]]
-category = "dev"
-description = "Python Library for Tom's Obvious, Minimal Language"
 name = "toml"
+version = "0.10.2"
+description = "Python Library for Tom's Obvious, Minimal Language"
+category = "dev"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "0.10.2"
 
 [[package]]
-category = "dev"
-description = "Measures the displayed width of unicode strings in a terminal"
 name = "wcwidth"
-optional = false
-python-versions = "*"
 version = "0.2.5"
-
-[[package]]
+description = "Measures the displayed width of unicode strings in a terminal"
 category = "dev"
-description = "Module for decorators, wrappers and monkey patching."
-name = "wrapt"
 optional = false
 python-versions = "*"
-version = "1.12.1"
 
 [[package]]
-category = "main"
-description = "XGBoost Python Package"
+name = "wrapt"
+version = "1.12.1"
+description = "Module for decorators, wrappers and monkey patching."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "xgboost"
+version = "1.3.3"
+description = "XGBoost Python Package"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "1.3.3"
 
 [package.dependencies]
 numpy = "*"
@@ -584,12 +581,20 @@ plotting = ["graphviz", "matplotlib"]
 scikit-learn = ["scikit-learn"]
 
 [[package]]
-category = "main"
-description = "A suite of visual analysis and diagnostic tools for machine learning."
+name = "yapf"
+version = "0.31.0"
+description = "A formatter for Python code."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "yellowbrick"
+version = "1.3.post1"
+description = "A suite of visual analysis and diagnostic tools for machine learning."
+category = "main"
 optional = false
 python-versions = ">=3.4, <4"
-version = "1.3.post1"
 
 [package.dependencies]
 cycler = ">=0.10.0"
@@ -599,8 +604,9 @@ scikit-learn = ">=0.20"
 scipy = ">=1.0.0"
 
 [metadata]
-content-hash = "9c5337b6008f21c9944d27215944cb1d5bfa955797f69c0a8408b9325a3e756f"
+lock-version = "1.1"
 python-versions = "^3.8"
+content-hash = "a8d2e142717d9ba009e2aa6ae9213f355dbafbf2b7b0afd3bda29c3cd50e3796"
 
 [metadata.files]
 astroid = [
@@ -1049,6 +1055,10 @@ xgboost = [
     {file = "xgboost-1.3.3-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9586a76a834091d44144eaa50006fb6d8cbc9d50d7a2eb1a95dd8b8329b5a76b"},
     {file = "xgboost-1.3.3-py3-none-win_amd64.whl", hash = "sha256:648e3f0e5c76ebf10ecee1ed354dc87b28f092452694f05eecf6a0485ecc3087"},
     {file = "xgboost-1.3.3.tar.gz", hash = "sha256:397051647bb837915f3ff24afc7d49f7fca57630ffd00fb5ef66ae2a0881fb43"},
+]
+yapf = [
+    {file = "yapf-0.31.0-py2.py3-none-any.whl", hash = "sha256:e3a234ba8455fe201eaa649cdac872d590089a18b661e39bbac7020978dd9c2e"},
+    {file = "yapf-0.31.0.tar.gz", hash = "sha256:408fb9a2b254c302f49db83c59f9aa0b4b0fd0ec25be3a5c51181327922ff63d"},
 ]
 yellowbrick = [
     {file = "yellowbrick-1.3.post1-py3-none-any.whl", hash = "sha256:69b70196af1793d130d062326ef630a8630903d4f7499e010f662b0e450d1adb"},

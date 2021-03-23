@@ -48,8 +48,51 @@ class Library(object):
     
     subclasses: Registry = Registry()
     instances: Registry = Registry()
-        
+
+    """ Properties """
+    
+    @property
+    def leaves(self) -> Tuple[str]:
+        instances = [
+            k for k, v in self.instances.items() if isinstance(v, Leaf)]
+        subclasses = [
+            k for k, v in self.subclasses.items() if issubclass(v, Leaf)]
+        return tuple(instances + subclasses)
+
+    @property
+    def hubs(self) -> Tuple[str]:
+        instances = [
+            k for k, v in self.instances.items() if isinstance(v, Hub)]
+        subclasses = [
+            k for k, v in self.subclasses.items() if issubclass(v, Hub)]
+        return tuple(instances + subclasses)
+    
+    @property
+    def recipes(self) -> Tuple[str]:
+        instances = [
+            k for k, v in self.instances.items() if isinstance(v, Recipe)]
+        subclasses = [
+            k for k, v in self.subclasses.items() if issubclass(v, Recipe)]
+        return tuple(instances + subclasses)   
+    
     """ Public Methods """
+    
+    def classify(self, component: str) -> str:
+        """[summary]
+
+        Args:
+            component (str): [description]
+
+        Returns:
+            str: [description]
+            
+        """        
+        if component in self.leaves:
+            return 'leaf'
+        elif component in self.hubs:
+            return 'parallel'
+        elif component in self.recipes:
+            return 'serial'
 
     def instance(self, name: Union[str, Sequence[str]], **kwargs) -> Component:
         """Returns instance of first match of 'name' in stored catalogs.
@@ -103,16 +146,13 @@ class Library(object):
             
         """
         if isinstance(component, Component):
-            instances_key = self._get_instances_key(
-                component = component)
+            instances_key = self._get_instances_key(component = component)
             self.instances[instances_key] = component
-            subclasses_key = self._get_subclasses_key(
-                component = component)
+            subclasses_key = self._get_subclasses_key(component = component)
             if subclasses_key not in self.subclasses:
                 self.subclasses[subclasses_key] = component.__class__
         elif inspect.isclass(component) and issubclass(component, Component):
-            subclasses_key = self._get_subclasses_key(
-                component = component)
+            subclasses_key = self._get_subclasses_key(component = component)
             self.subclasses[subclasses_key] = component
         else:
             raise TypeError(
