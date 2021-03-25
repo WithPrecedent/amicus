@@ -93,38 +93,38 @@ class Builder(collections.abc.Iterator):
             self.advance()
         return self
         
-    def functionify(self, source: str, product: str) -> str:
-        """[summary]
+    # def functionify(self, source: str, product: str) -> str:
+    #     """[summary]
 
-        Args:
-            source (str): [description]
-            product (str): [description]
+    #     Args:
+    #         source (str): [description]
+    #         product (str): [description]
 
-        Returns:
-            str: [description]
+    #     Returns:
+    #         str: [description]
             
-        """        
-        name = f'{source}_to_{product}'
-        return getattr(self.workshop, name)
+    #     """        
+    #     name = f'{source}_to_{product}'
+    #     return getattr(self.workshop, name)
 
-    def kwargify(self, func: Callable) -> Dict[Hashable, Any]:
-        """[summary]
+    # def kwargify(self, func: Callable) -> Dict[Hashable, Any]:
+    #     """[summary]
 
-        Args:
-            func (Callable): [description]
+    #     Args:
+    #         func (Callable): [description]
 
-        Returns:
-            Dict[Hashable, Any]: [description]
+    #     Returns:
+    #         Dict[Hashable, Any]: [description]
             
-        """        
-        parameters = inspect.signature(func).parameters.keys()
-        kwargs = {}
-        for parameter in parameters:
-            try:
-                kwargs[parameter] = getattr(self.project, parameter)
-            except AttributeError:
-                pass
-        return kwargs
+    #     """        
+    #     parameters = inspect.signature(func).parameters.keys()
+    #     kwargs = {}
+    #     for parameter in parameters:
+    #         try:
+    #             kwargs[parameter] = getattr(self.project, parameter)
+    #         except AttributeError:
+    #             pass
+    #     return kwargs
     
     """ Dunder Methods """
 
@@ -166,7 +166,8 @@ class Builder(collections.abc.Iterator):
         if self.index + 1 < len(self.stages):
             source = self.stages[self.current]
             product = self.stages[self.subsequent]
-            builder = self.functionify(source = source, product = product)
+            # builder = self.functionify(source = source, product = product)
+            builder = getattr(self.workshop, f'create_{product}')
             if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
                 print(f'Creating {product}')
             kwargs = {'project': self.project}

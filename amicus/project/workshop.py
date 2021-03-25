@@ -22,7 +22,7 @@ from . import products
 
 """ Settings Parsing Functions """
 
-def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
+def create_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
     """[summary]
 
     Args:
@@ -32,18 +32,46 @@ def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
         nodes.Component: [description]
         
     """
+    settings = project.settings
+    try:
+        library = project.library
+    except AttributeError:
+        library = configuration.library
+    suffixes = library.subclasses.suffixes
+    workflow = settings_to_workflow(
+        settings = settings,
+        library = library,
+        suffixes = suffixes,
+        **kwargs)
+    return workflow
+
+def settings_to_workflow(
+    settings: amicus.options.Settings,
+    library: nodes.Library,
+    suffixes: Sequence[str],
+    **kwargs) -> nodes.Component:
+    """[summary]
+
+    Args:
+        settings (amicus.options.Settings): [description]
+        library (nodes.Library): [description]
+        suffixes (Sequence[str]): [description]
+
+    Returns:
+        nodes.Component: [description]
+    """    
     subcomponents = settings_to_subcomponents(
-        settings = project.settings,
-        suffixes = project.library.suffixes)
+        settings = settings,
+        suffixes = suffixes)
     sections = settings_to_sections(
-        settings = project.settings,
-        suffixes = project.library.suffixes)  
-    names = [subcomponents.keys()]
-    names += [more_itertools.collapse(subcomponents.values())]
-    names = amicus.tools.deduplicate(names)
+        settings = settings,
+        suffixes = suffixes)  
+    names = list(subcomponents.keys())
+    names += list(more_itertools.collapse(subcomponents.values()))
+    names = amicus.tools.deduplicate(iterable = list(names))
     designs = settings_to_designs(
-        settings = project.settings,
-        suffixes = project.library.suffixes,
+        settings = settings,
+        suffixes = suffixes,
         names = names,
         sections = sections)
     for name in names:
@@ -51,12 +79,12 @@ def settings_to_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
             name = name,
             designs = designs,
             sections = sections,
-            settings = project.settings,
-            library = project.library,
+            settings = settings,
+            library = library,
             recursive = True)
     return settings_to_graph(
-        settings = project.settings,
-        library = project.library,
+        settings = settings,
+        library = library,
         subcomponents = subcomponents,
         **kwargs)
 
@@ -111,7 +139,7 @@ def settings_to_sections(
             sections[name] = name
             for key in component_keys:
                 values = amicus.tools.listify(section[key])
-                sections.update(dict.fromkeys(values, section))
+                sections.update(dict.fromkeys(values, name))
     return sections
 
 def settings_to_designs(
@@ -133,8 +161,10 @@ def settings_to_designs(
     """    
     designs = {}
     for name in names:
+        section = sections[name]
+        print('test section', name, section)
         component_keys = [
-            k for k in settings[name].keys() if k.endswith(suffixes)]
+            k for k in settings[section].keys() if k.endswith(suffixes)]
         if component_keys:
             try:
                 designs[name] = settings_to_design(
@@ -145,7 +175,7 @@ def settings_to_designs(
                 pass
             for key in component_keys:
                 prefix, suffix = amicus.tools.divide_string(key)
-                values = amicus.tools.listify(section[key])
+                values = amicus.tools.listify(settings[section][key])
                 if suffix.endswith('s'):
                     design = suffix[:-1]
                 else:
@@ -407,8 +437,8 @@ def workflow_to_summary(project: amicus.Project, **kwargs) -> amicus.Project:
     # summary = None
     # print('test workflow', project.workflow)
     # print('test paths', project.workflow.paths)
-    # print('test parser contents', project.library.instances['parser'].contents)
-    # print('test parser paths', project.library.instances['parser'].paths)
+    # print('test parser contents', library.instances['parser'].contents)
+    # print('test parser paths', library.instances['parser'].paths)
     summary = configuration.SUMMARY()
     print('test project paths', project.workflow.paths)
     # for path in enumerate(project.workflow.paths):
