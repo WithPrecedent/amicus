@@ -133,7 +133,8 @@ def settings_to_designs(
     """    
     designs = {}
     for name in names:
-        component_keys = [k for k in section.keys() if k.endswith(suffixes)]
+        component_keys = [
+            k for k in settings[name].keys() if k.endswith(suffixes)]
         if component_keys:
             try:
                 designs[name] = settings_to_design(
