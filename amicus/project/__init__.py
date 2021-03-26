@@ -32,11 +32,12 @@ the modules and other items listed in values. 'importables' is necessary for
 the lazy importation system used throughout amicus.
 """
 importables: Dict[str, str] = {
-    'interface': 'interface',
     'configuration': 'configuration',
+    'core': 'core',
+    'interface': 'interface',
     'nodes': 'nodes',
-    'products': 'products',
     'workshop': 'workshop',
+    'Library': 'nodes.Library',
     'Component': 'nodes.Component',
     'Parameters': 'nodes.Parameters',
     'Leaf': 'nodes.Leaf',
@@ -48,8 +49,8 @@ importables: Dict[str, str] = {
     'Contest': 'nodes.Contest',
     'Study': 'nodes.Study',
     'Survey': 'nodes.Survey',
-    'Summary': 'products.Summary',
-    'Result': 'products.Result',
+    'Summary': 'core.Summary',
+    'Result': 'core.Result',
     'Builder': 'interface.Builder',
     }
 

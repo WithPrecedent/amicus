@@ -10,7 +10,7 @@ module-level constants.
 """
 
 from . import nodes
-from . import products
+from . import core
 
 
 VERBOSE: bool = True
@@ -20,5 +20,5 @@ PARALLELIZE: bool = False
 
 DESIGN = 'technique'
 LIBRARY = nodes.Component.library
-SUMMARY = products.Summary
-RESULT = products.Result
+SUMMARY = core.Summary
+RESULT = core.Result

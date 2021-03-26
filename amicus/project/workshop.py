@@ -8,6 +8,7 @@ Contents:
 
 """
 from __future__ import annotations
+import itertools
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
     Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
     Type, Union)
@@ -17,7 +18,7 @@ import more_itertools
 import amicus
 from . import configuration
 from . import nodes
-from . import products
+from . import core
 
 
 """ Settings Parsing Functions """
@@ -59,36 +60,38 @@ def settings_to_workflow(
 
     Returns:
         nodes.Component: [description]
+        
     """    
-    subcomponents = settings_to_subcomponents(
+    connections = settings_to_connections(
         settings = settings,
         suffixes = suffixes)
     sections = settings_to_sections(
         settings = settings,
         suffixes = suffixes)  
-    names = list(subcomponents.keys())
-    names += list(more_itertools.collapse(subcomponents.values()))
-    names = amicus.tools.deduplicate(iterable = list(names))
-    designs = settings_to_designs(
+    nodes = (list(connections.keys()) 
+             + list(itertools.chain.from_iterable(connections.values())))
+    nodes = amicus.tools.deduplicate(iterable = list(nodes))
+    bases = settings_to_bases(
         settings = settings,
         suffixes = suffixes,
-        names = names,
+        nodes = nodes,
         sections = sections)
-    for name in names:
+    for name in nodes:
         _ = settings_to_component(
             name = name,
-            designs = designs,
+            bases = bases,
             sections = sections,
             settings = settings,
-            library = library,
-            recursive = True)
-    return settings_to_graph(
+            library = library)
+    workflow = settings_to_graph(
         settings = settings,
         library = library,
-        subcomponents = subcomponents,
+        connections = connections,
         **kwargs)
+    workflow.library = library
+    return workflow
 
-def settings_to_subcomponents(
+def settings_to_connections(
     settings: amicus.options.Settings,
     suffixes: Sequence[str]) -> Dict[str, List[str]]:
     """[summary]
@@ -101,23 +104,23 @@ def settings_to_subcomponents(
         Dict[str, List[str]]: [description]
         
     """    
-    subcomponents = {}
+    connections = {}
     for name, section in settings.items():
         component_keys = [k for k in section.keys() if k.endswith(suffixes)]
         for key in component_keys:
             prefix, suffix = amicus.tools.divide_string(key)
             values = amicus.tools.listify(section[key])
             if prefix == suffix:
-                if name in subcomponents:
-                    subcomponents[name].extend(values)
+                if name in connections:
+                    connections[name].extend(values)
                 else:
-                    subcomponents[name] = values
+                    connections[name] = values
             else:
-                if prefix in subcomponents:
-                    subcomponents[prefix].extend(values)
+                if prefix in connections:
+                    connections[prefix].extend(values)
                 else:
-                    subcomponents[prefix] = values
-    return subcomponents
+                    connections[prefix] = values
+    return connections
 
 def settings_to_sections(
     settings: amicus.options.Settings,
@@ -142,37 +145,33 @@ def settings_to_sections(
                 sections.update(dict.fromkeys(values, name))
     return sections
 
-def settings_to_designs(
+def settings_to_bases(
     settings: amicus.options.Settings,
     suffixes: Sequence[str],
-    names: Dict[str, str],
+    nodes: Dict[str, str],
     sections: Dict[str, str]) -> Dict[str, str]:
     """[summary]
 
     Args:
         settings (amicus.options.Settings): [description]
         suffixes (Sequence[str]): [description]
-        names (Dict[str, str]):
+        nodes (Dict[str, str]):
         sections (Dict[str, str]):
 
     Returns:
         Dict[str, str]: [description]
         
     """    
-    designs = {}
-    for name in names:
+    bases = {}
+    for name in nodes:
         section = sections[name]
-        print('test section', name, section)
         component_keys = [
             k for k in settings[section].keys() if k.endswith(suffixes)]
         if component_keys:
-            try:
-                designs[name] = settings_to_design(
-                    name = name,
-                    section = sections[name],
-                    settings = settings)
-            except KeyError:
-                pass
+            bases[name] = settings_to_base(
+                name = name,
+                section = sections[name],
+                settings = settings)
             for key in component_keys:
                 prefix, suffix = amicus.tools.divide_string(key)
                 values = amicus.tools.listify(settings[section][key])
@@ -180,8 +179,8 @@ def settings_to_designs(
                     design = suffix[:-1]
                 else:
                     design = suffix            
-                designs.update(dict.fromkeys(values, design))
-    return designs
+                bases.update(dict.fromkeys(values, design))
+    return bases
 
 def settings_to_design(
     name: str, 
@@ -194,9 +193,9 @@ def settings_to_design(
         section (str):
         settings (amicus.options.Settings): Settings instance that contains
             either the design corresponding to 'name' or a default design.
-        designs (Dict[str, str]): a set of default designs if one is not found
+        bases (Dict[str, str]): a set of default bases if one is not found
              in 'settings'. This might be separately created by the
-             'settings_to_subcomponents' method from 'settings'.
+             'settings_to_connections' method from 'settings'.
 
     Returns:
         str: the name of the design.
@@ -217,44 +216,40 @@ def settings_to_design(
 def settings_to_graph(
     settings: amicus.options.Settings,
     library: nodes.Library = None,
-    subcomponents: Dict[str, List[str]] = None) -> amicus.structures.Graph:
+    connections: Dict[str, List[str]] = None) -> amicus.structures.Graph:
     """[summary]
 
     Args:
         settings (amicus.options.Settings): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
-        subcomponents (Dict[str, List[str]], optional): [description]. Defaults 
+        connections (Dict[str, List[str]], optional): [description]. Defaults 
             to None.
 
     Returns:
         amicus.structures.Graph: [description]
         
     """    
-    
     library = library or configuration.LIBRARY
-    subcomponents = subcomponents or settings_to_subcomponents(
+    connections = connections or settings_to_connections(
         settings = settings, 
         library = library)
     graph = amicus.structures.Graph()
-    for node in subcomponents.keys():
+    for node in connections.keys():
         kind = library.classify(component = node)
         method = locals()[f'finalize_{kind}']
         graph = method(
             node = node, 
-            subcomponents = subcomponents,
+            connections = connections,
             library = library, 
             graph = graph)     
     return graph
 
 def settings_to_component(
     name: str, 
-    designs: Dict[str, str],
+    bases: Dict[str, str],
     sections: Dict[str, str],
     settings: amicus.options.Settings,
-    library: nodes.Library = None,
-    design: str = None, 
-    recursive: bool = True,
-    overwrite: bool = False,
+    library: nodes.Library,
     **kwargs) -> nodes.Component:
     """[summary]
 
@@ -263,7 +258,7 @@ def settings_to_component(
         section (str): [description]
         settings (amicus.options.Settings): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
-        subcomponents (Dict[str, List[str]], optional): [description]. Defaults 
+        connections (Dict[str, List[str]], optional): [description]. Defaults 
             to None.
         design (str, optional): [description]. Defaults to None.
         recursive (bool, optional): [description]. Defaults to True.
@@ -273,11 +268,8 @@ def settings_to_component(
         nodes.Component: [description]
     
     """
-    library = library or configuration.LIBRARY
-    design = design or settings_to_design(
-        name = name, 
-        section = section, 
-        settings = settings)
+    design = bases[name]
+    section = sections[name]
     initialization = settings_to_initialization(
         name = name, 
         design = design,
@@ -291,26 +283,6 @@ def settings_to_component(
             design = design,
             settings = settings)
     component = library.instance(name = [name, design], **initialization)
-    if isinstance(component, amicus.structures.Structure) and recursive:
-        try:
-            component.organize(subcomponents = subcomponents)
-        except AttributeError:
-            pass
-        for node in component.keys():
-            if node not in library.instances or overwrite:
-                if node in settings:
-                    subsection = node
-                else: 
-                    subsection = section
-                # Subcomponents don't need to be stored or returned because they 
-                # are automatically registered in 'library.instances' when they 
-                # are instanced.
-                settings_to_component(
-                    name = node,
-                    section = subsection,
-                    settings = settings,
-                    library = library,
-                    subcomponents = subcomponents)
     return component
 
 def settings_to_initialization(
@@ -369,14 +341,14 @@ def settings_to_implementation(
 
 def finalize_serial(
     node: str,
-    subcomponents: Dict[str, List[str]],
+    connections: Dict[str, List[str]],
     library: nodes.Library,
     graph: amicus.structures.Graph) -> amicus.structures.Graph:
     """[summary]
 
     Args:
         node (str): [description]
-        subcomponents (Dict[str, List[str]]): [description]
+        connections (Dict[str, List[str]]): [description]
         library (nodes.Library): [description]
         graph (amicus.structures.Graph): [description]
 
@@ -384,17 +356,17 @@ def finalize_serial(
         amicus.structures.Graph: [description]
         
     """    
-    subcomponents = _serial_order(
+    connections = _serial_order(
         name = node, 
-        subcomponents = subcomponents)
-    nodes = list(more_itertools.collapse(subcomponents))
+        connections = connections)
+    nodes = list(more_itertools.collapse(connections))
     if nodes:
         graph.extend(nodes = nodes)
     return graph      
 
 def _serial_order(
     name: str,
-    subcomponents: Dict[str, List[str]]) -> List[Hashable]:
+    connections: Dict[str, List[str]]) -> List[Hashable]:
     """[summary]
 
     Args:
@@ -406,19 +378,19 @@ def _serial_order(
         
     """   
     organized = []
-    components = subcomponents[name]
+    components = connections[name]
     for item in components:
         organized.append(item)
-        if item in subcomponents:
-            organized_subcomponents = []
-            subcomponents = _serial_order(
+        if item in connections:
+            organized_connections = []
+            connections = _serial_order(
                 name = item, 
-                subcomponents = subcomponents)
-            organized_subcomponents.append(subcomponents)
-            if len(organized_subcomponents) == 1:
-                organized.append(organized_subcomponents[0])
+                connections = connections)
+            organized_connections.append(connections)
+            if len(organized_connections) == 1:
+                organized.append(organized_connections[0])
             else:
-                organized.append(organized_subcomponents)
+                organized.append(organized_connections)
     return organized   
 
 
@@ -454,7 +426,7 @@ def workflow_to_result(
     project: amicus.Project,
     data: Any = None,
     library: nodes.Library = None,
-    result: products.Result = None,
+    result: core.Result = None,
     **kwargs) -> object:
     """[summary]
 
@@ -464,7 +436,7 @@ def workflow_to_result(
         project (amicus.Project): [description]
         data (Any, optional): [description]. Defaults to None.
         library (nodes.Library, optional): [description]. Defaults to None.
-        result (products.Result, optional): [description]. Defaults to None.
+        result (core.Result, optional): [description]. Defaults to None.
 
     Returns:
         object: [description]

@@ -42,7 +42,7 @@ class Registry(amicus.types.Catalog):
         plurals = [key + 's' for key in self.contents.keys()]
         return tuple(list(self.contents.keys()) + plurals)
 
-   
+ 
 @dataclasses.dataclass
 class Library(object):
     

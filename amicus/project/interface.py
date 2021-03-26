@@ -29,7 +29,7 @@ import warnings
 import amicus
 from . import configuration
 from . import nodes
-from . import products
+from . import core
 from . import workshop
 
 
@@ -228,7 +228,7 @@ class Project(amicus.quirks.Element):
             field.
     
     Attributes:
-        library (ClassVar[core.Library]): a class attribute containing a 
+        library (ClassVar[nodes.Library]): a class attribute containing a 
             dot-accessible dictionary of base classes. Each base class has 
             'subclasses' and 'instances' class attributes which contain catalogs
             of subclasses and instances of those library classes. This 
