@@ -8,17 +8,28 @@ This module stores universally accessible configuration options in the form of
 module-level constants.
  
 """
+from __future__ import annotations
+from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
+    Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
+    Type, Union)
 
 from . import nodes
 from . import core
 
+""" General Default Settings """
 
-VERBOSE: bool = True
-SEED: int = 42
 CONSERVE_MEMORY: bool = False
 PARALLELIZE: bool = False
+SEED: int = 42
+VERBOSE: bool = True
 
-DESIGN = 'technique'
-LIBRARY = nodes.Component.library
-SUMMARY = core.Summary
-RESULT = core.Result
+""" Default Classes and Related Options """
+
+COMPONENT: Type = nodes.Component
+COOKBOOK: Type = core.Cookbook
+DESIGN: str = 'technique'
+LIBRARY: Type = nodes.Component.library
+RECIPE: Type = core.Recipe
+RESULT: Type = core.Result
+SUMMARY: Type = core.Summary
+WORKFLOW: Type = core.Workflow

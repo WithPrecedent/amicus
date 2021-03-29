@@ -656,7 +656,8 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         contents (Mapping[Hashable, Any]]): stored dictionary. Defaults to an 
             empty dict.
         default (Any): default value to return when the 'get' method is used.
-              
+            Defaults to None.
+                          
     """
     contents: Mapping[Hashable, Any] = dataclasses.field(default_factory = dict)
     default: Any = None
