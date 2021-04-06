@@ -38,18 +38,15 @@ def create_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
         library = project.library
     except AttributeError:
         library = configuration.library
-    suffixes = library.subclasses.suffixes
     workflow = settings_to_workflow(
         settings = settings,
         library = library,
-        suffixes = suffixes,
         **kwargs)
     return workflow
 
 def settings_to_workflow(
     settings: amicus.options.Settings,
     library: nodes.Library,
-    suffixes: Sequence[str],
     **kwargs) -> nodes.Component:
     """[summary]
 
@@ -61,7 +58,8 @@ def settings_to_workflow(
     Returns:
         nodes.Component: [description]
         
-    """    
+    """
+    suffixes = library.subclasses.suffixes  
     connections = settings_to_connections(
         settings = settings,
         suffixes = suffixes)
