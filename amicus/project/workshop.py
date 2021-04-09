@@ -66,16 +66,16 @@ def settings_to_workflow(
     sections = settings_to_sections(
         settings = settings,
         suffixes = suffixes)  
-    nodes = (list(connections.keys()) 
-             + list(itertools.chain.from_iterable(connections.values())))
-    nodes = amicus.tools.deduplicate(iterable = list(nodes))
+    all_nodes = (list(connections.keys()) 
+                 + list(itertools.chain.from_iterable(connections.values())))
+    nodes = amicus.tools.deduplicate(iterable = list(all_nodes))
     bases = settings_to_bases(
         settings = settings,
         suffixes = suffixes,
         nodes = nodes,
         sections = sections)
     for name in nodes:
-        _ = settings_to_component(
+        settings_to_component(
             name = name,
             bases = bases,
             sections = sections,
