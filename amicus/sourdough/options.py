@@ -23,7 +23,6 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
     Type, Union)
 
 import more_itertools
-import toml
 
 import amicus
 
@@ -171,7 +170,7 @@ class Configuration(amicus.types.Lexicon):
             contents.optionxform = lambda option: option
             contents.read(str(file_path))
             return cls(contents = dict(contents._sections), **kwargs)
-        except FileNotFoundError:
+        except (KeyError, FileNotFoundError):
             raise FileNotFoundError(f'settings file {file_path} not found')
 
     @classmethod
@@ -246,6 +245,7 @@ class Configuration(amicus.types.Lexicon):
             FileNotFoundError: if the file_path does not correspond to a file.
 
         """
+        import toml
         if 'infer_types' not in kwargs:
             kwargs['infer_types'] = True
         try:
@@ -253,6 +253,32 @@ class Configuration(amicus.types.Lexicon):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
    
+    @classmethod
+    def from_yaml(cls, 
+        file_path: Union[str, pathlib.Path], 
+        **kwargs) -> Configuration:
+        """Returns settings dictionary from a .yaml file.
+
+        Args:
+            file_path (str): path to configparser-compatible .toml file.
+
+        Returns:
+            Mapping[Any, Any] of contents.
+
+        Raises:
+            FileNotFoundError: if the file_path does not correspond to a file.
+
+        """
+        import yaml
+        if 'infer_types' not in kwargs:
+            kwargs['infer_types'] = False
+        try:
+            with open(file_path, 'r') as config:
+                return cls(contents = yaml.safe_load(config, **kwargs))
+        except FileNotFoundError:
+            raise FileNotFoundError(f'settings file {file_path} not found')
+        
+
     """ Public Methods """
 
     def add(self, section: str, contents: Mapping[str, Any]) -> None:

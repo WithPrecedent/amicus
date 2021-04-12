@@ -1,11 +1,10 @@
 """
-amicus.project.nodes:
+amicus.project.nodes: project workflow nodes and related classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-
 
 """
 from __future__ import annotations
@@ -13,7 +12,6 @@ import abc
 import copy
 import dataclasses
 import inspect
-import itertools
 import multiprocessing
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
     Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
@@ -22,27 +20,29 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 import more_itertools
 
 import amicus
+from . import configuration
+from . import workshop
 
 
 @dataclasses.dataclass
 class Registry(amicus.types.Catalog):
-    """A Catalog of Component subclasses or instances."""
+    """A Catalog of Worker subclasses or subclass instances."""
 
     """ Properties """
     
     @property
     def suffixes(self) -> tuple[str]:
-        """Returns all subclass names and with an 's' added to the end.
+        """Returns all stored names and naive plurals of those names.
         
         Returns:
-            tuple[str]: all subclass names with an 's' added in order to create
-                simple plurals.
+            tuple[str]: all names with an 's' added in order to create simple 
+                plurals combined with the stored keys.
                 
         """
         plurals = [key + 's' for key in self.contents.keys()]
         return tuple(list(self.contents.keys()) + plurals)
 
- 
+
 @dataclasses.dataclass
 class Library(object):
     
@@ -52,29 +52,41 @@ class Library(object):
     """ Properties """
     
     @property
-    def leaves(self) -> Tuple[str]:
+    def laborers(self) -> Tuple[str]:
+        kind = configuration.bases.laborer
         instances = [
-            k for k, v in self.instances.items() if isinstance(v, Leaf)]
+            k for k, v in self.instances.items() if isinstance(v, kind)]
         subclasses = [
-            k for k, v in self.subclasses.items() if issubclass(v, Leaf)]
+            k for k, v in self.subclasses.items() if issubclass(v, kind)]
+        return tuple(instances + subclasses)   
+        
+    @property
+    def manager(self) -> Tuple[str]:
+        kind = configuration.bases.manager
+        instances = [
+            k for k, v in self.instances.items() if isinstance(v, kind)]
+        subclasses = [
+            k for k, v in self.subclasses.items() if issubclass(v, kind)]
+        return tuple(instances + subclasses)   
+     
+    @property
+    def tasks(self) -> Tuple[str]:
+        kind = configuration.bases.task
+        instances = [
+            k for k, v in self.instances.items() if isinstance(v, kind)]
+        subclasses = [
+            k for k, v in self.subclasses.items() if issubclass(v, kind)]
         return tuple(instances + subclasses)
 
     @property
-    def hubs(self) -> Tuple[str]:
+    def workers(self) -> Tuple[str]:
+        kind = configuration.bases.worker
         instances = [
-            k for k, v in self.instances.items() if isinstance(v, Hub)]
+            k for k, v in self.instances.items() if isinstance(v, kind)]
         subclasses = [
-            k for k, v in self.subclasses.items() if issubclass(v, Hub)]
+            k for k, v in self.subclasses.items() if issubclass(v, kind)]
         return tuple(instances + subclasses)
-    
-    @property
-    def recipes(self) -> Tuple[str]:
-        instances = [
-            k for k, v in self.instances.items() if isinstance(v, Recipe)]
-        subclasses = [
-            k for k, v in self.subclasses.items() if issubclass(v, Recipe)]
-        return tuple(instances + subclasses)   
-    
+
     """ Public Methods """
     
     def classify(self, component: str) -> str:
@@ -87,14 +99,18 @@ class Library(object):
             str: [description]
             
         """        
-        if component in self.leaves:
-            return 'leaf'
-        elif component in self.hubs:
-            return 'parallel'
-        elif component in self.recipes:
-            return 'serial'
+        if component in self.laborers:
+            return 'laborer'
+        elif component in self.managers:
+            return 'manager'
+        elif component in self.tasks:
+            return 'task'
+        elif component in self.workers:
+            return 'worker'
+        else:
+            raise TypeError(f'{component} is not a recognized type')
 
-    def instance(self, name: Union[str, Sequence[str]], **kwargs) -> Component:
+    def instance(self, name: Union[str, Sequence[str]], **kwargs) -> Worker:
         """Returns instance of first match of 'name' in stored catalogs.
         
         The method prioritizes the 'instances' catalog over 'subclasses' and any
@@ -107,7 +123,7 @@ class Library(object):
             KeyError: [description]
             
         Returns:
-            Component: [description]
+            Worker: [description]
             
         """
         names = amicus.tools.listify(name)
@@ -132,11 +148,11 @@ class Library(object):
                 setattr(instance, key, value)  
         return instance 
 
-    def register(self, component: Union[Component, Type[Component]]) -> None:
+    def register(self, component: Union[Worker, Type[Worker]]) -> None:
         """[summary]
 
         Args:
-            component (Union[Component, Type[Component]]): [description]
+            component (Union[Worker, Type[Worker]]): [description]
 
         Raises:
             TypeError: [description]
@@ -145,21 +161,21 @@ class Library(object):
             [type]: [description]
             
         """
-        if isinstance(component, Component):
+        if isinstance(component, Worker):
             instances_key = self._get_instances_key(component = component)
             self.instances[instances_key] = component
             subclasses_key = self._get_subclasses_key(component = component)
             if subclasses_key not in self.subclasses:
                 self.subclasses[subclasses_key] = component.__class__
-        elif inspect.isclass(component) and issubclass(component, Component):
+        elif inspect.isclass(component) and issubclass(component, Worker):
             subclasses_key = self._get_subclasses_key(component = component)
             self.subclasses[subclasses_key] = component
         else:
             raise TypeError(
-                f'component must be a Component subclass or instance')
+                f'component must be a Worker subclass or instance')
         return self
     
-    def select(self, name: Union[str, Sequence[str]]) -> Component:
+    def select(self, name: Union[str, Sequence[str]]) -> Worker:
         """Returns subclass of first match of 'name' in stored catalogs.
         
         The method prioritizes the 'subclasses' catalog over 'instances' and any
@@ -172,7 +188,7 @@ class Library(object):
             KeyError: [description]
             
         Returns:
-            Component: [description]
+            Worker: [description]
             
         """
         names = amicus.tools.listify(name)
@@ -210,7 +226,7 @@ class Library(object):
     """ Private Methods """
     
     def _get_instances_key(self, 
-        component: Union[Component, Type[Component]]) -> str:
+        component: Union[Worker, Type[Worker]]) -> str:
         """Returns a snakecase key of the class name.
         
         Returns:
@@ -227,7 +243,7 @@ class Library(object):
         return key
     
     def _get_subclasses_key(self, 
-        component: Union[Component, Type[Component]]) -> str:
+        component: Union[Worker, Type[Worker]]) -> str:
         """Returns a snakecase key of the class name.
         
         Returns:
@@ -243,7 +259,7 @@ class Library(object):
 
 @dataclasses.dataclass    
 class Parameters(amicus.types.Lexicon):
-    """Creates and stores parameters for a Component.
+    """Creates and stores parameters for a Worker.
     
     The use of Parameters is entirely optional, but it provides a handy tool
     for aggregating data from an array of sources, including those which only 
@@ -376,8 +392,8 @@ class Component(abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
             Defaults to None.
@@ -475,7 +491,7 @@ class Component(abc.ABC):
     """ Dunder Methods """
     
     def __call__(self, project: amicus.Project, **kwargs) -> amicus.Project:
-        """Applies 'implement' method if an instance is called.
+        """Applies 'execute' method if an instance is called.
         
         Args:
             project (amicus.Project): instance from which data needed for 
@@ -485,18 +501,18 @@ class Component(abc.ABC):
             amicus.Project: with possible changes made.
             
         """
-        return self.implement(project = project, **kwargs)
+        return self.execute(project = project, **kwargs)
 
 
 @dataclasses.dataclass
-class Leaf(Component, abc.ABC):
+class Task(Component, abc.ABC):
     """Base class for primitive leaf nodes in an amicus Workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
             Defaults to None.
@@ -519,6 +535,7 @@ class Leaf(Component, abc.ABC):
         default_factory = Parameters)
     iterations: Union[int, str] = 1     
 
+    """ Public Methods """
     
     def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
         """Applies 'contents' to 'project'.
@@ -536,7 +553,123 @@ class Leaf(Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Step(amicus.types.Proxy, Leaf):
+class Worker(amicus.structures.Graph, Component):
+    """Keystone class for parts of an amicus workflow.
+
+    Args:
+        name (str): designates the name of a class instance that is used for 
+            internal referencing throughout amicus. For example, if an amicus 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
+            to None. 
+        contents (Dict[str, List[str]]): an adjacency list where the keys are 
+            names of components and the values are names of components which the 
+            key component is connected to. Defaults to an empty dict.
+        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
+            'contents' when the 'implement' method is called. Defaults to an 
+            empty Parameters instance.
+        iterations (Union[int, str]): number of times the 'implement' method 
+            should  be called. If 'iterations' is 'infinite', the 'implement' 
+            method will continue indefinitely unless the method stops further 
+            iteration. Defaults to 1.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+
+    Attributes:
+        library (ClassVar[Library]): library that stores concrete (non-abstract) 
+            subclasses and instances of Component. 
+                              
+    """
+    name: str = None
+    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
+    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
+        default_factory = Parameters)
+    iterations: Union[int, str] = 1
+    default: Any = dataclasses.field(default_factory = list)
+
+    """ Private Methods """
+    
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies stored nodes to 'project' in order.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for node in self.paths[0]:
+            project = node.execute(project = project, **kwargs)
+        return project
+    
+    """ Public Methods """  
+
+    def organize(self, subcomponents: Dict[str, List[str]]) -> None:
+        """[summary]
+
+        Args:
+            subcomponents (Dict[str, List[str]]): [description]
+
+        """
+        subcomponents = self._serial_order(
+            name = self.name, 
+            subcomponents = subcomponents)
+        nodes = list(more_itertools.collapse(subcomponents))
+        if nodes:
+            self.extend(nodes = nodes)
+        return self       
+
+    def implement(self, project: amicus.Project, **kwargs) -> amicus.Project:
+        """Applies 'contents' to 'project'.
+        
+        Args:
+            project (amicus.Project): instance from which data needed for 
+                implementation should be derived and all results be added.
+
+        Returns:
+            amicus.Project: with possible changes made.
+            
+        """
+        return self._implement_in_serial(project = project, **kwargs)    
+
+    """ Private Methods """
+    
+    def _serial_order(self, 
+        name: str,
+        subcomponents: Dict[str, List[str]]) -> List[Hashable]:
+        """[summary]
+
+        Args:
+            name (str): [description]
+            directive (Directive): [description]
+
+        Returns:
+            List[Hashable]: [description]
+            
+        """   
+        organized = []
+        components = subcomponents[name]
+        for item in components:
+            organized.append(item)
+            if item in subcomponents:
+                organized_subcomponents = []
+                subcomponents = self._serial_order(
+                    name = item, 
+                    subcomponents = subcomponents)
+                organized_subcomponents.append(subcomponents)
+                if len(organized_subcomponents) == 1:
+                    organized.append(organized_subcomponents[0])
+                else:
+                    organized.append(organized_subcomponents)
+        return organized   
+
+
+@dataclasses.dataclass
+class Step(amicus.types.Proxy, Task):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement
@@ -547,8 +680,8 @@ class Step(amicus.types.Proxy, Leaf):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Technique): stored Technique instance to be used by the 
             'implement' method. Defaults to None.
@@ -607,14 +740,14 @@ class Step(amicus.types.Proxy, Leaf):
         
                                                   
 @dataclasses.dataclass
-class Technique(Leaf):
+class Technique(Task):
     """Keystone class for primitive objects in an amicus composite object.
 
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Callable): stored Callable algorithm to be used by the 
             'implement' method. Defaults to None.
@@ -680,14 +813,14 @@ class Technique(Leaf):
 
 
 @dataclasses.dataclass
-class Worker(amicus.structures.Graph, Component):
+class Laborer(amicus.structures.Graph, Worker):
     """Keystone class for parts of an amicus workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -713,62 +846,7 @@ class Worker(amicus.structures.Graph, Component):
         default_factory = Parameters)
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
-
-    """ Private Methods """
-    
-    def _implement_in_serial(self, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """Applies stored nodes to 'project' in order.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        for node in self.paths[0]:
-            project = node.execute(project = project, **kwargs)
-        return project
- 
- 
-@dataclasses.dataclass
-class Recipe(Worker):
-    """A Worker with a serial Workflow.
-        
-    Args:
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
-            to None. 
-        contents (Dict[str, List[str]]): an adjacency list where the keys are 
-            names of components and the values are names of components which the 
-            key component is connected to. Defaults to an empty dict.
-        parameters (MutableMapping[Hashable, Any]): parameters to be attached to 
-            'contents' when the 'implement' method is called. Defaults to an 
-            empty Parameters instance.
-        iterations (Union[int, str]): number of times the 'implement' method 
-            should  be called. If 'iterations' is 'infinite', the 'implement' 
-            method will continue indefinitely unless the method stops further 
-            iteration. Defaults to 1.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to an empty list.
-
-    Attributes:
-        library (ClassVar[Library]): library that stores concrete (non-abstract) 
-            subclasses and instances of Component. 
-                         
-    """
-    name: str = None
-    contents: Dict[str, List[str]] = dataclasses.field(default_factory = dict)
-    parameters: MutableMapping[Hashable, Any] = dataclasses.field(
-        default_factory = Parameters)
-    iterations: Union[int, str] = 1
-    default: Any = dataclasses.field(default_factory = list)
-  
+   
     """ Public Methods """  
 
     def organize(self, subcomponents: Dict[str, List[str]]) -> None:
@@ -801,6 +879,23 @@ class Recipe(Worker):
 
     """ Private Methods """
     
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies stored nodes to 'project' in order.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for node in self.paths[0]:
+            project = node.execute(project = project, **kwargs)
+        return project
+
     def _serial_order(self, 
         name: str,
         subcomponents: Dict[str, List[str]]) -> List[Hashable]:
@@ -808,7 +903,7 @@ class Recipe(Worker):
 
         Args:
             name (str): [description]
-            directive (core.Directive): [description]
+            directive (Directive): [description]
 
         Returns:
             List[Hashable]: [description]
@@ -830,16 +925,16 @@ class Recipe(Worker):
                     organized.append(organized_subcomponents)
         return organized   
 
-
+ 
 @dataclasses.dataclass
-class Hub(Worker, abc.ABC):
+class Manager(Worker, abc.ABC):
     """Base class for branching and parallel Workers.
         
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -926,7 +1021,7 @@ class Hub(Worker, abc.ABC):
 
 
 @dataclasses.dataclass
-class Contest(Hub):
+class Contest(Manager):
     """Resolves a parallel workflow by selecting the best option.
 
     It resolves a parallel workflow based upon criteria in 'contents'
@@ -934,8 +1029,8 @@ class Contest(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -968,7 +1063,7 @@ class Contest(Hub):
  
     
 @dataclasses.dataclass
-class Study(Hub):
+class Study(Manager):
     """Allows parallel workflow to continue
 
     A Study might be wholly passive or implement some reporting or alterations
@@ -977,8 +1072,8 @@ class Study(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -1011,7 +1106,7 @@ class Study(Hub):
   
     
 @dataclasses.dataclass
-class Survey(Hub):
+class Survey(Manager):
     """Resolves a parallel workflow by averaging.
 
     It resolves a parallel workflow based upon the averaging criteria in 
@@ -1020,8 +1115,8 @@ class Survey(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
