@@ -71,7 +71,7 @@ importables: Dict[str, str] = {
     'Hybrid': 'sourdough.types.Hybrid',
     'Lexicon': 'sourdough.types.Lexicon',
     'Catalog': 'sourdough.types.Catalog',
-    'Settings': 'sourdough.options.Settings',
+    'Configuration': 'sourdough.options.Configuration',
     'Clerk': 'sourdough.options.Clerk',
     'Keystone': 'sourdough.framework.Keystone',
     'create_keystone': 'sourdough.framework.create_keystone',

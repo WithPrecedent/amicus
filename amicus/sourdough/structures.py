@@ -54,8 +54,8 @@ class Node(amicus.quirks.Element, collections.abc.Hashable):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
             Defaults to None. 
 
     """
@@ -131,8 +131,8 @@ class SimpleNode(Node):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
             Defaults to None. 
 
     """
@@ -151,8 +151,8 @@ class SmartNode(Node):
         contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
             Defaults to None. 
 
     """

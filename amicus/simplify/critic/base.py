@@ -24,9 +24,9 @@ class Critic(base.SimpleManager):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if a 
-            amicus instance needs settings from a SimpleSettings
+            amicus instance needs settings from a SimpleConfiguration
             instance, 'name' should match the appropriate section name in a 
-            SimpleSettings instance. Defaults to None. 
+            SimpleConfiguration instance. Defaults to None. 
         workflow (base.SimpleWorkflow): a workflow of a project subpart derived 
             from 'outline'. Defaults to None.
         needs (ClassVar[Union[Sequence[str], str]]): attributes needed from 

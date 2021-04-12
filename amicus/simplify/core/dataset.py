@@ -45,8 +45,8 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             dictionary.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an 
-            amicus instance needs settings from a Settings instance, 
-            'name' should match the appropriate section name in a Settings 
+            amicus instance needs settings from a Configuration instance, 
+            'name' should match the appropriate section name in a Configuration 
             instance. Defaults to None.
 
     """
@@ -84,7 +84,7 @@ class Dataset(amicus.quirks.Needy, amicus.quirks.Element):
             datatypes: Mapping[str, str] = lambda: {},
             prefixes: Mapping[str, str] = lambda: {},
             name: str = None,
-            settings: base.Settings = None,
+            settings: base.Configuration = None,
             filer: base.Filer = None) -> Dataset:
         """Creates an Dataset instance.
 

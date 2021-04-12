@@ -53,8 +53,8 @@ class Element(amicus.types.Quirk):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. 
             Defaults to None. 
 
     Namespaces: library, library, name, __post_init__, and _get_name

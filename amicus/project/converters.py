@@ -19,8 +19,8 @@ import amicus
 
 
 @dataclasses.dataclass
-class SettingsConverter(amicus.Converter):
-    """Type converter for Settings.
+class ConfigurationConverter(amicus.Converter):
+    """Type converter for Configuration.
 
     Args:
         base (str): 
@@ -31,7 +31,7 @@ class SettingsConverter(amicus.Converter):
     base: str = 'settings'
     parameters: Dict[str, Any] = dataclasses.field(default_factory = dict)
     alternatives: tuple[Type] = tuple([pathlib.Path, Mapping])
-    default: Type = amicus.options.Settings
+    default: Type = amicus.options.Configuration
 
 
 @dataclasses.dataclass

@@ -21,7 +21,7 @@ from . import nodes
 from . import core
 
 
-""" Settings Parsing Functions """
+""" Configuration Parsing Functions """
 
 def create_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
     """[summary]
@@ -45,13 +45,13 @@ def create_workflow(project: amicus.Project, **kwargs) -> nodes.Component:
     return workflow
 
 def settings_to_workflow(
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     library: nodes.Library,
     **kwargs) -> nodes.Component:
     """[summary]
 
     Args:
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         library (nodes.Library): [description]
         suffixes (Sequence[str]): [description]
 
@@ -90,12 +90,12 @@ def settings_to_workflow(
     return workflow
 
 def settings_to_connections(
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     suffixes: Sequence[str]) -> Dict[str, List[str]]:
     """[summary]
 
     Args:
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         suffixes (Sequence[str]): [description]
 
     Returns:
@@ -121,12 +121,12 @@ def settings_to_connections(
     return connections
 
 def settings_to_sections(
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     suffixes: Sequence[str]) -> Dict[str, str]:
     """[summary]
 
     Args:
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         suffixes (Sequence[str]): [description]
 
     Returns:
@@ -144,14 +144,14 @@ def settings_to_sections(
     return sections
 
 def settings_to_bases(
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     suffixes: Sequence[str],
     nodes: Dict[str, str],
     sections: Dict[str, str]) -> Dict[str, str]:
     """[summary]
 
     Args:
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         suffixes (Sequence[str]): [description]
         nodes (Dict[str, str]):
         sections (Dict[str, str]):
@@ -183,13 +183,13 @@ def settings_to_bases(
 def settings_to_design(
     name: str, 
     section: str, 
-    settings: amicus.options.Settings) -> str:
+    settings: amicus.options.Configuration) -> str:
     """Gets name of a Component design.
 
     Args:
         name (str): name of the Component.
         section (str):
-        settings (amicus.options.Settings): Settings instance that contains
+        settings (amicus.options.Configuration): Configuration instance that contains
             either the design corresponding to 'name' or a default design.
         bases (Dict[str, str]): a set of default bases if one is not found
              in 'settings'. This might be separately created by the
@@ -212,13 +212,13 @@ def settings_to_design(
     return design  
  
 def settings_to_graph(
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     library: nodes.Library = None,
     connections: Dict[str, List[str]] = None) -> amicus.structures.Graph:
     """[summary]
 
     Args:
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
         connections (Dict[str, List[str]], optional): [description]. Defaults 
             to None.
@@ -246,7 +246,7 @@ def settings_to_component(
     name: str, 
     bases: Dict[str, str],
     sections: Dict[str, str],
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     library: nodes.Library,
     **kwargs) -> nodes.Component:
     """[summary]
@@ -254,7 +254,7 @@ def settings_to_component(
     Args:
         name (str): [description]
         section (str): [description]
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         library (nodes.Library, optional): [description]. Defaults to None.
         connections (Dict[str, List[str]], optional): [description]. Defaults 
             to None.
@@ -287,7 +287,7 @@ def settings_to_initialization(
     name: str, 
     section: str,
     design: str,
-    settings: amicus.options.Settings,
+    settings: amicus.options.Configuration,
     library: nodes.Library) -> Dict[Hashable, Any]:
     """Gets parameters for a specific Component from 'settings'.
 
@@ -295,7 +295,7 @@ def settings_to_initialization(
         name (str): [description]
         section (str): [description]
         design (str): [description]
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
         library (nodes.Library): [description]
 
     Returns:
@@ -316,13 +316,13 @@ def settings_to_initialization(
 def settings_to_implementation(
     name: str, 
     design: str,
-    settings: amicus.options.Settings) -> Dict[Hashable, Any]:
+    settings: amicus.options.Configuration) -> Dict[Hashable, Any]:
     """[summary]
 
     Args:
         name (str): [description]
         design (str): [description]
-        settings (amicus.options.Settings): [description]
+        settings (amicus.options.Configuration): [description]
 
     Returns:
         Dict[Hashable, Any]: [description]

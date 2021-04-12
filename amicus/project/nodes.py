@@ -266,8 +266,8 @@ class Parameters(amicus.types.Lexicon):
             an empty dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. To properly match parameters
-            in a Settings instance, 'name' should be the prefix to "_parameters"
-            as a section name in a Settings instance. Defaults to None. 
+            in a Configuration instance, 'name' should be the prefix to "_parameters"
+            as a section name in a Configuration instance. Defaults to None. 
         default (Mapping[str, Any]): default parameters that will be used if 
             they are not overridden. Defaults to an empty dict.
         implementation (Mapping[str, str]): parameters with values that can only 
@@ -279,7 +279,7 @@ class Parameters(amicus.types.Lexicon):
             allowed. If 'selected' is empty, all possible parameters are 
             allowed. However, if any are listed, all other parameters that are
             included are removed. This is can be useful when including 
-            parameters in a Settings instance for an entire step, only some of
+            parameters in a Configuration instance for an entire step, only some of
             which might apply to certain techniques. Defaults to an empty list.
 
     """
@@ -322,11 +322,11 @@ class Parameters(amicus.types.Lexicon):
     """ Private Methods """
      
     def _from_settings(self, 
-        settings: amicus.options.Settings) -> Dict[str, Any]: 
+        settings: amicus.options.Configuration) -> Dict[str, Any]: 
         """Returns any applicable parameters from 'settings'.
 
         Args:
-            settings (amicus.options.Settings): instance with possible 
+            settings (amicus.options.Configuration): instance with possible 
                 parameters.
 
         Returns:
@@ -376,8 +376,8 @@ class Component(abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
             Defaults to None.
@@ -495,8 +495,8 @@ class Leaf(Component, abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Any): stored item(s) to be used by the 'implement' method.
             Defaults to None.
@@ -547,8 +547,8 @@ class Step(amicus.types.Proxy, Leaf):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Technique): stored Technique instance to be used by the 
             'implement' method. Defaults to None.
@@ -613,8 +613,8 @@ class Technique(Leaf):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Callable): stored Callable algorithm to be used by the 
             'implement' method. Defaults to None.
@@ -686,8 +686,8 @@ class Worker(amicus.structures.Graph, Component):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -741,8 +741,8 @@ class Recipe(Worker):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -838,8 +838,8 @@ class Hub(Worker, abc.ABC):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -934,8 +934,8 @@ class Contest(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -977,8 +977,8 @@ class Study(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 
@@ -1020,8 +1020,8 @@ class Survey(Hub):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
         contents (Dict[str, List[str]]): an adjacency list where the keys are 
             names of components and the values are names of components which the 

@@ -16,7 +16,7 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
 from . import nodes
 from . import core
 
-""" General Default Settings """
+""" General Default Configuration """
 
 CONSERVE_MEMORY: bool = False
 PARALLELIZE: bool = False

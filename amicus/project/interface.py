@@ -195,15 +195,15 @@ class Project(amicus.quirks.Element):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Settings instance, 'name' should 
-            match the appropriate section name in a Settings instance. Defaults 
+            instance needs settings from a Configuration instance, 'name' should 
+            match the appropriate section name in a Configuration instance. Defaults 
             to None. 
-        settings (Union[amicus.options.Settings, Type[amicus.options.Settings], 
-            Mapping[str, Mapping[str, Any]]], pathlib.Path, str): a Settings-
+        settings (Union[amicus.options.Configuration, Type[amicus.options.Configuration], 
+            Mapping[str, Mapping[str, Any]]], pathlib.Path, str): a Configuration-
             compatible subclass or instance, a str or pathlib.Path containing 
             the file path where a file of a supported file type with settings 
-            for a Settings instance is located, or a 2-level mapping containing 
-            settings. Defaults to the default Settings instance.
+            for a Configuration instance is located, or a 2-level mapping containing 
+            settings. Defaults to the default Configuration instance.
         filer (Union[core.Filer, Type[core.Filer], pathlib.Path, str]): a Filer-
             compatible class or a str or pathlib.Path containing the full path 
             of where the root folder should be located for file input and 
@@ -243,8 +243,8 @@ class Project(amicus.quirks.Element):
     """
     name: str = None
     settings: Union[
-        amicus.options.Settings, 
-        Type[amicus.options.Settings], 
+        amicus.options.Configuration, 
+        Type[amicus.options.Configuration], 
         Mapping[str, Mapping[str, Any]],
         pathlib.Path, 
         str] = None
@@ -271,7 +271,7 @@ class Project(amicus.quirks.Element):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods.
-        self.settings = amicus.options.Settings.create(
+        self.settings = amicus.options.Configuration.create(
             file_path = self.settings)
         self.identification = self._validate_identification(
             identification = self.identification)
@@ -290,12 +290,12 @@ class Project(amicus.quirks.Element):
 
     @classmethod
     def create(cls, 
-        settings: amicus.options.Settings, 
+        settings: amicus.options.Configuration, 
         **kwargs) -> Project:
         """[summary]
 
         Args:
-            settings (amicus.options.Settings): [description]
+            settings (amicus.options.Configuration): [description]
 
         Returns:
             Project: [description]
@@ -304,12 +304,12 @@ class Project(amicus.quirks.Element):
 
     @classmethod
     def from_settings(cls, 
-        settings: amicus.options.Settings, 
+        settings: amicus.options.Configuration, 
         **kwargs) -> Project:
         """[summary]
 
         Args:
-            settings (amicus.options.Settings): [description]
+            settings (amicus.options.Configuration): [description]
 
         Returns:
             Project: [description]

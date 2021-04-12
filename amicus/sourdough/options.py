@@ -5,7 +5,7 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 Contents:
-    Settings (Lexicon): stores configuration settings after either loading 
+    Configuration (Lexicon): stores configuration settings after either loading 
         them from disk or by the passed arguments.    
     Clerk (object): interface for amicus file management classes and methods.
          
@@ -29,16 +29,16 @@ import amicus
 
 
 @dataclasses.dataclass
-class Settings(amicus.types.Lexicon):
+class Configuration(amicus.types.Lexicon):
     """Loads and stores configuration settings.
 
-    To create Settings instance, a user can pass a:
+    To create Configuration instance, a user can pass a:
         1) file path to a compatible file type;
         2) string containing a a file path to a compatible file type;
                                 or,
         3) 2-level nested dict.
 
-    If 'contents' is imported from a file, Settings creates a dict and can 
+    If 'contents' is imported from a file, Configuration creates a dict and can 
     convert the dict values to appropriate datatypes. Currently, supported file 
     types are: ini, json, toml, and python.
 
@@ -48,7 +48,7 @@ class Settings(amicus.types.Lexicon):
     if the source file is a python module (assuming the user has properly set
     the types of the stored python dict).
 
-    Because Settings uses ConfigParser for .ini files, by default it stores 
+    Because Configuration uses ConfigParser for .ini files, by default it stores 
     a 2-level dict. The desire for accessibility and simplicity amicusted this 
     limitation. A greater number of levels can be achieved by having separate
     sections with names corresponding to the strings in the values of items in 
@@ -93,7 +93,7 @@ class Settings(amicus.types.Lexicon):
     """ Class Methods """
 
     @classmethod
-    def create(cls, **kwargs) -> Settings:
+    def create(cls, **kwargs) -> Configuration:
         """Calls corresponding creation class method to instance a subclass.
 
         Raises:
@@ -119,14 +119,14 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_dictionary(cls, 
         dictionary: Mapping[str, Mapping[str, Any]], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """[summary]
 
         Args:
             path (Union[str, pathlib.Path]): [description]
 
         Returns:
-            Settings: [description]
+            Configuration: [description]
             
         """        
         return cls(contents = dictionary, **kwargs)
@@ -134,14 +134,14 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_file_path(cls, 
         file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """[summary]
 
         Args:
             path (Union[str, pathlib.Path]): [description]
 
         Returns:
-            Settings: [description]
+            Configuration: [description]
             
         """        
         extension = str(pathlib.Path(file_path).suffix)[1:]
@@ -151,7 +151,7 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_ini(cls, 
         file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """Returns settings dictionary from an .ini file.
 
         Args:
@@ -177,7 +177,7 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_json(cls, 
         file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """Returns settings dictionary from an .json file.
 
         Args:
@@ -202,7 +202,7 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_py(cls, 
         file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """Returns a settings dictionary from a .py file.
 
         Args:
@@ -233,7 +233,7 @@ class Settings(amicus.types.Lexicon):
     @classmethod
     def from_toml(cls, 
         file_path: Union[str, pathlib.Path], 
-        **kwargs) -> Settings:
+        **kwargs) -> Configuration:
         """Returns settings dictionary from a .toml file.
 
         Args:
@@ -383,7 +383,7 @@ class Clerk(object):
     amicus, pandas, and numpy objects.
 
     Args:
-        settings (Settings): a Settings instance, preferably with a section 
+        settings (Configuration): a Configuration instance, preferably with a section 
             named 'filer' or 'files' with file-management related settings. If 
             'settings' does not have file configuration options or if 'settings' 
             is None, internal defaults will be used. Defaults to None.
@@ -403,7 +403,7 @@ class Clerk(object):
         Refactor and amicus with accompanying classes.
 
     """
-    settings: Settings = None
+    settings: Configuration = None
     root_folder: Union[str, pathlib.Path] = None
     input_folder: Union[str, pathlib.Path] = 'input'
     output_folder: Union[str, pathlib.Path] = 'output'
@@ -684,11 +684,11 @@ class Clerk(object):
                 save_method = '_unpickle_object')}
 
     def _get_default_parameters(self, 
-                                settings: Settings) -> Mapping[Any, Any]:
+                                settings: Configuration) -> Mapping[Any, Any]:
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
-            settings (Settings): an instance with a section named 'files' which
+            settings (Configuration): an instance with a section named 'files' which
                 contains default parameters for file transfers.
 
         Returns:
@@ -1006,8 +1006,8 @@ class FileFormat(object):
     Args:
         name (str): designates the name of the class instance used
             for internal referencing throughout amicus. If the class instance
-            needs settings from the shared Settings instance, 'name' should
-            match the appropriate section name in that Settings instance. When
+            needs settings from the shared Configuration instance, 'name' should
+            match the appropriate section name in that Configuration instance. When
             subclassing, it is a good settings to use the same 'name' attribute
             as the base class for effective coordination between amicus
             classes. Defaults to None or __class__.__name__.lower().
