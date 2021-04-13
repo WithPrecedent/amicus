@@ -278,7 +278,6 @@ class Configuration(amicus.types.Lexicon):
         except FileNotFoundError:
             raise FileNotFoundError(f'settings file {file_path} not found')
         
-
     """ Public Methods """
 
     def add(self, section: str, contents: Mapping[str, Any]) -> None:
@@ -295,7 +294,8 @@ class Configuration(amicus.types.Lexicon):
             self[section] = contents
         return self
 
-    def inject(self, instance: object,
+    def inject(self, 
+               instance: object,
                additional: Union[Sequence[str], str] = None, 
                overwrite: bool = False) -> object:
         """Injects appropriate items into 'instance' from 'contents'.
@@ -409,8 +409,8 @@ class Clerk(object):
     amicus, pandas, and numpy objects.
 
     Args:
-        settings (Configuration): a Configuration instance, preferably with a section 
-            named 'filer' or 'files' with file-management related settings. If 
+        settings (Configuration): a Configuration instance, preferably with a 
+            section named 'files' with file-management related settings. If 
             'settings' does not have file configuration options or if 'settings' 
             is None, internal defaults will be used. Defaults to None.
         root_folder (Union[str, pathlib.Path]): the complete path from which the 
@@ -440,9 +440,7 @@ class Clerk(object):
         """Initializes class instance attributes."""
         # Attempots to Inject attributes from 'settings'.
         try:
-            self.settings.inject(
-                instance = self, 
-                additional = ['files', 'filer'])
+            self.settings.inject(instance = self, additional = ['files'])
         except (AttributeError, TypeError):
             pass
         # Validates core folder paths and writes them to disk.
@@ -455,9 +453,9 @@ class Clerk(object):
         # Gets default parameters for file transfers from 'settings'.
         self.default_parameters = self._get_default_parameters(
             settings = self.settings)
-        # Creates FileImporter and FileSaver instances for loading and saving
+        # Creates FileLoader and FileSaver instances for loading and saving
         # files.
-        self.loader = FileImporter(filer = self)
+        self.loader = FileLoader(filer = self)
         self.saver = FileSaver(filer = self)
         return self
 
@@ -507,7 +505,7 @@ class Clerk(object):
             file_path: Union[str, pathlib.Path] = None,
             folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Union[str, 'FileFormat'] = None,
+            file_format: Union[str, FileFormat] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
@@ -544,7 +542,7 @@ class Clerk(object):
             file_path: Union[str, pathlib.Path] = None,
             folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Union[str, 'FileFormat'] = None,
+            file_format: Union[str, FileFormat] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -559,7 +557,7 @@ class Clerk(object):
                 name of a folder stored in 'filer'. Defaults to None.
             file_name (str): file name without extension. Defaults to
                 None.
-            file_format (Union[str, 'FileFormat']]): object with
+            file_format (Union[str, FileFormat]]): object with
                 information about how the file should be loaded or the key to
                 such an object stored in 'filer'. Defaults to None
             **kwargs: can be passed if additional options are desired specific
@@ -623,7 +621,7 @@ class Clerk(object):
         except FileNotFoundError:
             return self.validate(path = self.root_folder / path)
                 
-    def _get_default_file_formats(self) -> Mapping[Any, 'FileFormat']:
+    def _get_default_file_formats(self) -> Mapping[Any, FileFormat]:
         """Returns supported file formats.
 
         Returns:
@@ -633,7 +631,7 @@ class Clerk(object):
         return {
             'csv': FileFormat(
                 name = 'csv',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.csv',
                 load_method = 'read_csv',
                 save_method = 'to_csv',
@@ -646,7 +644,7 @@ class Clerk(object):
                     'nrows': 'test_size'}),
             'excel': FileFormat(
                 name = 'excel',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.xlsx',
                 load_method = 'read_excel',
                 save_method = 'to_excel',
@@ -657,14 +655,14 @@ class Clerk(object):
                     'nrows': 'test_size'}),
             'feather': FileFormat(
                 name = 'feather',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.feather',
                 load_method = 'read_feather',
                 save_method = 'to_feather',
                 required_parameters = {'nthreads': -1}),
             'hdf': FileFormat(
                 name = 'hdf',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.hdf',
                 load_method = 'read_hdf',
                 save_method = 'to_hdf',
@@ -673,7 +671,7 @@ class Clerk(object):
                     'chunksize': 'test_size'}),
             'json': FileFormat(
                 name = 'json',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.json',
                 load_method = 'read_json',
                 save_method = 'to_json',
@@ -683,20 +681,20 @@ class Clerk(object):
                     'chunksize': 'test_size'}),
             'stata': FileFormat(
                 name = 'stata',
-                modules =  'pandas',
+                module =  'pandas',
                 extension = '.dta',
                 load_method = 'read_stata',
                 save_method = 'to_stata',
                 shared_parameters = {'chunksize': 'test_size'}),
             'text': FileFormat(
                 name = 'text',
-                modules =  None,
+                module =  None,
                 extension = '.txt',
                 load_method = '_import_text',
                 save_method = '_export_text'),
             'png': FileFormat(
                 name = 'png',
-                modules =  'seaborn',
+                module =  'seaborn',
                 extension = '.png',
                 save_method = 'save_fig',
                 required_parameters = {
@@ -704,7 +702,7 @@ class Clerk(object):
                     'format': 'png'}),
             'pickle': FileFormat(
                 name = 'pickle',
-                modules =  None,
+                module =  None,
                 extension = '.pickle',
                 load_method = '_pickle_object',
                 save_method = '_unpickle_object')}
@@ -714,8 +712,8 @@ class Clerk(object):
         """Returns default parameters for file transfers from 'settings'.
 
         Args:
-            settings (Configuration): an instance with a section named 'files' which
-                contains default parameters for file transfers.
+            settings (Configuration): an instance with a section named 'files' 
+                which contains default parameters for file transfers.
 
         Returns:
             Mapping: with default parameters from settings.
@@ -763,7 +761,7 @@ class Clerk(object):
 
 @dataclasses.dataclass
 class Distributor(abc.ABC):
-    """Keystone class for amicus FileImporter and FileSaver.
+    """Base class for amicus FileLoader and FileSaver.
 
     Args:
         filer (Clerk): a related Clerk instance.
@@ -825,7 +823,7 @@ class Distributor(abc.ABC):
         return new_kwargs
 
     def _check_file_format(self,
-            file_format: Union[str, 'FileFormat']) -> 'FileFormat':
+            file_format: Union[str, FileFormat]) -> FileFormat:
         """Selects 'file_format' or returns FileFormat instance intact.
 
         Args:
@@ -873,9 +871,9 @@ class Distributor(abc.ABC):
             file_path: Union[str, pathlib.Path],
             folder: Union[str, pathlib.Path],
             file_name: str,
-            file_format: Union[str, 'FileFormat']) -> Sequence[Union[
+            file_format: Union[str, FileFormat]) -> Sequence[Union[
                 pathlib.Path,
-                'FileFormat']]:
+                FileFormat]]:
         """Prepares file path related arguments for loading or saving a file.
 
         Args:
@@ -910,7 +908,7 @@ class Distributor(abc.ABC):
 
 
 @dataclasses.dataclass
-class FileImporter(Distributor):
+class FileLoader(Distributor):
     """Manages file importing for amicus.
 
     Args:
@@ -929,7 +927,7 @@ class FileImporter(Distributor):
             file_path: Union[str, pathlib.Path] = None,
             folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Union[str, 'FileFormat'] = None,
+            file_format: Union[str, FileFormat] = None,
             **kwargs) -> Any:
         """Imports file by calling appropriate method based on file_format.
 
@@ -983,14 +981,12 @@ class FileSaver(Distributor):
         """Calls 'transfer' method with **kwargs."""
         return self.transfer(**kwargs)
 
-    """ Keystone amicus Methods """
-
     def transfer(self,
             variable: Any,
             file_path: Union[str, pathlib.Path] = None,
             folder: Union[str, pathlib.Path] = None,
             file_name: str = None,
-            file_format: Union[str, 'FileFormat'] = None,
+            file_format: Union[str, FileFormat] = None,
             **kwargs) -> None:
         """Exports file by calling appropriate method based on file_format.
 
@@ -1030,13 +1026,8 @@ class FileFormat(object):
     """File format information.
 
     Args:
-        name (str): designates the name of the class instance used
-            for internal referencing throughout amicus. If the class instance
-            needs settings from the shared Configuration instance, 'name' should
-            match the appropriate section name in that Configuration instance. When
-            subclassing, it is a good settings to use the same 'name' attribute
-            as the base class for effective coordination between amicus
-            classes. Defaults to None or __class__.__name__.lower().
+        name (str): the format name which should match the key when a FileFormat
+            instance is stored.
         module (str): name of module where object to incorporate is located
             (can either be an amicus or non-amicus module).
         extension (str): actual file extension to use. Defaults to
@@ -1056,9 +1047,7 @@ class FileFormat(object):
     """
 
     name: str = None
-    modules: str = 'amicus'
-    _loaded: Mapping[Any, Any] = dataclasses.field(
-        default_factory = dict)
+    module: str = 'amicus'
     extension: str = None
     load_method: str = None
     save_method: str = None

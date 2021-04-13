@@ -18,7 +18,6 @@ import collections.abc
 import dataclasses
 import inspect
 import logging
-import multiprocessing
 import pathlib
 from types import ModuleType
 from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List, 
@@ -28,13 +27,11 @@ import warnings
 
 import amicus
 from . import configuration
-from . import nodes
-from . import core
-from . import workshop
 
-
-CONFIGURATION: ModuleType = amicus.project.configuration
-
+if configuration.PARALLELIZE:
+    import multiprocessing
+    multiprocessing.set_start_method('spawn')
+    
 
 """Initializes the amicus project logger."""
 
@@ -45,6 +42,7 @@ LOGGER.addHandler(console_handler)
 file_handler = logging.FileHandler('amicus.log')
 file_handler.setLevel(logging.DEBUG)
 LOGGER.addHandler(file_handler)
+LOGGER.info(f'amicus version is: {amicus.__version__}')
 
 
 """ Iterator for Constructing Project Stages """
@@ -168,12 +166,12 @@ class Builder(collections.abc.Iterator):
             product = self.stages[self.subsequent]
             # builder = self.functionify(source = source, product = product)
             builder = getattr(self.workshop, f'create_{product}')
-            if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
+            if hasattr(configuration, 'VERBOSE') and configuration.VERBOSE:
                 print(f'Creating {product}')
             kwargs = {'project': self.project}
             setattr(self.project, product, builder(**kwargs))
             self.index += 1
-            if hasattr(CONFIGURATION, 'VERBOSE') and CONFIGURATION.VERBOSE:
+            if hasattr(configuration, 'VERBOSE') and configuration.VERBOSE:
                 print(f'Completed {product}')
         else:
             raise StopIteration
@@ -195,15 +193,15 @@ class Project(amicus.quirks.Element):
     Args:
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. Defaults 
+            instance needs settings from a Settings instance, 'name' should 
+            match the appropriate section name in a Settings instance. Defaults 
             to None. 
-        settings (Union[amicus.options.Configuration, Type[amicus.options.Configuration], 
-            Mapping[str, Mapping[str, Any]]], pathlib.Path, str): a Configuration-
+        settings (Union[amicus.options.Settings, Type[amicus.options.Settings], 
+            Mapping[str, Mapping[str, Any]]], pathlib.Path, str): a Settings-
             compatible subclass or instance, a str or pathlib.Path containing 
             the file path where a file of a supported file type with settings 
-            for a Configuration instance is located, or a 2-level mapping containing 
-            settings. Defaults to the default Configuration instance.
+            for a Settings instance is located, or a 2-level mapping containing 
+            settings. Defaults to the default Settings instance.
         filer (Union[core.Filer, Type[core.Filer], pathlib.Path, str]): a Filer-
             compatible class or a str or pathlib.Path containing the full path 
             of where the root folder should be located for file input and 
@@ -243,8 +241,8 @@ class Project(amicus.quirks.Element):
     """
     name: str = None
     settings: Union[
-        amicus.options.Configuration, 
-        Type[amicus.options.Configuration], 
+        amicus.options.Settings, 
+        Type[amicus.options.Settings], 
         Mapping[str, Mapping[str, Any]],
         pathlib.Path, 
         str] = None
@@ -257,7 +255,6 @@ class Project(amicus.quirks.Element):
     builder: Builder = basic_builder
     data: Any = None
     automatic: bool = True
-    library: nodes.Library = nodes.Component.library
     
     """ Initialization Methods """
 
@@ -271,16 +268,15 @@ class Project(amicus.quirks.Element):
         # Removes various python warnings from console output.
         warnings.filterwarnings('ignore')
         # Calls validation methods.
-        self.settings = amicus.options.Configuration.create(
-            file_path = self.settings)
-        self.identification = self._validate_identification(
-            identification = self.identification)
+        self._validate_settings()
+        self._validate_identification()
         self.filer = amicus.options.Clerk(settings = self.settings)
         self.builder.project = self
         # Reconciles 'settings' with 'configuration'
         self.harmonize()
         # Sets multiprocessing technique, if necessary.
-        if configuration.PARALLELIZE:
+        if configuration.PARALLELIZE and not locals()['multiprocessing']:
+            import multiprocessing
             multiprocessing.set_start_method('spawn')
         # Calls 'execute' if 'automatic' is True.
         if self.automatic:
@@ -290,12 +286,12 @@ class Project(amicus.quirks.Element):
 
     @classmethod
     def create(cls, 
-        settings: amicus.options.Configuration, 
+        settings: amicus.options.Settings, 
         **kwargs) -> Project:
         """[summary]
 
         Args:
-            settings (amicus.options.Configuration): [description]
+            settings (amicus.options.Settings): [description]
 
         Returns:
             Project: [description]
@@ -304,12 +300,12 @@ class Project(amicus.quirks.Element):
 
     @classmethod
     def from_settings(cls, 
-        settings: amicus.options.Configuration, 
+        settings: amicus.options.Settings, 
         **kwargs) -> Project:
         """[summary]
 
         Args:
-            settings (amicus.options.Configuration): [description]
+            settings (amicus.options.Settings): [description]
 
         Returns:
             Project: [description]
@@ -349,25 +345,60 @@ class Project(amicus.quirks.Element):
         return self
                      
     """ Private Methods """
-
-    def _validate_identification(self, identification: str) -> str:
+    
+    def _validate_settings(self) -> None:
+        """Validates the 'settings' attribute.
+        
+        If 'settings' is None, the default 'settings' in 'configuration' is
+        used.
+        
+        """
+        if self.settings is None:
+            self.settings = configuration.settings
+        elif isinstance(self.settings, (str, pathlib.Path)):
+            self.settings = configuration.bases.settings.create(
+                file_path = self.settings)
+        elif isinstance(self.settings, dict):
+            self.settings = configuration.bases.settings.create(
+                dictionary = self.settings)
+        elif not isinstance(self.settings, configuration.bases.settings):
+            raise TypeError(
+                'settings must be a str, pathlib.Path, dict, None type')
+        return self      
+    
+    def _validate_identification(self) -> None:
         """Creates unique 'identification' if one doesn't exist.
         
         By default, 'identification' is set to the 'name' attribute followed by
         an underscore and the date and time.
         
-        Args:
-            identification (str): unique identification string for a project.
-            
-        Returns:
-            str: a default identification, derived from the project's 'name'
-                attribute and the date and time.
+        """
+        if self.identification is None:
+            self.identification = amicus.tools.datetime_string(
+                prefix = self.name)
+        return self
+    
+    def _validate_settings(self) -> None:
+        """Validates the 'filer' attribute.
+        
+        If 'filer' is None, the default 'filer' in 'configuration.bases' is
+        used.
         
         """
-        if not identification:
-            identification = amicus.tools.datetime_string(prefix = self.name)
-        return identification
-           
+        if self.settings is None:
+            self.settings = configuration.settings
+        elif isinstance(self.settings, (str, pathlib.Path)):
+            self.settings = configuration.bases.settings.create(
+                file_path = self.settings)
+        elif isinstance(self.settings, dict):
+            self.settings = configuration.bases.settings.create(
+                dictionary = self.settings)
+        elif not isinstance(self.settings, configuration.bases.settings):
+            raise TypeError(
+                'settings must be a str, pathlib.Path, dict, None type')
+        self.settings.project = self
+        return self      
+              
     """ Dunder Methods """
 
     # def __getattr__(self, attribute: str) -> Any:
@@ -404,4 +435,3 @@ class Project(amicus.quirks.Element):
         except StopIteration:
             pass
         return self
-

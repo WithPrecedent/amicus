@@ -9,6 +9,7 @@ Contents:
 """
 from __future__ import annotations
 import abc
+import collections.abc
 import copy
 import dataclasses
 import inspect
@@ -21,12 +22,11 @@ import more_itertools
 
 import amicus
 from . import configuration
-from . import workshop
 
 
 @dataclasses.dataclass
 class Registry(amicus.types.Catalog):
-    """A Catalog of Worker subclasses or subclass instances."""
+    """A Catalog of Component subclasses or subclass instances."""
 
     """ Properties """
     
@@ -110,7 +110,7 @@ class Library(object):
         else:
             raise TypeError(f'{component} is not a recognized type')
 
-    def instance(self, name: Union[str, Sequence[str]], **kwargs) -> Worker:
+    def instance(self, name: Union[str, Sequence[str]], **kwargs) -> Component:
         """Returns instance of first match of 'name' in stored catalogs.
         
         The method prioritizes the 'instances' catalog over 'subclasses' and any
@@ -123,7 +123,7 @@ class Library(object):
             KeyError: [description]
             
         Returns:
-            Worker: [description]
+            Component: [description]
             
         """
         names = amicus.tools.listify(name)
@@ -148,11 +148,11 @@ class Library(object):
                 setattr(instance, key, value)  
         return instance 
 
-    def register(self, component: Union[Worker, Type[Worker]]) -> None:
+    def register(self, component: Union[Component, Type[Component]]) -> None:
         """[summary]
 
         Args:
-            component (Union[Worker, Type[Worker]]): [description]
+            component (Union[Component, Type[Component]]): [description]
 
         Raises:
             TypeError: [description]
@@ -161,21 +161,21 @@ class Library(object):
             [type]: [description]
             
         """
-        if isinstance(component, Worker):
+        if isinstance(component, Component):
             instances_key = self._get_instances_key(component = component)
             self.instances[instances_key] = component
             subclasses_key = self._get_subclasses_key(component = component)
             if subclasses_key not in self.subclasses:
                 self.subclasses[subclasses_key] = component.__class__
-        elif inspect.isclass(component) and issubclass(component, Worker):
+        elif inspect.isclass(component) and issubclass(component, Component):
             subclasses_key = self._get_subclasses_key(component = component)
             self.subclasses[subclasses_key] = component
         else:
             raise TypeError(
-                f'component must be a Worker subclass or instance')
+                f'component must be a Component subclass or instance')
         return self
     
-    def select(self, name: Union[str, Sequence[str]]) -> Worker:
+    def select(self, name: Union[str, Sequence[str]]) -> Component:
         """Returns subclass of first match of 'name' in stored catalogs.
         
         The method prioritizes the 'subclasses' catalog over 'instances' and any
@@ -188,7 +188,7 @@ class Library(object):
             KeyError: [description]
             
         Returns:
-            Worker: [description]
+            Component: [description]
             
         """
         names = amicus.tools.listify(name)
@@ -226,7 +226,7 @@ class Library(object):
     """ Private Methods """
     
     def _get_instances_key(self, 
-        component: Union[Worker, Type[Worker]]) -> str:
+        component: Union[Component, Type[Component]]) -> str:
         """Returns a snakecase key of the class name.
         
         Returns:
@@ -243,7 +243,7 @@ class Library(object):
         return key
     
     def _get_subclasses_key(self, 
-        component: Union[Worker, Type[Worker]]) -> str:
+        component: Union[Component, Type[Component]]) -> str:
         """Returns a snakecase key of the class name.
         
         Returns:
@@ -259,7 +259,7 @@ class Library(object):
 
 @dataclasses.dataclass    
 class Parameters(amicus.types.Lexicon):
-    """Creates and stores parameters for a Worker.
+    """Creates and stores parameters for a Component.
     
     The use of Parameters is entirely optional, but it provides a handy tool
     for aggregating data from an array of sources, including those which only 
@@ -282,8 +282,8 @@ class Parameters(amicus.types.Lexicon):
             an empty dict.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. To properly match parameters
-            in a Configuration instance, 'name' should be the prefix to "_parameters"
-            as a section name in a Configuration instance. Defaults to None. 
+            in a Settings instance, 'name' should be the prefix to "_parameters"
+            as a section name in a Settings instance. Defaults to None. 
         default (Mapping[str, Any]): default parameters that will be used if 
             they are not overridden. Defaults to an empty dict.
         implementation (Mapping[str, str]): parameters with values that can only 
@@ -295,7 +295,7 @@ class Parameters(amicus.types.Lexicon):
             allowed. If 'selected' is empty, all possible parameters are 
             allowed. However, if any are listed, all other parameters that are
             included are removed. This is can be useful when including 
-            parameters in a Configuration instance for an entire step, only some of
+            parameters in a Settings instance for an entire step, only some of
             which might apply to certain techniques. Defaults to an empty list.
 
     """
@@ -338,11 +338,11 @@ class Parameters(amicus.types.Lexicon):
     """ Private Methods """
      
     def _from_settings(self, 
-        settings: amicus.options.Configuration) -> Dict[str, Any]: 
+        settings: amicus.options.Settings) -> Dict[str, Any]: 
         """Returns any applicable parameters from 'settings'.
 
         Args:
-            settings (amicus.options.Configuration): instance with possible 
+            settings (amicus.options.Settings): instance with possible 
                 parameters.
 
         Returns:
@@ -553,7 +553,7 @@ class Task(Component, abc.ABC):
 
 
 @dataclasses.dataclass
-class Worker(amicus.structures.Graph, Component):
+class Worker(Component, collections.abc.Iterable, abc.ABC):
     """Keystone class for parts of an amicus workflow.
 
     Args:

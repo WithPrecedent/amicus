@@ -1,5 +1,5 @@
 """
-amicus.project.configuration:
+amicus.project.settings:
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
@@ -15,8 +15,6 @@ from typing import (Any, Callable, ClassVar, Dict, Hashable, Iterable, List,
     Mapping, MutableMapping, MutableSequence, Optional, Sequence, Set, Tuple, 
     Type, Union)
 
-from . import nodes
-from . import core
 import amicus
 
 
@@ -204,3 +202,5 @@ class Settings(amicus.options.Configuration):
         return managers
 
 settings = Settings()
+
+filer = amicus.options.Clerk(settings = settings)
