@@ -148,6 +148,19 @@ class Library(object):
                 setattr(instance, key, value)  
         return instance 
 
+    def parameterify(self, name: Union[str, Sequence[str]]) -> List[str]:
+        """[summary]
+
+        Args:
+            name (Union[str, Sequence[str]]): [description]
+
+        Returns:
+            List[str]: [description]
+            
+        """        
+        component = self.select(name = name)
+        return list(component.__annotations__.keys())
+       
     def register(self, component: Union[Component, Type[Component]]) -> None:
         """[summary]
 
@@ -209,20 +222,7 @@ class Library(object):
         else:
             component = item.__class__  
         return component 
-
-    def parameterify(self, name: Union[str, Sequence[str]]) -> List[str]:
-        """[summary]
-
-        Args:
-            name (Union[str, Sequence[str]]): [description]
-
-        Returns:
-            List[str]: [description]
-            
-        """        
-        component = self.select(name = name)
-        return list(component.__annotations__.keys())
-           
+    
     """ Private Methods """
     
     def _get_instances_key(self, 
@@ -387,7 +387,7 @@ class Parameters(amicus.types.Lexicon):
 
 @dataclasses.dataclass
 class Component(abc.ABC):
-    """Base Keystone class for nodes in a project workflow.
+    """Base class for nodes in a project workflow.
 
     Args:
         name (str): designates the name of a class instance that is used for 
@@ -484,7 +484,7 @@ class Component(abc.ABC):
                 while True:
                     project = self.implement(project = project, **parameters)
             else:
-                for iteration in range(iterations):
+                for _ in range(iterations):
                     project = self.implement(project = project, **parameters)
         return project
 
@@ -587,25 +587,6 @@ class Worker(Component, collections.abc.Iterable, abc.ABC):
     iterations: Union[int, str] = 1
     default: Any = dataclasses.field(default_factory = list)
 
-    """ Private Methods """
-    
-    def _implement_in_serial(self, 
-        project: amicus.Project, 
-        **kwargs) -> amicus.Project:
-        """Applies stored nodes to 'project' in order.
-
-        Args:
-            project (Project): amicus project to apply changes to and/or
-                gather needed data from.
-                
-        Returns:
-            Project: with possible alterations made.       
-        
-        """
-        for node in self.paths[0]:
-            project = node.execute(project = project, **kwargs)
-        return project
-    
     """ Public Methods """  
 
     def organize(self, subcomponents: Dict[str, List[str]]) -> None:
@@ -637,7 +618,24 @@ class Worker(Component, collections.abc.Iterable, abc.ABC):
         return self._implement_in_serial(project = project, **kwargs)    
 
     """ Private Methods """
-    
+
+    def _implement_in_serial(self, 
+        project: amicus.Project, 
+        **kwargs) -> amicus.Project:
+        """Applies stored nodes to 'project' in order.
+
+        Args:
+            project (Project): amicus project to apply changes to and/or
+                gather needed data from.
+                
+        Returns:
+            Project: with possible alterations made.       
+        
+        """
+        for node in self.paths[0]:
+            project = node.execute(project = project, **kwargs)
+        return project
+       
     def _serial_order(self, 
         name: str,
         subcomponents: Dict[str, List[str]]) -> List[Hashable]:

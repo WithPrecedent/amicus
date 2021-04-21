@@ -175,8 +175,8 @@ class Structure(amicus.Bunch, abc.ABC):
     implementation of all of the listed methods and properties.
     
     Structure also includes two dunder methods that allow '+' and '+=' to be 
-    used to combine two amicus structures. However, for these duner methods to
-    work, the subclass must include its own 'combine' method.
+    used to join two amicus structures. However, for these duner methods to
+    work, the subclass must include its own 'join' method.
     
     Args:
         contents (Iterable): stored iterable. Defaults to None.
@@ -321,13 +321,13 @@ class Structure(amicus.Bunch, abc.ABC):
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
 
-    def combine(self, structure: Structure) -> None:
+    def join(self, structure: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
         Subclasses should ordinarily provide their own methods.
         
         Args:
-            structure (Structure): a second Structure to combine with this one.
+            structure (Structure): a second Structure to join with this one.
             
         """
         raise NotImplementedError(
@@ -374,7 +374,7 @@ class Structure(amicus.Bunch, abc.ABC):
 
     """ Private Method """
     
-    def _namify(self, node: Any) -> str:
+    def _hashify(self, node: Any) -> str:
         """[summary]
 
         Args:
@@ -400,29 +400,29 @@ class Structure(amicus.Bunch, abc.ABC):
     def __add__(self, other: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
-        Adding another structure uses the 'combine' method. Read that method's 
+        Adding another structure uses the 'join' method. Read that method's 
         docstring for further details about how the structures are added 
         together.
         
         Args:
-            other (Structure): a second Structure to combine with this one.
+            other (Structure): a second Structure to join with this one.
             
         """
-        self.combine(structure = other)        
+        self.join(structure = other)        
         return self
 
     def __iadd__(self, other: Any) -> None:
         """Adds 'other' Structure to this Structure.
 
-        Adding another structure uses the 'combine' method. Read that method's 
+        Adding another structure uses the 'join' method. Read that method's 
         docstring for further details about how the structures are added 
         together.
         
         Args:
-            other (Structure): a second Structure to combine with this one.
+            other (Structure): a second Structure to join with this one.
             
         """
-        self.combine(structure = other)        
+        self.join(structure = other)        
         return self
 
 
@@ -463,7 +463,7 @@ class Graph(amicus.types.Lexicon, Structure):
                 of edges as values.
             
         """
-        return {self._namify(n): e for n, e in self.contents.items()}
+        return {self._hashify(n): e for n, e in self.contents.items()}
                
     @property
     def endpoints(self) -> List[Hashable]:
@@ -489,7 +489,7 @@ class Graph(amicus.types.Lexicon, Structure):
             List[Hashable]: all nodes.
             
         """
-        return {self._namify(n): n for n in self.contents.keys()}
+        return {self._hashify(n): n for n in self.contents.keys()}
 
     @property
     def paths(self) -> List[List[Hashable]]:
@@ -657,7 +657,7 @@ class Graph(amicus.types.Lexicon, Structure):
             if start not in self.contents:
                 self.add_node(node = start)
             if stop not in self.contents[start]:
-                self.contents[start].append(self._namify(stop))
+                self.contents[start].append(self._hashify(stop))
         return self
 
     def add_node(self, node: Hashable) -> None:
@@ -697,64 +697,6 @@ class Graph(amicus.types.Lexicon, Structure):
         else:
             self.add_node(node = node)
         return self  
-    
-    def branchify(self, 
-        nodes: Sequence[Sequence[Hashable]],
-        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
-        """Adds parallel paths to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            nodes (Sequence[Sequence[Hashable]]): a list of list of nodes which
-                should have a Cartesian product determined and extended to
-                the stored data structure.
-            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
-                to. If there are multiple nodes in 'start', 'node' will be added 
-                to each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """
-        if start is None:
-            start = copy.deepcopy(self.endpoints) 
-        paths = list(map(list, itertools.product(*nodes))) 
-        for path in paths:
-            if start:
-                for starting in more_itertools.always_iterable(start):
-                    self.add_edge(start = starting, stop = path[0])
-            elif path[0] not in self.contents:
-                self.add_node(path[0])
-            edges = more_itertools.windowed(path, 2)
-            for edge_pair in edges:
-                self.add_edge(start = edge_pair[0], stop = edge_pair[1]) 
-        return self    
-
-    def combine(self, structure: Graph) -> None:
-        """Adds 'structure' to this Graph.
-
-        Combining creates an edge between every endpoint of this instance's
-        Graph and the every root of 'graph'.
-
-        Args:
-            structure (Graph): a second Graph to combine with this one.
-            
-        Raises:
-            ValueError: if 'graph' has nodes that are also in 'contents'.
-            TypeError: if 'graph' is not a Graph type.
-            
-        """
-        if isinstance(structure, Graph):
-            if self.contents:
-                current_endpoints = self.endpoints
-                self.contents.update(structure.contents)
-                for endpoint in current_endpoints:
-                    for root in structure.roots:
-                        self.add_edge(start = endpoint, stop = root)
-            else:
-                self.contents = structure.contents
-        else:
-            raise TypeError('structure must be a Graph type to combine')
-        return self
 
     def delete_edge(self, start: Hashable, stop: Hashable) -> None:
         """Deletes edge from graph.
@@ -874,6 +816,33 @@ class Graph(amicus.types.Lexicon, Structure):
                     paths.append(new_path)
         return paths
 
+    def join(self, structure: Graph) -> None:
+        """Adds 'structure' to this Graph.
+
+        Combining creates an edge between every endpoint of this instance's
+        Graph and the every root of 'graph'.
+
+        Args:
+            structure (Graph): a second Graph to join with this one.
+            
+        Raises:
+            ValueError: if 'graph' has nodes that are also in 'contents'.
+            TypeError: if 'graph' is not a Graph type.
+            
+        """
+        if isinstance(structure, Graph):
+            if self.contents:
+                current_endpoints = self.endpoints
+                self.contents.update(structure.contents)
+                for endpoint in current_endpoints:
+                    for root in structure.roots:
+                        self.add_edge(start = endpoint, stop = root)
+            else:
+                self.contents = structure.contents
+        else:
+            raise TypeError('structure must be a Graph type to join')
+        return self
+
     def replace_node(self, node: Hashable) -> None:
         """Replaces a node that already exists but leaves its edges intact.
 
@@ -887,7 +856,7 @@ class Graph(amicus.types.Lexicon, Structure):
         """
         if node not in self.contents:
             raise ValueError(
-                f'{self._namify(node)} cannot replace a node that does not '
+                f'{self._hashify(node)} cannot replace a node that does not '
                 f'currently exist')   
         else:
             edges = self.contents[node]
@@ -1179,13 +1148,13 @@ class Pipeline(amicus.types.Hybrid, Structure):
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
 
-    def combine(self, structure: Structure) -> None:
+    def join(self, structure: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
         Subclasses should ordinarily provide their own methods.
         
         Args:
-            structure (Structure): a second Structure to combine with this one.
+            structure (Structure): a second Structure to join with this one.
             
         """
         raise NotImplementedError(
