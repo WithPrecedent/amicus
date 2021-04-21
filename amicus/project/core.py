@@ -23,12 +23,10 @@ import amicus
 from . import configuration
 from . import workshop
 
-
-
  
 @dataclasses.dataclass
 class Cookbook(amicus.types.Lexicon):
-    """Stores a xollection of Recipes.
+    """Stores a collection of Recipes.
     
     Args:
         contents (Mapping[Hashable, Recipe]]): stored dictionary. Defaults to an 
@@ -56,7 +54,7 @@ class Cookbook(amicus.types.Lexicon):
 
 
 @dataclasses.dataclass
-class Result(amicus.types.Lexicon):            
+class Recipe(amicus.types.Lexicon):            
     """Stores results from a single path through a Workflow.
 
     Args:
@@ -104,8 +102,8 @@ class Summary(amicus.types.Lexicon):
             a list with 'workflow' and 'data'.          
               
     """
-    contents: Mapping[str, Result] = dataclasses.field(default_factory = dict)
-    default: Any = Result()
+    contents: Mapping[str, Recipe] = dataclasses.field(default_factory = dict)
+    default: Any = Recipe()
     prefix: str = 'path'
 
     """ Public Methods """
