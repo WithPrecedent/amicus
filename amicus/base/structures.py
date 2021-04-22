@@ -119,27 +119,7 @@ class Node(amicus.quirks.Element, collections.abc.Hashable):
         """
         return not(self == other)
 
-   
-@dataclasses.dataclass
-class SimpleNode(Node):
-    """Vertex that is unaware of nodes that it is connected to.
-    
-    SimpleNodes use less memory and embody the principle of loose coupling, 
-    relying on a Structure to determine all connections and relationships.
-    
-    Args:
-        contents (Any): any stored item(s). Defaults to None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. 
-            Defaults to None. 
-
-    """
-    contents: Any = None
-    name: str = None
-    
-    
+     
 @dataclasses.dataclass
 class SmartNode(Node):
     """Vertex that is aware of nodes that it is connected to.
@@ -161,7 +141,19 @@ class SmartNode(Node):
     parents: Sequence[Node] = dataclasses.field(default_factory = list)
     children: Sequence[Node] = dataclasses.field(default_factory = list)
     
-     
+
+def is_adjacency_list(item: Any) -> bool:
+    return (isinstance(item, Dict) 
+            and all(isinstance(v, List) for v in item.values()))
+
+def is_adjacency_matrix(item: Any) -> bool:
+    return isinstance(item, List) and all(isinstance(i, List) for i in item)
+
+def is_edge_list(item: Any) -> bool:
+    return (isinstance(item, List) 
+            and all(isinstance(i, Tuple) for i in item)
+            and all(len(i) == 2 for i in item))
+             
 @dataclasses.dataclass
 class Structure(amicus.Bunch, abc.ABC):
     """Abstract base class for iterable amicus data structures.
@@ -254,7 +246,7 @@ class Structure(amicus.Bunch, abc.ABC):
     """ Class Methods """
     
     @classmethod
-    def create(cls, *kwargs) -> Structure:
+    def create(cls, **kwargs) -> Structure:
         """Creates an instance of a Structure subclass from 'source'.
         
         Subclasses must proivde their own classmethods.
@@ -298,41 +290,6 @@ class Structure(amicus.Bunch, abc.ABC):
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
-    
-    def branchify(self, 
-        nodes: Sequence[Sequence[str]],
-        start: Union[str, Sequence[str]] = None, 
-        **kwargs) -> None:
-        """Adds parallel paths to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            nodes (Sequence[Sequence[str]]): a list of list of nodes which
-                should have a Cartesian product determined and extended to
-                the stored data structure.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """ 
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    def join(self, structure: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
-
-        Subclasses should ordinarily provide their own methods.
-        
-        Args:
-            structure (Structure): a second Structure to join with this one.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
 
     def extend(self, 
         nodes: Sequence[str],
@@ -352,7 +309,20 @@ class Structure(amicus.Bunch, abc.ABC):
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
-         
+
+    def join(self, structure: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Subclasses should ordinarily provide their own methods.
+        
+        Args:
+            structure (Structure): a second Structure to join with this one.
+            
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+     
     def search(self, start: str = None, depth_first: bool = True) -> List[Any]:
         """Returns a path through the stored data structure.
 
@@ -374,7 +344,7 @@ class Structure(amicus.Bunch, abc.ABC):
 
     """ Private Method """
     
-    def _hashify(self, node: Any) -> str:
+    def _stringify(self, node: Any) -> str:
         """[summary]
 
         Args:
@@ -391,9 +361,12 @@ class Structure(amicus.Bunch, abc.ABC):
                 return node.name
             except AttributeError:
                 try:
-                    return amicus.tools.snakify(node.__name__)
-                except AttributeError:
-                    return amicus.tools.snakify(node.__class__.__name__)
+                    return str(hash(node))
+                except (AttributeError, TypeError):
+                    try:
+                        return amicus.tools.snakify(node.__name__)
+                    except AttributeError:
+                        return amicus.tools.snakify(node.__class__.__name__)
                 
     """ Dunder Methods """
 
@@ -463,7 +436,7 @@ class Graph(amicus.types.Lexicon, Structure):
                 of edges as values.
             
         """
-        return {self._hashify(n): e for n, e in self.contents.items()}
+        return {self._stringify(n): e for n, e in self.contents.items()}
                
     @property
     def endpoints(self) -> List[Hashable]:
@@ -489,7 +462,7 @@ class Graph(amicus.types.Lexicon, Structure):
             List[Hashable]: all nodes.
             
         """
-        return {self._hashify(n): n for n in self.contents.keys()}
+        return {self._stringify(n): n for n in self.contents.keys()}
 
     @property
     def paths(self) -> List[List[Hashable]]:
@@ -657,7 +630,7 @@ class Graph(amicus.types.Lexicon, Structure):
             if start not in self.contents:
                 self.add_node(node = start)
             if stop not in self.contents[start]:
-                self.contents[start].append(self._hashify(stop))
+                self.contents[start].append(self._stringify(stop))
         return self
 
     def add_node(self, node: Hashable) -> None:
@@ -856,7 +829,7 @@ class Graph(amicus.types.Lexicon, Structure):
         """
         if node not in self.contents:
             raise ValueError(
-                f'{self._hashify(node)} cannot replace a node that does not '
+                f'{self._stringify(node)} cannot replace a node that does not '
                 f'currently exist')   
         else:
             edges = self.contents[node]
@@ -1125,41 +1098,6 @@ class Pipeline(amicus.types.Hybrid, Structure):
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.__class__.__name__} '
             f'structure')
-    
-    def branchify(self, 
-        nodes: Sequence[Sequence[str]],
-        start: Union[str, Sequence[str]] = None, 
-        **kwargs) -> None:
-        """Adds parallel paths to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            nodes (Sequence[Sequence[str]]): a list of list of nodes which
-                should have a Cartesian product determined and extended to
-                the stored data structure.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """ 
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    def join(self, structure: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
-
-        Subclasses should ordinarily provide their own methods.
-        
-        Args:
-            structure (Structure): a second Structure to join with this one.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
 
     def extend(self, 
         nodes: Sequence[str],
@@ -1175,6 +1113,19 @@ class Pipeline(amicus.types.Hybrid, Structure):
                 each of the starting points. If 'start' is None, 'endpoints'
                 will be used. Defaults to None.
                 
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+
+    def join(self, structure: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Subclasses should ordinarily provide their own methods.
+        
+        Args:
+            structure (Structure): a second Structure to join with this one.
+            
         """
         raise NotImplementedError(
             f'{__name__} is not implemented for a {self.__class__.__name__} '
