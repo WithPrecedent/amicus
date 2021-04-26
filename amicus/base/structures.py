@@ -143,19 +143,141 @@ class SmartNode(Node):
     
 
 def is_adjacency_list(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
+    
     return (isinstance(item, Dict) 
             and all(isinstance(v, List) for v in item.values()))
 
 def is_adjacency_matrix(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
     return isinstance(item, List) and all(isinstance(i, List) for i in item)
 
 def is_edge_list(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
     return (isinstance(item, List) 
             and all(isinstance(i, Tuple) for i in item)
             and all(len(i) == 2 for i in item))
-             
+
+def adjacency_list_to_edge_list(
+    source: Dict[Hashable, List[Hashable]]) -> List[tuple[Hashable]]:
+    """[summary]
+
+    Args:
+        source (Dict[Hashable, List[Hashable]]): [description]
+
+    Returns:
+        List[tuple[Hashable]]: [description]
+        
+    """
+    edges = []
+    for node, connections in source.items():
+        for connection in connections:
+            edges.append(tuple(node, connection))
+    return 
+
+def adjacency_list_to_adjacency_matrix(
+    source: Dict[Hashable, List[Hashable]]) -> Tuple[
+        List[List[int]], List[Hashable]]:
+    """[summary]
+
+    Args:
+        source (Dict[Hashable, List[Hashable]]): [description]
+
+    Returns:
+        Tuple[ List[List[int]], List[Hashable]]: [description]
+        
+    """
+    names = list(source.keys())
+    matrix = []
+    for i in range(len(source)): 
+        matrix.append([0] * len(source))
+        for j in source[i]:
+            matrix[i][j] = 1
+    return tuple(matrix, names)
+
+def adjacency_matrix_to_adjacency_list(
+    source: Tuple[List[List[int]], List[Hashable]]) -> Dict[
+        Hashable, List[Hashable]]:
+    """[summary]
+
+    Args:
+        source (Tuple[List[List[int]], List[Hashable]]): [description]
+
+    Returns:
+        Dict[ Hashable, List[Hashable]]: [description]
+        
+    """
+    matrix = source[0]
+    names = source[1]
+    name_mapping = dict(zip(range(len(matrix)), names))
+    raw_adjacency = {
+        i: [j for j, adjacent in enumerate(row) if adjacent] 
+        for i, row in enumerate(matrix)}
+    adjacency = {}
+    for key, value in raw_adjacency.items():
+        new_key = name_mapping[key]
+        new_values = []
+        for edge in value:
+            new_values.append(name_mapping[edge])
+        adjacency[new_key] = new_values
+    return adjacency
+
+# def adjacency_matrix_to_edge_list(
+#     source: Tuple[List[List[int]], List[Hashable]]) -> List[tuple[Hashable]]:
+#     return
+
+def edge_list_to_adjacency_list(
+    source: List[tuple[Hashable]]) -> Dict[Hashable, List[Hashable]]:
+    """[summary]
+
+    Args:
+        source (List[tuple[Hashable]]): [description]
+
+    Returns:
+        Dict[Hashable, List[Hashable]]: [description]
+        
+    """
+    adjacency = {}
+    for edge_pair in source:
+        if edge_pair[0] not in adjacency:
+            adjacency[edge_pair[0]] = [edge_pair[1]]
+        else:
+            adjacency[edge_pair[0]].append(edge_pair[1])
+        if edge_pair[1] not in adjacency:
+            adjacency[edge_pair[1]] = []
+    return adjacency
+
+# def edge_list_to_adjacency_matrix(
+#     source: List[tuple[Hashable]]) -> Tuple[List[List[int]], List[Hashable]]:
+#     return
+
+       
 @dataclasses.dataclass
-class Structure(amicus.Bunch, abc.ABC):
+class Structure(amicus.types.Bunch, abc.ABC):
     """Abstract base class for iterable amicus data structures.
     
     Structure includes many methods and properties that should ordinarily be
@@ -180,6 +302,7 @@ class Structure(amicus.Bunch, abc.ABC):
             'endpoints' property will return a list with that one endpoint if 
             'consistent_interface' is True to maintain consistency with other
             Structure subclasses. Defaults to True.
+            
     """
     contents: Iterable = None
     consistent_interface: bool = True
@@ -554,15 +677,7 @@ class Graph(amicus.types.Lexicon, Structure):
             Graph: a Graph instance created based on 'edges'.
 
         """
-        contents = {}
-        for edge_pair in edges:
-            if edge_pair[0] not in contents:
-                contents[edge_pair[0]] = [edge_pair[1]]
-            else:
-                contents[edge_pair[0]].append(edge_pair[1])
-            if edge_pair[1] not in contents:
-                contents[edge_pair[1]] = []
-        return cls(contents = contents)
+        return cls(contents = edge_list_to_adjacency_list(source = edges))
     
     @classmethod
     def from_matrix(cls, 
@@ -581,18 +696,8 @@ class Graph(amicus.types.Lexicon, Structure):
             Graph: a Graph instance created based on 'matrix' and 'names'.
                         
         """
-        name_mapping = dict(zip(range(len(matrix)), names))
-        raw_adjacency = {
-            i: [j for j, adjacent in enumerate(row) if adjacent] 
-            for i, row in enumerate(matrix)}
-        contents = {}
-        for key, value in raw_adjacency.items():
-            new_key = name_mapping[key]
-            new_values = []
-            for edge in value:
-                new_values.append(name_mapping[edge])
-            contents[new_key] = new_values
-        return cls(contents = contents)
+        return cls(contents = adjacency_matrix_to_adjacency_list(
+            source = tuple(matrix, names)))
     
     """ Public Methods """
     
