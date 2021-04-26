@@ -23,7 +23,72 @@ import amicus
 from . import configuration
 from . import workshop
 
+     
+@dataclasses.dataclass
+class Workflow(amicus.structures.Graph):
+    """Stores a workflow as an adjacency list.
 
+    Args:
+        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
+            keys are nodes and the values are nodes which the key is connected 
+            to. Defaults to an empty dict.
+        default (Any): default value to return when the 'get' method is used.
+            Defaults to an empty list.
+                  
+    """  
+    contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
+        default_factory = dict)
+    default: Any = dataclasses.field(default_factory = list)
+    components: MutableMapping[str, object] = (
+        amicus.project.configuration.bases.component.library)
+
+    """ Public Class Methods """
+        
+    @classmethod
+    def create(cls, project: amicus.Project, **kwargs) -> Workflow:
+        """Creates a Workflow instance from 'project'.
+                
+        Returns:
+            Workflow: created from attributes of 'project' and/or any default
+                options if the data for creation is not in 'project'.
+                
+        """
+        return workshop.create_workflow(project = project, **kwargs)
+
+    """ Public Methods """
+
+    def branchify(self, 
+        nodes: Sequence[Sequence[Hashable]],
+        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
+        """Adds parallel paths to the stored data structure.
+
+        Subclasses should ordinarily provide their own methods.
+
+        Args:
+            nodes (Sequence[Sequence[Hashable]]): a list of list of nodes which
+                should have a Cartesian product determined and extended to
+                the stored data structure.
+            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
+                to. If there are multiple nodes in 'start', 'node' will be added 
+                to each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """
+        if start is None:
+            start = copy.deepcopy(self.endpoints) 
+        paths = list(map(list, itertools.product(*nodes))) 
+        for path in paths:
+            if start:
+                for starting in more_itertools.always_iterable(start):
+                    self.add_edge(start = starting, stop = path[0])
+            elif path[0] not in self.contents:
+                self.add_node(path[0])
+            edges = more_itertools.windowed(path, 2)
+            for edge_pair in edges:
+                self.add_edge(start = edge_pair[0], stop = edge_pair[1]) 
+        return self    
+  
+  
 @dataclasses.dataclass
 class Recipe(amicus.types.Lexicon):            
     """Stores results from a single path through a Workflow.
@@ -91,9 +156,8 @@ class Cookbook(amicus.types.Lexicon):
     contents: Mapping[Hashable, Recipe] = dataclasses.field(
         default_factory = dict)
     default: Any = Recipe
-    prefix: ClassVar[str] = 'recipe'
 
-    """ Public Methods """
+    """ Public Class Methods """
     
     @classmethod
     def create(cls, project: amicus.Project, **kwargs) -> Cookbook:
@@ -113,7 +177,24 @@ class Cookbook(amicus.types.Lexicon):
                 name = name)
             cookbook[name] = recipe
         return cookbook
-            
+          
+    """ Public Methods """
+    
+    def add(self, recipe: Recipe, prefix: str = None) -> None:
+        """Adds a recipe to 'contents'.
+
+        Args:
+            recipe (Recipe): Recipe instance to store in the cookbook.
+            prefix (str): prefix to use for the key in storing 'recipe'. If it
+                is None, the snake case name of the class of 'recipe' will be
+                used as the prefix. Defaults to None.
+
+        """
+        prefix = prefix or amicus.tools.snakify(recipe.__class__.__name__)
+        key = f'{prefix}_{len(self.contents) + 1}'
+        self.contents[key] = recipe
+        return self
+  
             
 @dataclasses.dataclass
 class Summary(amicus.types.Lexicon):
@@ -128,8 +209,8 @@ class Summary(amicus.types.Lexicon):
     contents: Mapping[str, Recipe] = dataclasses.field(default_factory = dict)
     default: Any = Recipe()
 
-    """ Public Methods """
-    
+    """ Public Class Methods """
+     
     @classmethod
     def create(cls, project: amicus.Project, **kwargs) -> Summary:
         """Creates a Summary instance from 'project'.
@@ -140,67 +221,3 @@ class Summary(amicus.types.Lexicon):
                 
         """
         return workshop.create_summary(project = project, **kwargs)
-
-            
-@dataclasses.dataclass
-class Workflow(amicus.structures.Graph):
-    """Stores a workflow as an adjacency list.
-
-    Args:
-        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
-            keys are nodes and the values are nodes which the key is connected 
-            to. Defaults to an empty dict.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to an empty list.
-                  
-    """  
-    contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
-        default_factory = dict)
-    default: Any = dataclasses.field(default_factory = list)
-    components: MutableMapping[str, object] = (
-        amicus.project.configuration.bases.component.library)
-
-    """ Public Methods """
-    
-    @classmethod
-    def create(cls, project: amicus.Project, **kwargs) -> Workflow:
-        """Creates a Workflow instance from 'project'.
-                
-        Returns:
-            Workflow: created from attributes of 'project' and/or any default
-                options if the data for creation is not in 'project'.
-                
-        """
-        return workshop.create_workflow(project = project, **kwargs)
-
-    def branchify(self, 
-        nodes: Sequence[Sequence[Hashable]],
-        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
-        """Adds parallel paths to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            nodes (Sequence[Sequence[Hashable]]): a list of list of nodes which
-                should have a Cartesian product determined and extended to
-                the stored data structure.
-            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
-                to. If there are multiple nodes in 'start', 'node' will be added 
-                to each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """
-        if start is None:
-            start = copy.deepcopy(self.endpoints) 
-        paths = list(map(list, itertools.product(*nodes))) 
-        for path in paths:
-            if start:
-                for starting in more_itertools.always_iterable(start):
-                    self.add_edge(start = starting, stop = path[0])
-            elif path[0] not in self.contents:
-                self.add_node(path[0])
-            edges = more_itertools.windowed(path, 2)
-            for edge_pair in edges:
-                self.add_edge(start = edge_pair[0], stop = edge_pair[1]) 
-        return self    
-  
