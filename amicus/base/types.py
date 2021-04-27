@@ -54,7 +54,7 @@ class Proxy(collections.abc.Container):
             agnostic as to the type of item(s) in 'contents' while returning the
             expected result from an 'in' call.
         2) Access methods for getting, setting, and deleting try to 
-            intelligently direct the user's call to the proxy or stored class.
+            intelligently direct the user's call to the proxy or stored object.
             So, for example, when a user tries to set an attribute on the proxy,
             the method will replace an attribute that exists in the proxy if
             one exists. But if there is no such attribute, the set method is

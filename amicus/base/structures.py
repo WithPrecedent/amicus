@@ -10,9 +10,8 @@ unweighted and directed. However, the architecture of Structure and Node can
 support weighted edges and undirected composite structures as well.
 
 Contents:
-    Node (Element, Proxy, collections.abc.Hashable):
-    SimpleNode (Node):
-    SmartNode (Node):
+    Node (Element, collections.abc.Hashable):
+    # SmartNode (Node):
     Structure (Keystone, ABC): base class for all amicus composite structures.
     Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
 
@@ -51,20 +50,20 @@ class Node(amicus.quirks.Element, collections.abc.Hashable):
     'contents'.
     
     Args:
-        contents (Any): any stored item(s). Defaults to None.
         name (str): designates the name of a class instance that is used for 
             internal referencing throughout amicus. For example, if an amicus 
             instance needs settings from a Configuration instance, 'name' should 
             match the appropriate section name in a Configuration instance. 
             Defaults to None. 
+        contents (Any): any stored item(s). Defaults to None.
 
     """
-    contents: Any = None
     name: str = None
+    contents: Any = None
 
     """ Initialization Methods """
     
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, *args, **kwargs):
         """Forces subclasses to use the same hash methods as Node.
         
         This is necessary because dataclasses, by design, do not automatically 
@@ -72,7 +71,7 @@ class Node(amicus.quirks.Element, collections.abc.Hashable):
         classes.
         
         """
-        super().__init_subclass__(**kwargs)
+        super().__init_subclass__(*args, **kwargs)
         cls.__hash__ = Node.__hash__
         cls.__eq__ = Node.__eq__
         cls.__ne__ = Node.__ne__
@@ -120,26 +119,26 @@ class Node(amicus.quirks.Element, collections.abc.Hashable):
         return not(self == other)
 
      
-@dataclasses.dataclass
-class SmartNode(Node):
-    """Vertex that is aware of nodes that it is connected to.
+# @dataclasses.dataclass
+# class SmartNode(Node):
+#     """Vertex that is aware of nodes that it is connected to.
     
-    SmartNodes take more memory, include methods to coordinate with adjoining
-    nodes, and allow for decentralization of connections and relationships.
+#     SmartNodes take more memory, include methods to coordinate with adjoining
+#     nodes, and allow for decentralization of connections and relationships.
     
-    Args:
-        contents (Any): any stored item(s). Defaults to None.
-        name (str): designates the name of a class instance that is used for 
-            internal referencing throughout amicus. For example, if an amicus 
-            instance needs settings from a Configuration instance, 'name' should 
-            match the appropriate section name in a Configuration instance. 
-            Defaults to None. 
+#     Args:
+#         contents (Any): any stored item(s). Defaults to None.
+#         name (str): designates the name of a class instance that is used for 
+#             internal referencing throughout amicus. For example, if an amicus 
+#             instance needs settings from a Configuration instance, 'name' should 
+#             match the appropriate section name in a Configuration instance. 
+#             Defaults to None. 
 
-    """
-    contents: Any = None
-    name: str = None
-    parents: Sequence[Node] = dataclasses.field(default_factory = list)
-    children: Sequence[Node] = dataclasses.field(default_factory = list)
+#     """
+#     contents: Any = None
+#     name: str = None
+#     parents: Sequence[Node] = dataclasses.field(default_factory = list)
+#     children: Sequence[Node] = dataclasses.field(default_factory = list)
     
 
 def is_adjacency_list(item: Any) -> bool:
@@ -182,7 +181,7 @@ def is_edge_list(item: Any) -> bool:
             and all(isinstance(i, Tuple) for i in item)
             and all(len(i) == 2 for i in item))
 
-def adjacency_list_to_edge_list(
+def adjacency_to_edges(
     source: Dict[Hashable, List[Hashable]]) -> List[tuple[Hashable]]:
     """[summary]
 
@@ -199,7 +198,7 @@ def adjacency_list_to_edge_list(
             edges.append(tuple(node, connection))
     return 
 
-def adjacency_list_to_adjacency_matrix(
+def adjacency_to_matrix(
     source: Dict[Hashable, List[Hashable]]) -> Tuple[
         List[List[int]], List[Hashable]]:
     """[summary]
@@ -219,7 +218,7 @@ def adjacency_list_to_adjacency_matrix(
             matrix[i][j] = 1
     return tuple(matrix, names)
 
-def adjacency_matrix_to_adjacency_list(
+def matrix_to_adjacency(
     source: Tuple[List[List[int]], List[Hashable]]) -> Dict[
         Hashable, List[Hashable]]:
     """[summary]
@@ -246,11 +245,7 @@ def adjacency_matrix_to_adjacency_list(
         adjacency[new_key] = new_values
     return adjacency
 
-# def adjacency_matrix_to_edge_list(
-#     source: Tuple[List[List[int]], List[Hashable]]) -> List[tuple[Hashable]]:
-#     return
-
-def edge_list_to_adjacency_list(
+def edges_to_adjacency(
     source: List[tuple[Hashable]]) -> Dict[Hashable, List[Hashable]]:
     """[summary]
 
@@ -270,10 +265,6 @@ def edge_list_to_adjacency_list(
         if edge_pair[1] not in adjacency:
             adjacency[edge_pair[1]] = []
     return adjacency
-
-# def edge_list_to_adjacency_matrix(
-#     source: List[tuple[Hashable]]) -> Tuple[List[List[int]], List[Hashable]]:
-#     return
 
        
 @dataclasses.dataclass
@@ -677,7 +668,7 @@ class Graph(amicus.types.Lexicon, Structure):
             Graph: a Graph instance created based on 'edges'.
 
         """
-        return cls(contents = edge_list_to_adjacency_list(source = edges))
+        return cls(contents = edges_to_adjacency(source = edges))
     
     @classmethod
     def from_matrix(cls, 
@@ -696,8 +687,7 @@ class Graph(amicus.types.Lexicon, Structure):
             Graph: a Graph instance created based on 'matrix' and 'names'.
                         
         """
-        return cls(contents = adjacency_matrix_to_adjacency_list(
-            source = tuple(matrix, names)))
+        return cls(contents = matrix_to_adjacency(source = tuple(matrix, names)))
     
     """ Public Methods """
     
