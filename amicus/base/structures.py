@@ -38,7 +38,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Node(amicus.quirks.Element, collections.abc.Hashable):
+class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
     """Vertex for any amicus composite Structure.
     
     Node acts a basic wrapper for any item stored in an amicus Structure. An
