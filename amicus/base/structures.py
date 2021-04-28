@@ -37,6 +37,11 @@ import more_itertools
 import amicus
 
 
+Adjacency: Type = Dict[Hashable, List[Hashable]]
+Matrix: Type = Tuple[List[List[int]], List[Hashable]]
+Edges: Type = List[Tuple[Hashable]]
+
+
 @dataclasses.dataclass
 class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
     """Vertex for any amicus composite Structure.
@@ -181,35 +186,16 @@ def is_edge_list(item: Any) -> bool:
             and all(isinstance(i, Tuple) for i in item)
             and all(len(i) == 2 for i in item))
 
-def adjacency_to_edges(
-    source: Dict[Hashable, List[Hashable]]) -> List[tuple[Hashable]]:
-    """[summary]
-
-    Args:
-        source (Dict[Hashable, List[Hashable]]): [description]
-
-    Returns:
-        List[tuple[Hashable]]: [description]
-        
-    """
+def adjacency_to_edges(source: Adjacency) -> Edges:
+    """Converts an adjacency list to an edge list."""
     edges = []
     for node, connections in source.items():
         for connection in connections:
             edges.append(tuple(node, connection))
     return 
 
-def adjacency_to_matrix(
-    source: Dict[Hashable, List[Hashable]]) -> Tuple[
-        List[List[int]], List[Hashable]]:
-    """[summary]
-
-    Args:
-        source (Dict[Hashable, List[Hashable]]): [description]
-
-    Returns:
-        Tuple[ List[List[int]], List[Hashable]]: [description]
-        
-    """
+def adjacency_to_matrix(source: Adjacency) -> Matrix:
+    """Converts an adjacency list to an adjacency matrix."""
     names = list(source.keys())
     matrix = []
     for i in range(len(source)): 
@@ -218,18 +204,20 @@ def adjacency_to_matrix(
             matrix[i][j] = 1
     return tuple(matrix, names)
 
-def matrix_to_adjacency(
-    source: Tuple[List[List[int]], List[Hashable]]) -> Dict[
-        Hashable, List[Hashable]]:
-    """[summary]
+def edges_to_adjacency(source: Edges) -> Adjacency:
+    """Converts and edge list to an adjacency list."""
+    adjacency = {}
+    for edge_pair in source:
+        if edge_pair[0] not in adjacency:
+            adjacency[edge_pair[0]] = [edge_pair[1]]
+        else:
+            adjacency[edge_pair[0]].append(edge_pair[1])
+        if edge_pair[1] not in adjacency:
+            adjacency[edge_pair[1]] = []
+    return adjacency
 
-    Args:
-        source (Tuple[List[List[int]], List[Hashable]]): [description]
-
-    Returns:
-        Dict[ Hashable, List[Hashable]]: [description]
-        
-    """
+def matrix_to_adjacency(source: Matrix) -> Adjacency:
+    """Converts adjacency matrix to an adjacency list."""
     matrix = source[0]
     names = source[1]
     name_mapping = dict(zip(range(len(matrix)), names))
@@ -243,27 +231,6 @@ def matrix_to_adjacency(
         for edge in value:
             new_values.append(name_mapping[edge])
         adjacency[new_key] = new_values
-    return adjacency
-
-def edges_to_adjacency(
-    source: List[tuple[Hashable]]) -> Dict[Hashable, List[Hashable]]:
-    """[summary]
-
-    Args:
-        source (List[tuple[Hashable]]): [description]
-
-    Returns:
-        Dict[Hashable, List[Hashable]]: [description]
-        
-    """
-    adjacency = {}
-    for edge_pair in source:
-        if edge_pair[0] not in adjacency:
-            adjacency[edge_pair[0]] = [edge_pair[1]]
-        else:
-            adjacency[edge_pair[0]].append(edge_pair[1])
-        if edge_pair[1] not in adjacency:
-            adjacency[edge_pair[1]] = []
     return adjacency
 
        
@@ -299,7 +266,22 @@ class Structure(amicus.types.Bunch, abc.ABC):
     consistent_interface: bool = True
 
     """ Properties """
-           
+
+    @property
+    def edges(self) -> Dict[str, List[Hashable]]:
+        """Returns a dict of node names as keys and edges as values.
+        
+        Subclasses must provide their own properties.
+ 
+        Returns:
+            Dict[str, List[Hashable]]: dict with nodes as str as keys and lists
+                of edges as values.
+            
+        """
+        raise NotImplementedError(
+            f'{__name__} is not implemented for a {self.__class__.__name__} '
+            f'structure')
+                 
     @property
     def endpoints(self) -> List[Any]:
         """Returns endpoint nodes in the Structure.
@@ -525,43 +507,39 @@ class Graph(amicus.types.Lexicon, Structure):
     a missing key. This means that a Graph need not inherit from defaultdict.
     
     Args:
-        contents (Dict[Hashable, List[Hashable]]): an adjacency list where the 
+        contents (Adjacency): an adjacency list where the 
             keys are nodes and the values are nodes which the key is connected 
             to. Defaults to an empty dict.
         default (Any): default value to return when the 'get' method is used.
             Defaults to an empty list.
                   
     """  
-    contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
+    contents: Adjacency = dataclasses.field(
         default_factory = dict)
     default: Any = dataclasses.field(default_factory = list)
     
     """ Properties """
 
     @property
-    def edges(self) -> Dict[str, List[Hashable]]:
-        """Returns a dict of node names as keys and edges as values.
-        
-        This property creates a new dict with str keys derived from the nodes 
-        (looking first for a 'name' attribute) with values as edges.
- 
-        Returns:
-            Dict[str, List[Hashable]]: dict with nodes as str as keys and lists
-                of edges as values.
-            
-        """
-        return {self._stringify(n): e for n, e in self.contents.items()}
-               
+    def adjacency(self) -> Adjacency:
+        """Returns the stored graph as an adjacency list."""
+        return self.contents
+
+    @property
+    def edges(self) -> Adjacency:
+        """Returns the stored graph as an adjacency matrix."""
+        return adjacency_to_edges(source = self.contents)
+
     @property
     def endpoints(self) -> List[Hashable]:
-        """Returns endpoint nodes in the Graph.
-
-        Returns:
-            List[Hashable]: endpoint nodes in 'contents'. 
-            
-        """
+        """Returns endpoint nodes in the Graph."""
         return [k for k in self.contents.keys() if not self.contents[k]]
-              
+    
+    @property
+    def matrix(self) -> Matrix:
+        """Returns the stored graph as an edge list."""
+        return adjacency_to_matrix(source = self.contents)
+                      
     @property
     def nodes(self) -> Dict[str, Hashable]:
         """Returns a dict of node names as keys and nodes as values.
@@ -571,9 +549,12 @@ class Graph(amicus.types.Lexicon, Structure):
         stored nodes. This property creates a new dict with str keys derived
         from the nodes (looking first for a 'name' attribute) so that a user
         can access a node. 
- 
+        
+        This property is not needed if the stored nodes are all strings.
+        
         Returns:
-            List[Hashable]: all nodes.
+            Dict[str, Hashable]: keys are the name or has of nodes and the 
+                values are the nodes themselves.
             
         """
         return {self._stringify(n): n for n in self.contents.keys()}
@@ -603,47 +584,38 @@ class Graph(amicus.types.Lexicon, Structure):
     """ Class Methods """
     
     @classmethod
-    def create(cls, **kwargs) -> Graph:
-        """Creates an instance of a Graph subclass from kwargs
+    def create(cls, source: Union[Adjacency, Edges, Matrix]) -> Graph:
+        """Creates an instance of a Graph from 'source'.
         
-        kwargs must include an adjacency list (at kwargs['adjacency']), 
-        adjacency matrix (at kwargs['matrix']), or edge list (at 
-        kwargs['edges']). For specific formatting of each supported source type, 
-        look at the docs for each of the called methods beginning with 'from_'.
-                
-        If the source is an adjacency matrix, 'names' should also be passed as a
-        list of node names corresponding with the adjacency matrix.
+        Args:
+            source (Union[Adjacency, Edges, Matrix]): an adjacency list, 
+                adjacency matrix, or edge list which can used to create the
+                stored graph.
                 
         Returns:
-            Graph: a Graph instance created based on 'kwargs'.
+            Graph: a Graph instance created based on 'source'.
                 
         """
-        if ('adjacency' in kwargs 
-                and (isinstance(kwargs['adjacency'], Dict) 
-                and all(isinstance(v, List) 
-                    for v in kwargs['adjacency'].values()))):
-            return cls.from_adjacency(**kwargs)
-        elif ('edges' in kwargs
-                and isinstance(kwargs['edges'], List)
-                and all(isinstance(i, Tuple) for i in kwargs['edges'])):
-            return cls.from_edges(**kwargs)
-        elif ('matrix' in kwargs
-                and 'names' in kwargs
-                and isinstance(kwargs['matrix'], List)
-                and all(isinstance(i, List) for i in kwargs['matrix'])):
-            return cls.from_matrix(**kwargs)
+        if is_adjacency_list(item = source):
+            return cls.from_adjacency(adjacency = source)
+        elif is_adjacency_matrix(item = source):
+            return cls.from_matrix(matrix = source)
+        elif is_edge_list(item = source):
+            return cls.from_adjacency(edges = source)
         else:
-            return cls(**kwargs)
+            raise TypeError(
+                f'create requires source to be an adjacency list, adjacency '
+                f'matrix, or edge list')
            
     @classmethod
-    def from_adjacency(cls, adjacency: Dict[Hashable, List[Hashable]]) -> Graph:
+    def from_adjacency(cls, adjacency: Adjacency) -> Graph:
         """Creates a Graph instance from an adjacency list.
         
         'adjacency' should be formatted with nodes as keys and values as lists
         of names of nodes to which the node in the key is connected.
 
         Args:
-            adjacency (Dict[Hashable, List[Hashable]]): adjacency list used to 
+            adjacency (Adjacency): adjacency list used to 
                 create a Graph instance.
 
         Returns:
@@ -653,7 +625,7 @@ class Graph(amicus.types.Lexicon, Structure):
         return cls(contents = adjacency)
     
     @classmethod
-    def from_edges(cls, edges: List[tuple[Hashable]]) -> Graph:
+    def from_edges(cls, edges: Edges) -> Graph:
         """Creates a Graph instance from an edge list.
 
         'edges' should be a list of tuples, where the first item in the tuple
@@ -661,7 +633,7 @@ class Graph(amicus.types.Lexicon, Structure):
         the first item is connected.
         
         Args:
-            edges (List[tuple[Hashable]]): Edge list used to create a Graph 
+            edges (Edges): Edge list used to create a Graph 
                 instance.
                 
         Returns:
@@ -1055,193 +1027,193 @@ class Graph(amicus.types.Lexicon, Structure):
         return new_line.join(representation) 
 
 
-@dataclasses.dataclass
-class Pipeline(amicus.types.Hybrid, Structure):
-    """Stores a pipeline structure using an amicus Hybrid.
+# @dataclasses.dataclass
+# class Pipeline(amicus.types.Hybrid, Structure):
+#     """Stores a pipeline structure using an amicus Hybrid.
     
-    Unlike a Graph, items stored do not need to be hashable, even though the
-    Pipeline, by virtue of inheriting from Hybrid, provides a dict interface.
-    However, to offer this functionality, all items stored in Pipeline should
-    have a 'name' attribute to provide pseudo-keys for the dict interface.
+#     Unlike a Graph, items stored do not need to be hashable, even though the
+#     Pipeline, by virtue of inheriting from Hybrid, provides a dict interface.
+#     However, to offer this functionality, all items stored in Pipeline should
+#     have a 'name' attribute to provide pseudo-keys for the dict interface.
     
-    Args:
-        contents (Sequence[Any]): items with 'name' attributes to store. If a 
-            dict is passed, the keys will be ignored and only the values will be 
-            added to 'contents'. If a single item is passed, it will be placed 
-            in a list. Defaults to an empty list.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to None.
+#     Args:
+#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
+#             dict is passed, the keys will be ignored and only the values will be 
+#             added to 'contents'. If a single item is passed, it will be placed 
+#             in a list. Defaults to an empty list.
+#         default (Any): default value to return when the 'get' method is used.
+#             Defaults to None.
             
-    """
-    contents: Sequence[Any] = dataclasses.field(default_factory = list)
-    default: Any = None
+#     """
+#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
+#     default: Any = None
 
-    """ Properties """
+#     """ Properties """
            
-    @property
-    def endpoints(self) -> List[Any]:
-        """Returns endpoint nodes in the Pipeline.
+#     @property
+#     def endpoints(self) -> List[Any]:
+#         """Returns endpoint nodes in the Pipeline.
 
-        Returns:
-            List[Any] nodes at the end of the stored data structure.
+#         Returns:
+#             List[Any] nodes at the end of the stored data structure.
             
-        """
-        if self.consistent_interface:
-            return [self.contents[-1]]
-        else:
-            return self.contents[-1]
+#         """
+#         if self.consistent_interface:
+#             return [self.contents[-1]]
+#         else:
+#             return self.contents[-1]
            
-    @property             
-    def nodes(self) -> List[Any]:
-        """Returns all nodes in the Graph.
+#     @property             
+#     def nodes(self) -> List[Any]:
+#         """Returns all nodes in the Graph.
 
-        Returns:
-            List[Any]: nodes in the stored data structure.
+#         Returns:
+#             List[Any]: nodes in the stored data structure.
             
-        """
-        return self.contents
+#         """
+#         return self.contents
         
-    @property
-    def paths(self) -> List[List[Any]]:
-        """Returns all paths through the stored data structure.
+#     @property
+#     def paths(self) -> List[List[Any]]:
+#         """Returns all paths through the stored data structure.
             
-        Returns:
-            List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
-                list of lists of nodes.
+#         Returns:
+#             List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
+#                 list of lists of nodes.
                 
-        """
-        if self.consistent_interface:
-            return [self.contents]
-        else:
-            return self.contents
+#         """
+#         if self.consistent_interface:
+#             return [self.contents]
+#         else:
+#             return self.contents
            
-    @property
-    def roots(self) -> List[Any]:
-        """Returns root nodes in Pipeline
+#     @property
+#     def roots(self) -> List[Any]:
+#         """Returns root nodes in Pipeline
         
-        Returns:
-            List[Any]: names of root nodes in the stored data structure.
+#         Returns:
+#             List[Any]: names of root nodes in the stored data structure.
             
-        """
-        if self.consistent_interface:
-            return [self.contents[0]]
-        else:
-            return self.contents[0]
+#         """
+#         if self.consistent_interface:
+#             return [self.contents[0]]
+#         else:
+#             return self.contents[0]
 
-    """ Class Methods """
+#     """ Class Methods """
     
-    @classmethod
-    def create(cls, **kwargs) -> Pipeline:
-        """Creates an instance of a Graph subclass from kwargs.
+#     @classmethod
+#     def create(cls, **kwargs) -> Pipeline:
+#         """Creates an instance of a Graph subclass from kwargs.
         
-        Returns:
-            Pipeline: a Pipline instance created using kwargs.
+#         Returns:
+#             Pipeline: a Pipline instance created using kwargs.
             
-        """
-        if ('nodes' in kwargs 
-                and isinstance(kwargs['nodes'], Sequence) 
-                and (all(isinstance(n, str) for n in kwargs['nodes'])
-                     or (all(hasattr(n, 'name') for n in kwargs['nodes'])))):
-            return cls.from_nodes(**kwargs)
-        else:
-            return cls(**kwargs)
+#         """
+#         if ('nodes' in kwargs 
+#                 and isinstance(kwargs['nodes'], Sequence) 
+#                 and (all(isinstance(n, str) for n in kwargs['nodes'])
+#                      or (all(hasattr(n, 'name') for n in kwargs['nodes'])))):
+#             return cls.from_nodes(**kwargs)
+#         else:
+#             return cls(**kwargs)
  
-    @classmethod
-    def from_nodes(cls, nodes: Union[Any, Sequence[Any]]) -> Pipeline:
-        """[summary]
+#     @classmethod
+#     def from_nodes(cls, nodes: Union[Any, Sequence[Any]]) -> Pipeline:
+#         """[summary]
 
-        Args:
-            nodes (Union[Any, Sequence[Any]]): [description]
+#         Args:
+#             nodes (Union[Any, Sequence[Any]]): [description]
 
-        Returns:
-            Pipeline: [description]
+#         Returns:
+#             Pipeline: [description]
             
-        """        
-        return cls(contents = amicus.tools.listify(nodes))    
+#         """        
+#         return cls(contents = amicus.tools.listify(nodes))    
         
-    """ Public Methods """
+#     """ Public Methods """
     
-    def add(self, nodes: Any, **kwargs) -> None:
-        """Adds 'nodes' to the stored data structure.
+#     def add(self, nodes: Any, **kwargs) -> None:
+#         """Adds 'nodes' to the stored data structure.
         
-        Subclasses should ordinarily provide their own methods.
+#         Subclasses should ordinarily provide their own methods.
         
-        Args:
-            nodes (Any): item(s) to add to 'contents'.
+#         Args:
+#             nodes (Any): item(s) to add to 'contents'.
             
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
+#         """
+#         raise NotImplementedError(
+#             f'{__name__} is not implemented for a {self.__class__.__name__} '
+#             f'structure')
 
-    def append(self, 
-        node: str,
-        start: Union[str, Sequence[str]] = None, 
-        **kwargs) -> None:
-        """Appends 'node' to the stored data structure.
+#     def append(self, 
+#         node: str,
+#         start: Union[str, Sequence[str]] = None, 
+#         **kwargs) -> None:
+#         """Appends 'node' to the stored data structure.
 
-        Subclasses should ordinarily provide their own methods.
+#         Subclasses should ordinarily provide their own methods.
         
-        Args:
-            node (str): item to add to 'contents'.
-            start (Union[str, Sequence[str]]): where to add new node to. If
-                there are multiple nodes in 'start', 'node' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
+#         Args:
+#             node (str): item to add to 'contents'.
+#             start (Union[str, Sequence[str]]): where to add new node to. If
+#                 there are multiple nodes in 'start', 'node' will be added to
+#                 each of the starting points. If 'start' is None, 'endpoints'
+#                 will be used. Defaults to None.
             
-        """ 
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
+#         """ 
+#         raise NotImplementedError(
+#             f'{__name__} is not implemented for a {self.__class__.__name__} '
+#             f'structure')
 
-    def extend(self, 
-        nodes: Sequence[str],
-        start: Union[str, Sequence[str]] = None) -> None:
-        """Adds 'nodes' to the stored data structure.
+#     def extend(self, 
+#         nodes: Sequence[str],
+#         start: Union[str, Sequence[str]] = None) -> None:
+#         """Adds 'nodes' to the stored data structure.
 
-        Subclasses should ordinarily provide their own methods.
+#         Subclasses should ordinarily provide their own methods.
 
-        Args:
-            nodes (Sequence[str]): names of items to add.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
+#         Args:
+#             nodes (Sequence[str]): names of items to add.
+#             start (Union[str, Sequence[str]]): where to add new nodes to. If
+#                 there are multiple nodes in 'start', 'nodes' will be added to
+#                 each of the starting points. If 'start' is None, 'endpoints'
+#                 will be used. Defaults to None.
                 
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
+#         """
+#         raise NotImplementedError(
+#             f'{__name__} is not implemented for a {self.__class__.__name__} '
+#             f'structure')
 
-    def join(self, structure: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
+#     def join(self, structure: Structure) -> None:
+#         """Adds 'other' Structure to this Structure.
 
-        Subclasses should ordinarily provide their own methods.
+#         Subclasses should ordinarily provide their own methods.
         
-        Args:
-            structure (Structure): a second Structure to join with this one.
+#         Args:
+#             structure (Structure): a second Structure to join with this one.
             
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
+#         """
+#         raise NotImplementedError(
+#             f'{__name__} is not implemented for a {self.__class__.__name__} '
+#             f'structure')
          
-    def search(self, 
-        start: Hashable = None, 
-        depth_first: bool = True) -> List[Any]:
-        """Returns a path through the stored data structure.
+#     def search(self, 
+#         start: Hashable = None, 
+#         depth_first: bool = True) -> List[Any]:
+#         """Returns a path through the stored data structure.
 
-        Args:
-            start (str): node to start the path from. If None, it is assigned to
-                'roots'. Defaults to None.
-            depth_first (bool): whether the search should be depth first (True)
-                or breadth first (False). Defaults to True.
+#         Args:
+#             start (str): node to start the path from. If None, it is assigned to
+#                 'roots'. Defaults to None.
+#             depth_first (bool): whether the search should be depth first (True)
+#                 or breadth first (False). Defaults to True.
 
-        Returns:
-            List[Any]: nodes in a path through the stored data structure.
+#         Returns:
+#             List[Any]: nodes in a path through the stored data structure.
             
-        """        
-        return self.contents
+#         """        
+#         return self.contents
 
 
 # @dataclasses.dataclass
