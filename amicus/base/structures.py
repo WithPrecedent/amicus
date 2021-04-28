@@ -498,7 +498,7 @@ class Structure(amicus.types.Bunch, abc.ABC):
         self.join(structure = other)        
         return self
 
-    def __iadd__(self, other: Any) -> None:
+    def __iadd__(self, other: Structure) -> None:
         """Adds 'other' Structure to this Structure.
 
         Adding another structure uses the 'join' method. Read that method's 

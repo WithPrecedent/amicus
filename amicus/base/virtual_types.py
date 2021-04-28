@@ -97,6 +97,7 @@ class Structure(VirtualBase, abc.ABC):
         'extend',
         'join']
     attributes: ClassVar[Sequence[str]] = [
+        'edges',
         'endpoints',
         'nodes',
         'paths',
