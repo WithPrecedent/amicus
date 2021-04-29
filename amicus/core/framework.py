@@ -34,7 +34,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Registry(amicus.types.Catalog):
+class Registry(amicus.base.Catalog):
     """A Catalog of Keystone subclasses."""
 
     """ Properties """
@@ -65,7 +65,7 @@ class Library(object):
             keystone (Keystone): [description]
 
         """
-        keystone.instances = amicus.types.Catalog()
+        keystone.instances = amicus.base.Catalog()
         keystone.subclasses = Registry()
         setattr(self, name, keystone)
         return self
@@ -82,7 +82,7 @@ class Library(object):
 
 
 @dataclasses.dataclass
-class Keystone(amicus.types.Quirk, abc.ABC):
+class Keystone(amicus.base.Quirk, abc.ABC):
     """Base mixin for automatic registration of subclasses and instances. 
     
     Any concrete (non-abstract) subclass will automatically store itself in the 
@@ -107,7 +107,7 @@ class Keystone(amicus.types.Quirk, abc.ABC):
             those stored subclasses. 'subclasses' is automatically created when 
             a direct Keystone subclass (Keystone is in its '__bases__') is 
             instanced.
-        instances (ClassVar[amicus.types.Catalog]): catalog that stores
+        instances (ClassVar[amicus.base.Catalog]): catalog that stores
             subclass instances and allows runtime access of those stored 
             subclass instances. 'instances' is automatically created when a 
             direct Keystone subclass (Keystone is in its '__bases__') is 
@@ -251,17 +251,17 @@ def create_keystone(
         name: str = None, 
         quirks: Union[
             str, 
-            amicus.types.Quirk, 
+            amicus.base.Quirk, 
             Sequence[str],
-            Sequence[amicus.types.Quirk]] = None) -> Keystone:
+            Sequence[amicus.base.Quirk]] = None) -> Keystone:
     """[summary]
 
     Args:
         keystone (Union[str, Keystone], optional): [description]. Defaults to 
             object.
         name (str, optional): [description]. Defaults to None.
-        quirks (Union[ str, amicus.types.Quirk, Sequence[str], 
-            Sequence[amicus.types.Quirk]], optional): Defaults to None.
+        quirks (Union[ str, amicus.base.Quirk, Sequence[str], 
+            Sequence[amicus.base.Quirk]], optional): Defaults to None.
 
     Raises:
         ValueError: [description]
@@ -274,8 +274,8 @@ def create_keystone(
     bases = []
     for quirk in more_itertools.always_iterable(quirks):
         if isinstance(quirk, str):
-            bases.append(amicus.types.Quirk.quirks[quirk])
-        elif isinstance(quirk, amicus.types.Quirk):
+            bases.append(amicus.base.Quirk.quirks[quirk])
+        elif isinstance(quirk, amicus.base.Quirk):
             bases.append(quirk)
         else:
             raise TypeError('All quirks must be str or Quirk type')
@@ -294,7 +294,7 @@ def create_keystone(
         
 
 @dataclasses.dataclass
-class Validator(amicus.types.Quirk):
+class Validator(amicus.base.Quirk):
     """Mixin for calling validation methods
 
     Args:
@@ -302,11 +302,11 @@ class Validator(amicus.types.Quirk):
             Each item in 'validations' should have a corresponding method named 
             f'_validate_{name}' or match a key in 'converters'. Defaults to an 
             empty list. 
-        converters (amicus.types.Catalog):
+        converters (amicus.base.Catalog):
                
     """
     validations: ClassVar[Sequence[str]] = []
-    converters: ClassVar[amicus.types.Catalog] = amicus.types.Catalog()
+    converters: ClassVar[amicus.base.Catalog] = amicus.base.Catalog()
 
     """ Public Methods """
 

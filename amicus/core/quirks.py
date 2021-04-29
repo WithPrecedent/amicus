@@ -43,7 +43,7 @@ import amicus
        
 
 @dataclasses.dataclass
-class Element(amicus.types.Quirk):
+class Element(amicus.base.Quirk):
     """Mixin for classes that need a 'name' attribute.
     
     Automatically provides a 'name' attribute to a subclass, if it isn't 
@@ -91,7 +91,7 @@ class Element(amicus.types.Quirk):
 
 
 @dataclasses.dataclass
-class Importer(amicus.types.Quirk):
+class Importer(amicus.base.Quirk):
     """Faciliates lazy importing from modules.
 
     Subclasses with attributes storing strings containing import paths 
@@ -159,7 +159,7 @@ class Importer(amicus.types.Quirk):
 
 
 @dataclasses.dataclass
-class Needy(amicus.types.Quirk):
+class Needy(amicus.base.Quirk):
     """Provides internal creation and automatic parameterization.
     
     Args:

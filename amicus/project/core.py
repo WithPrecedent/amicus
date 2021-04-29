@@ -90,7 +90,7 @@ class Workflow(amicus.structures.Graph):
   
   
 @dataclasses.dataclass
-class Recipe(amicus.types.Lexicon):            
+class Recipe(amicus.base.Lexicon):            
     """Stores results from a single path through a Workflow.
 
     Args:
@@ -106,8 +106,8 @@ class Recipe(amicus.types.Lexicon):
     contents: Mapping[str, object] = dataclasses.field(default_factory = dict)
     default: Any = None
     name: str = None
-    results: amicus.types.Lexicon[str, Any] = dataclasses.field(
-        default_factory = amicus.types.Lexicon)
+    results: amicus.base.Lexicon[str, Any] = dataclasses.field(
+        default_factory = amicus.base.Lexicon)
                     
     """ Properties """
     
@@ -130,7 +130,7 @@ class Recipe(amicus.types.Lexicon):
     @classmethod
     def create(cls, 
         path: Sequence[str], 
-        components: amicus.types.Catalog,
+        components: amicus.base.Catalog,
         name: str = None) -> Recipe:
         """
                 
@@ -143,7 +143,7 @@ class Recipe(amicus.types.Lexicon):
        
        
 @dataclasses.dataclass
-class Cookbook(amicus.types.Lexicon):
+class Cookbook(amicus.base.Lexicon):
     """Stores a collection of Recipes.
     
     Args:
@@ -197,7 +197,7 @@ class Cookbook(amicus.types.Lexicon):
   
             
 @dataclasses.dataclass
-class Summary(amicus.types.Lexicon):
+class Summary(amicus.base.Lexicon):
     """Collects and stores results of all paths through a Workflow.
     
     Args:

@@ -1,10 +1,10 @@
 """
-types: amicus base types
+base: amicus base classes
 Corey Rayburn Yung <coreyrayburnyung@gmail.com>
 Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
-All amicus types have a 'contents' attribute where an item or 'items' are
+All amicus bases have a 'contents' attribute where an item or 'items' are
 internally stored. This is used instead of the normal 'data' attribute use in
 base python classes to make it easier for users to know which object they are
 accessing when using either 'contents' or 'data'.
@@ -44,7 +44,7 @@ import amicus
 
 @dataclasses.dataclass
 class Proxy(collections.abc.Container):
-    """Container for holding single items.
+    """Basic wrapper class.
     
     A Proxy differs than an ordinary container in 2 significant ways:
         1) When an 'in' call is made, the '__contains__' method first looks to
@@ -169,7 +169,7 @@ class Proxy(collections.abc.Container):
   
 @dataclasses.dataclass
 class Bunch(collections.abc.Iterable, abc.ABC):
-    """Abstract base class for amicus iterables.
+    """Base class for amicus iterables.
   
     A Bunch differs from a general python iterable in 3 ways:
         1) It must include an 'add' method which provides the default mechanism
@@ -193,6 +193,7 @@ class Bunch(collections.abc.Iterable, abc.ABC):
    
     """ Required Subclass Methods """
     
+    @abc.abstractmethod
     def add(self, item: Any) -> None:
         """Adds 'item' to 'contents' in the default manner.
         
@@ -323,37 +324,16 @@ class Progression(Bunch, collections.abc.MutableSequence):
         """
         del self.contents[key]
 
-    # def __iter__(self) -> Iterable[Any]:
-    #     """Returns iterable of 'contents'.
-
-    #     Returns:
-    #         Iterable: of 'contents'.
-
-    #     """
-    #     return iter(self.contents)
-
-    # def __len__(self) -> int:
-    #     """Returns length of iterable of 'contents'.
-
-    #     Returns:
-    #         int: length of iterable of 'contents'.
-
-    #     """
-    #     return len(self.contents)
-    
    
 @dataclasses.dataclass
 class Hybrid(Progression):
-    """Keystone class for ordered iterables in amicus composite objects.
+    """Base class for lists with additional dict interface.
     
     Hybrid combines the functionality and interfaces of python dicts and lists.
     It allows duplicate keys and list-like iteration while supporting the easier
     access methods of dictionaries. In order to support this hybrid approach to
     iterables, Hybrid can only store items with a 'name' attribute or property.
-    
-    Hybrid is used in 'amicus.structures.Tree' because amicus composite trees 
-    can have identically named nodes. 
-    
+
     A Hybrid inherits the differences between a Progression and an ordinary 
     python list.
     
@@ -620,24 +600,6 @@ class Hybrid(Progression):
             self.contents = [c for c in self.contents if c.name != key]
         return self
 
-    # def __iter__(self) -> Iterable:
-    #     """Returns iterable of 'contents'.
-
-    #     Returns:
-    #         Iterable: 'contents'.
-
-    #     """
-    #     return iter(self.contents)
-
-    # def __len__(self) -> int:
-    #     """Returns length of iterable of 'contents'
-
-    #     Returns:
-    #         int: length of iterable 'contents'.
-
-    #     """
-    #     return len(self.contents)
-
  
 @dataclasses.dataclass
 class Lexicon(Bunch, collections.abc.MutableMapping):
@@ -798,24 +760,6 @@ class Lexicon(Bunch, collections.abc.MutableMapping):
         del self.contents[key]
         return self
     
-    # def __iter__(self) -> Iterable[Any]:
-    #     """Returns iterable of 'contents'.
-
-    #     Returns:
-    #         Iterable: of 'contents'.
-
-    #     """
-    #     return iter(self.contents)
-
-    # def __len__(self) -> int:
-    #     """Returns length of iterable of 'contents'
-
-    #     Returns:
-    #         int: length of iterable 'contents'.
-
-    #     """
-    #     return len(self.contents)
-
 
 @dataclasses.dataclass
 class Catalog(Lexicon):

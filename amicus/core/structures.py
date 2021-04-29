@@ -43,7 +43,7 @@ Edges: Type = List[Tuple[Hashable]]
 
 
 @dataclasses.dataclass
-class Node(amicus.quirks.Element, amicus.types.Proxy, collections.abc.Hashable):
+class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
     """Vertex for any amicus composite Structure.
     
     Node acts a basic wrapper for any item stored in an amicus Structure. An
@@ -235,7 +235,7 @@ def matrix_to_adjacency(source: Matrix) -> Adjacency:
 
        
 @dataclasses.dataclass
-class Structure(amicus.types.Bunch, abc.ABC):
+class Structure(amicus.base.Bunch, abc.ABC):
     """Abstract base class for iterable amicus data structures.
     
     Structure includes many methods and properties that should ordinarily be
@@ -496,7 +496,7 @@ class Structure(amicus.types.Bunch, abc.ABC):
 
 
 @dataclasses.dataclass
-class Graph(amicus.types.Lexicon, Structure):
+class Graph(amicus.base.Lexicon, Structure):
     """Stores a directed acyclic graph (DAG) as an adjacency list.
 
     Despite being called an adjacency "list," the typical and most efficient
@@ -1028,7 +1028,7 @@ class Graph(amicus.types.Lexicon, Structure):
 
 
 # @dataclasses.dataclass
-# class Pipeline(amicus.types.Hybrid, Structure):
+# class Pipeline(amicus.base.Hybrid, Structure):
 #     """Stores a pipeline structure using an amicus Hybrid.
     
 #     Unlike a Graph, items stored do not need to be hashable, even though the
@@ -1217,7 +1217,7 @@ class Graph(amicus.types.Lexicon, Structure):
 
 
 # @dataclasses.dataclass
-# class Tree(amicus.types.Hybrid, Structure):
+# class Tree(amicus.base.Hybrid, Structure):
 #     """Stores a general tree structure using an amicus Hybrid.
     
 #     Args:

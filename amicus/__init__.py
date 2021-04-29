@@ -33,7 +33,7 @@ second-level access.
 
 For example:
 
-    Instead of acccesing Hybrid via amicus.base.types.Hybrid,
+    Instead of acccesing Hybrid via amicus.core.types.Hybrid,
     you can just use: amicus.Hybrid
     
 They also operate on a lazy importing system. This means that modules are only
@@ -60,25 +60,25 @@ importables: Dict[str, str] = {
     'decorators': 'utilities.decorators',
     'memory': 'utilities.memory',
     'tools': 'utilities.tools',
-    'quirks': 'base.quirks',
-    'types': 'base.types',
-    'options': 'base.options',
-    'framework': 'base.framework',
-    'structures': 'base.structures',
-    'Proxy': 'base.types.Proxy',
-    'Bunch': 'base.types.Bunch',
-    'Progression': 'base.types.Progression',
-    'Hybrid': 'base.types.Hybrid',
-    'Lexicon': 'base.types.Lexicon',
-    'Catalog': 'base.types.Catalog',
-    'Configuration': 'base.options.Configuration',
-    'Clerk': 'base.options.Clerk',
-    'Keystone': 'base.framework.Keystone',
-    'create_keystone': 'base.framework.create_keystone',
-    'Validator': 'base.framework.Validator',
-    'Converter': 'base.framework.Converter',
-    'Structure': 'base.structures.Structure',
-    'Graph': 'base.structures.Graph',
+    'quirks': 'core.quirks',
+    'types': 'core.types',
+    'options': 'core.options',
+    'framework': 'core.framework',
+    'structures': 'core.structures',
+    'Proxy': 'core.types.Proxy',
+    'Bunch': 'core.types.Bunch',
+    'Progression': 'core.types.Progression',
+    'Hybrid': 'core.types.Hybrid',
+    'Lexicon': 'core.types.Lexicon',
+    'Catalog': 'core.types.Catalog',
+    'Configuration': 'core.options.Configuration',
+    'Clerk': 'core.options.Clerk',
+    'Keystone': 'core.framework.Keystone',
+    'create_keystone': 'core.framework.create_keystone',
+    'Validator': 'core.framework.Validator',
+    'Converter': 'core.framework.Converter',
+    'Structure': 'core.structures.Structure',
+    'Graph': 'core.structures.Graph',
     'Project': 'project.interface.Project'}
 
 def __getattr__(name: str) -> Any:

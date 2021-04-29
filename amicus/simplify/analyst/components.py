@@ -810,14 +810,14 @@ class SimpleXGBoost(base.SimpleTechnique):
 #             algorithm = 'RidgeRegression',
 #             transform_method = None)}}
 
-# def get_algorithms(settings: Mapping[str, Any]) -> amicus.types.Catalog:
+# def get_algorithms(settings: Mapping[str, Any]) -> amicus.base.Catalog:
 #     """[summary]
 
 #     Args:
 #         project (amicus.Project): [description]
 
 #     Returns:
-#         amicus.types.Catalog: [description]
+#         amicus.base.Catalog: [description]
         
 #     """
 #     algorithms = raw_options

@@ -23,7 +23,7 @@ from . import stages
 
 
 @dataclasses.dataclass
-class SklearnModel(amicus.types.Quirk):
+class SklearnModel(amicus.base.Quirk):
     """Wrapper for a scikit-learn model (an algorithm that doesn't transform).
 
     Args:
@@ -81,7 +81,7 @@ class SklearnModel(amicus.types.Quirk):
 
 
 @dataclasses.dataclass
-class SklearnSplitter(amicus.types.Quirk):
+class SklearnSplitter(amicus.base.Quirk):
     """Wrapper for a scikit-learn data splitter.
 
     Args:
@@ -140,7 +140,7 @@ class SklearnSplitter(amicus.types.Quirk):
     
     
 @dataclasses.dataclass
-class SklearnTransformer(amicus.types.Quirk):
+class SklearnTransformer(amicus.base.Quirk):
     """Wrapper for a scikit-learn transformer.
 
     Args:

@@ -95,7 +95,7 @@ class Splitter(amicus.project.Technique):
         return project
 
 
-catalog = amicus.types.Catalog(
+catalog = amicus.base.Catalog(
     contents = {
         'train_test_split': Splitter(
             name = 'train test',

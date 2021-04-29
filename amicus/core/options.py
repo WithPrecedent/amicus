@@ -28,7 +28,7 @@ import amicus
 
 
 @dataclasses.dataclass
-class Configuration(amicus.types.Lexicon):
+class Configuration(amicus.base.Lexicon):
     """Loads and stores configuration settings.
 
     To create Configuration instance, a user can pass a:

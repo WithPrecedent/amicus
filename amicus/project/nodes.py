@@ -25,7 +25,7 @@ from . import configuration
 
 
 @dataclasses.dataclass
-class Registry(amicus.types.Catalog):
+class Registry(amicus.base.Catalog):
     """A Catalog of Component subclasses or subclass instances."""
 
     """ Properties """
@@ -258,7 +258,7 @@ class Library(object):
 
 
 @dataclasses.dataclass    
-class Parameters(amicus.types.Lexicon):
+class Parameters(amicus.base.Lexicon):
     """Creates and stores parameters for a Component.
     
     The use of Parameters is entirely optional, but it provides a handy tool
@@ -667,7 +667,7 @@ class Worker(Component, collections.abc.Iterable, abc.ABC):
 
 
 @dataclasses.dataclass
-class Step(amicus.types.Proxy, Task):
+class Step(amicus.base.Proxy, Task):
     """Wrapper for a Technique.
 
     Subclasses of Step can store additional methods and attributes to implement

@@ -103,7 +103,7 @@ class Sampler(amicus.quirks.Loader, amicus.project.Technique):
         return project
 
 
-catalog = amicus.types.Catalog(
+catalog = amicus.base.Catalog(
     contents = {
         'adasyn': Sampler(
             name = 'adasyn',

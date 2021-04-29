@@ -78,7 +78,7 @@ class SimpleShap(base.SimpleTechnique):
 
 
 
-# options = amicus.types.Catalog(contents = {
+# options = amicus.base.Catalog(contents = {
 #     'explain': {
 #         'eli5': base.SimpleTechnique(
 #             name = 'eli5_explain',
