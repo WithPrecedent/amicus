@@ -5,13 +5,12 @@ Copyright 2020-2021, Corey Rayburn Yung
 License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 amicus structures are primarily designed to be the backbones of workflows. So,
-the provided subclasses assume that all links in a composite structure are
+the provided subclasses assume that all edges in a composite structure are
 unweighted and directed. However, the architecture of Structure and Node can
-support weighted links and undirected composite structures as well.
+support weighted edges and undirected composite structures as well.
 
 Contents:
     Node (Element, collections.abc.Hashable):
-    # SmartNode (Node):
     Structure (Keystone, ABC): base class for all amicus composite structures.
     Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
 
@@ -19,7 +18,7 @@ To Do:
     Add Tree structure using an amicus Hybrid
     Add Pipeline structure using an amicus Hybrid?
     Add Network structure that is an undirected Graph with potentially weighted
-        links.
+        edges.
     
 """
 from __future__ import annotations
@@ -38,13 +37,104 @@ import amicus
 
 
 Adjacency: Type = Dict[Hashable, List[Hashable]]
-Matrix: Type = Tuple[List[List[int]], List[Hashable]]
-Edges: Type = List[Tuple[Hashable]]
+Matrix: Type = Union[Tuple[List[List[int]], List[Hashable]], List[List[int]]]
+Edge: Tuple[Hashable, Hashable]
+Edges: Type = List[Edge]
+
+    
+def is_adjacency_list(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
+    
+    return (isinstance(item, Dict) 
+            and all(isinstance(v, List) for v in item.values()))
+
+def is_adjacency_matrix(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
+    if isinstance(item, tuple):
+        item = item[0]
+    return isinstance(item, List) and all(isinstance(i, List) for i in item)
+
+def is_edge_list(item: Any) -> bool:
+    """[summary]
+
+    Args:
+        item (Any): [description]
+
+    Returns:
+        bool: [description]
+        
+    """
+    return (isinstance(item, List) 
+            and all(isinstance(i, Tuple) for i in item)
+            and all(len(i) == 2 for i in item))
+
+def adjacency_to_edges(source: Adjacency) -> Edges:
+    """Converts an adjacency list to an edge list."""
+    edges = []
+    for node, connections in source.items():
+        for connection in connections:
+            edges.append(tuple(node, connection))
+    return 
+
+def adjacency_to_matrix(source: Adjacency) -> Matrix:
+    """Converts an adjacency list to an adjacency matrix."""
+    names = list(source.keys())
+    matrix = []
+    for i in range(len(source)): 
+        matrix.append([0] * len(source))
+        for j in source[i]:
+            matrix[i][j] = 1
+    return tuple(matrix, names)
+
+def edges_to_adjacency(source: Edges) -> Adjacency:
+    """Converts and edge list to an adjacency list."""
+    adjacency = {}
+    for edge_pair in source:
+        if edge_pair[0] not in adjacency:
+            adjacency[edge_pair[0]] = [edge_pair[1]]
+        else:
+            adjacency[edge_pair[0]].append(edge_pair[1])
+        if edge_pair[1] not in adjacency:
+            adjacency[edge_pair[1]] = []
+    return adjacency
+
+def matrix_to_adjacency(source: Matrix) -> Adjacency:
+    """Converts adjacency matrix to an adjacency list."""
+    matrix = source[0]
+    names = source[1]
+    name_mapping = dict(zip(range(len(matrix)), names))
+    raw_adjacency = {
+        i: [j for j, adjacent in enumerate(row) if adjacent] 
+        for i, row in enumerate(matrix)}
+    adjacency = {}
+    for key, value in raw_adjacency.items():
+        new_key = name_mapping[key]
+        new_values = []
+        for edge in value:
+            new_values.append(name_mapping[edge])
+        adjacency[new_key] = new_values
+    return adjacency
 
 
 @dataclasses.dataclass
 class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
-    """Vertex for any amicus composite Structure.
+    """Vertex wrapper to provide hashability to any object.
     
     Node acts a basic wrapper for any item stored in an amicus Structure. An
     amicus Structure does not require Node instances to be stored. Rather, they
@@ -123,385 +213,17 @@ class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
         """
         return not(self == other)
 
-     
-# @dataclasses.dataclass
-# class SmartNode(Node):
-#     """Vertex that is aware of nodes that it is connected to.
-    
-#     SmartNodes take more memory, include methods to coordinate with adjoining
-#     nodes, and allow for decentralization of connections and relationships.
-    
-#     Args:
-#         contents (Any): any stored item(s). Defaults to None.
-#         name (str): designates the name of a class instance that is used for 
-#             internal referencing throughout amicus. For example, if an amicus 
-#             instance needs settings from a Configuration instance, 'name' should 
-#             match the appropriate section name in a Configuration instance. 
-#             Defaults to None. 
-
-#     """
-#     contents: Any = None
-#     name: str = None
-#     parents: Sequence[Node] = dataclasses.field(default_factory = list)
-#     children: Sequence[Node] = dataclasses.field(default_factory = list)
-    
-
-def is_adjacency_list(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
-    
-    return (isinstance(item, Dict) 
-            and all(isinstance(v, List) for v in item.values()))
-
-def is_adjacency_matrix(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
-    return isinstance(item, List) and all(isinstance(i, List) for i in item)
-
-def is_link_list(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
-    return (isinstance(item, List) 
-            and all(isinstance(i, Tuple) for i in item)
-            and all(len(i) == 2 for i in item))
-
-def adjacency_to_links(source: Adjacency) -> Edges:
-    """Converts an adjacency list to an link list."""
-    links = []
-    for node, connections in source.items():
-        for connection in connections:
-            links.append(tuple(node, connection))
-    return 
-
-def adjacency_to_matrix(source: Adjacency) -> Matrix:
-    """Converts an adjacency list to an adjacency matrix."""
-    names = list(source.keys())
-    matrix = []
-    for i in range(len(source)): 
-        matrix.append([0] * len(source))
-        for j in source[i]:
-            matrix[i][j] = 1
-    return tuple(matrix, names)
-
-def links_to_adjacency(source: Edges) -> Adjacency:
-    """Converts and link list to an adjacency list."""
-    adjacency = {}
-    for link_pair in source:
-        if link_pair[0] not in adjacency:
-            adjacency[link_pair[0]] = [link_pair[1]]
-        else:
-            adjacency[link_pair[0]].append(link_pair[1])
-        if link_pair[1] not in adjacency:
-            adjacency[link_pair[1]] = []
-    return adjacency
-
-def matrix_to_adjacency(source: Matrix) -> Adjacency:
-    """Converts adjacency matrix to an adjacency list."""
-    matrix = source[0]
-    names = source[1]
-    name_mapping = dict(zip(range(len(matrix)), names))
-    raw_adjacency = {
-        i: [j for j, adjacent in enumerate(row) if adjacent] 
-        for i, row in enumerate(matrix)}
-    adjacency = {}
-    for key, value in raw_adjacency.items():
-        new_key = name_mapping[key]
-        new_values = []
-        for link in value:
-            new_values.append(name_mapping[link])
-        adjacency[new_key] = new_values
-    return adjacency
-
-       
-@dataclasses.dataclass
-class Structure(amicus.base.Bunch, abc.ABC):
-    """Abstract base class for iterable amicus data structures.
-    
-    Structure includes many methods and properties that should ordinarily be
-    implemented by subclasses. However, rather than using 'abc.abstractmethod'
-    and other 'abc' decoraters, these listed methods and properties simply 
-    return a NotImplementedError if a subclass does not incldue them. This
-    allows users the flexibility to decide which methods and properties that
-    they wish to incorporate. However, all subclasses provided in amicus have
-    implementation of all of the listed methods and properties.
-    
-    Structure also includes two dunder methods that allow '+' and '+=' to be 
-    used to join two amicus structures. However, for these duner methods to
-    work, the subclass must include its own 'join' method.
-    
-    Args:
-        contents (Iterable): stored iterable. Defaults to None.
-        consistent_interface (bool): whether to ensure that all subclass
-            properties and methods return the same datatypes regardless of the
-            internally stored data (True) or whether the properties and methods
-            try to intelligently return the datatype based on the internally
-            stored data. For example, a Pipleine has only one endpoint, but the
-            'endpoints' property will return a list with that one endpoint if 
-            'consistent_interface' is True to maintain consistency with other
-            Structure subclasses. Defaults to True.
-            
-    """
-    contents: Iterable = None
-    consistent_interface: bool = True
-
-    """ Properties """
-         
-    @property
-    def endpoints(self) -> List[Any]:
-        """Returns endpoint nodes in the Structure.
-
-        Subclasses must provide their own properties.
-        
-        Returns:
-            List[Any] namea of endpoints in the stored data structure.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    @property
-    def links(self) -> Dict[str, List[Hashable]]:
-        """Returns a dict of node names as keys and links as values.
-        
-        Subclasses must provide their own properties.
- 
-        Returns:
-            Dict[str, List[Hashable]]: dict with nodes as str as keys and lists
-                of links as values.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-                  
-    @property             
-    def nodes(self) -> Dict[Hashable, Any]:
-        """Returns all nodes in the Structure.
-
-        Subclasses must provide their own properties.
-        
-        Returns:
-            List[Any]: names of all nodes in the stored data structure.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-        
-    @property
-    def paths(self) -> List[List[Any]]:
-        """Returns all paths through the stored data structure.
-
-        Subclasses must provide their own properties.
-                
-        Returns:
-            List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
-                list of lists of names of nodes.
-                
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-           
-    @property
-    def roots(self) -> List[Any]:
-        """Returns root nodes in the stored data structure.
-
-        Subclasses must provide their own properties.
-
-        Returns:
-            List[Any]: names of root nodes in the stored data structure.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    """ Class Methods """
-    
-    @classmethod
-    def create(cls, **kwargs) -> Structure:
-        """Creates an instance of a Structure subclass from 'source'.
-        
-        Subclasses must proivde their own classmethods.
-                
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {cls.__class__.__name__} '
-            f'structure')
- 
-    """ Public Methods """
-    
-    def add(self, nodes: Any, **kwargs) -> None:
-        """Adds 'nodes' to the stored data structure.
-        
-        Subclasses should ordinarily provide their own methods.
-        
-        Args:
-            nodes (Any): item(s) to add to 'contents'.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    def append(self, 
-        node: str,
-        start: Union[str, Sequence[str]] = None, 
-        **kwargs) -> None:
-        """Appends 'node' to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-        
-        Args:
-            node (str): item to add to 'contents'.
-            start (Union[str, Sequence[str]]): where to add new node to. If
-                there are multiple nodes in 'start', 'node' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-            
-        """ 
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    def extend(self, 
-        nodes: Sequence[str],
-        start: Union[str, Sequence[str]] = None) -> None:
-        """Adds 'nodes' to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            nodes (Sequence[str]): names of items to add.
-            start (Union[str, Sequence[str]]): where to add new nodes to. If
-                there are multiple nodes in 'start', 'nodes' will be added to
-                each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    def join(self, structure: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
-
-        Subclasses should ordinarily provide their own methods.
-        
-        Args:
-            structure (Structure): a second Structure to join with this one.
-            
-        """
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-     
-    def search(self, start: str = None, depth_first: bool = True) -> List[Any]:
-        """Returns a path through the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
-
-        Args:
-            start (str): node to start the path from. If None, it is assigned to
-                'roots'. Defaults to None.
-            depth_first (bool): whether the search should be depth first (True)
-                or breadth first (False). Defaults to True.
-
-        Returns:
-            List[Any]: nodes in a path through the stored data structure.
-            
-        """        
-        raise NotImplementedError(
-            f'{__name__} is not implemented for a {self.__class__.__name__} '
-            f'structure')
-
-    """ Private Method """
-    
-    def _stringify(self, node: Any) -> str:
-        """[summary]
-
-        Args:
-            node (Any): [description]
-
-        Returns:
-            str: [description]
-            
-        """        
-        if isinstance(node, str):
-            return node
-        else:
-            try:
-                return node.name
-            except AttributeError:
-                try:
-                    return str(hash(node))
-                except (AttributeError, TypeError):
-                    try:
-                        return amicus.tools.snakify(node.__name__)
-                    except AttributeError:
-                        return amicus.tools.snakify(node.__class__.__name__)
-                
-    """ Dunder Methods """
-
-    def __add__(self, other: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
-
-        Adding another structure uses the 'join' method. Read that method's 
-        docstring for further details about how the structures are added 
-        together.
-        
-        Args:
-            other (Structure): a second Structure to join with this one.
-            
-        """
-        self.join(structure = other)        
-        return self
-
-    def __iadd__(self, other: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
-
-        Adding another structure uses the 'join' method. Read that method's 
-        docstring for further details about how the structures are added 
-        together.
-        
-        Args:
-            other (Structure): a second Structure to join with this one.
-            
-        """
-        self.join(structure = other)        
-        return self
-
 
 @dataclasses.dataclass
-class Graph(amicus.base.Lexicon, Structure):
-    """Stores a directed acyclic graph (DAG) as an adjacency list.
-
-    Despite being called an adjacency "list," the typical and most efficient
-    way to store one is using a python dict. An amicus Graph inherits from a 
-    Lexicon in order to allow use of its extra functionality over a plain dict.
+class Graph(amicus.base.Lexicon):
+    """Base class for connected amicus data structures.
+    
+    Graph stores a directed acyclic graph (DAG) as an adjacency list. Despite 
+    being called an adjacency "list," the typical and most efficient way to 
+    store one is using a python dict. An amicus Graph inherits from a Lexicon 
+    in order to allow use of its extra functionality over a plain dict.
+    
+    Graph supports '+' and '+=' to be used to join two amicus Graph instances. 
     
     Graph also supports autovivification where a list is created as a value for
     a missing key. This means that a Graph need not inherit from defaultdict.
@@ -526,18 +248,18 @@ class Graph(amicus.base.Lexicon, Structure):
         return self.contents
 
     @property
-    def links(self) -> Adjacency:
+    def edges(self) -> Edges:
         """Returns the stored graph as an adjacency matrix."""
-        return adjacency_to_links(source = self.contents)
+        return adjacency_to_edges(source = self.contents)
 
     @property
     def endpoints(self) -> List[Hashable]:
         """Returns endpoint nodes in the Graph."""
         return [k for k in self.contents.keys() if not self.contents[k]]
-    
+
     @property
     def matrix(self) -> Matrix:
-        """Returns the stored graph as an link list."""
+        """Returns the stored graph as an edge list."""
         return adjacency_to_matrix(source = self.contents)
                       
     @property
@@ -557,7 +279,7 @@ class Graph(amicus.base.Lexicon, Structure):
                 values are the nodes themselves.
             
         """
-        return {self._stringify(n): n for n in self.contents.keys()}
+        return {self._hashify(n): n for n in self.contents.keys()}
 
     @property
     def paths(self) -> List[List[Hashable]]:
@@ -589,7 +311,7 @@ class Graph(amicus.base.Lexicon, Structure):
         
         Args:
             source (Union[Adjacency, Edges, Matrix]): an adjacency list, 
-                adjacency matrix, or link list which can used to create the
+                adjacency matrix, or edge list which can used to create the
                 stored graph.
                 
         Returns:
@@ -600,12 +322,12 @@ class Graph(amicus.base.Lexicon, Structure):
             return cls.from_adjacency(adjacency = source)
         elif is_adjacency_matrix(item = source):
             return cls.from_matrix(matrix = source)
-        elif is_link_list(item = source):
-            return cls.from_adjacency(links = source)
+        elif is_edge_list(item = source):
+            return cls.from_adjacency(edges = source)
         else:
             raise TypeError(
                 f'create requires source to be an adjacency list, adjacency '
-                f'matrix, or link list')
+                f'matrix, or edge list')
            
     @classmethod
     def from_adjacency(cls, adjacency: Adjacency) -> Graph:
@@ -625,64 +347,57 @@ class Graph(amicus.base.Lexicon, Structure):
         return cls(contents = adjacency)
     
     @classmethod
-    def from_links(cls, links: Edges) -> Graph:
-        """Creates a Graph instance from an link list.
+    def from_edges(cls, edges: Edges) -> Graph:
+        """Creates a Graph instance from an edge list.
 
-        'links' should be a list of tuples, where the first item in the tuple
+        'edges' should be a list of tuples, where the first item in the tuple
         is the node and the second item is the node (or name of node) to which
         the first item is connected.
         
         Args:
-            links (Edges): Edge list used to create a Graph 
+            edges (Edges): Edge list used to create a Graph 
                 instance.
                 
         Returns:
-            Graph: a Graph instance created based on 'links'.
+            Graph: a Graph instance created based on 'edges'.
 
         """
-        return cls(contents = links_to_adjacency(source = links))
+        return cls(contents = edges_to_adjacency(source = edges))
     
     @classmethod
-    def from_matrix(cls, 
-        matrix: List[List[int]], 
-        names: List[Hashable]) -> Graph:
+    def from_matrix(cls, matrix: Matrix) -> Graph:
         """Creates a Graph instance from an adjacency matrix
 
         Args:
-            matrix (matrix: List[List[int]]): adjacency matrix used to create a 
-                Graph instance. The values in the matrix should be 1 
-                (indicating an link) and 0 (indicating no link).
-            names (List[Hashable]): names of nodes in the order of the rows and
-                columns in 'matrix'.
+            matrix (Matrix): adjacency matrix used to create a Graph instance. 
+                The values in the matrix should be 1 (indicating an edge) and 0 
+                (indicating no edge).
  
         Returns:
-            Graph: a Graph instance created based on 'matrix' and 'names'.
+            Graph: a Graph instance created based on 'matrix'.
                         
         """
-        return cls(contents = matrix_to_adjacency(source = tuple(matrix, names)))
+        return cls(contents = matrix_to_adjacency(source = matrix))
     
     """ Public Methods """
     
-    def add(self, item: Union[Hashable, tuple[Hashable]]) -> None:
-        """Adds nodes or links to 'contents' depending on type.
+    def add(self, node: Hashable) -> None:
+        """Adds nodes or edges to 'contents' depending on type.
         
         Args:
             item (Union[Hashable, tuple[Hashable]]): either a node or a tuple 
-                containing the names of nodes for an link to be created.
+                containing the names of nodes for an edge to be created.
 
         """
-        if isinstance(item, tuple) and len(item) == 2:
-            self.add_link(start = item[0], stop = item[1])
-        else:
-            self.add_node(node = item)
+        self.contents[self._hashify(node)] = []
         return self
 
-    def add_link(self, start: Hashable, stop: Hashable) -> None:
-        """Adds an link to 'contents'.
+    def connect(self, start: Hashable, stop: Hashable) -> None:
+        """Adds an edge to 'contents'.
 
         Args:
-            start (Hashable): name of node for link to start.
-            stop (Hashable): name of node for link to stop.
+            start (Hashable): name of node for edge to start.
+            stop (Hashable): name of node for edge to stop.
             
         Raises:
             ValueError: if 'start' is the same as 'stop'.
@@ -690,27 +405,14 @@ class Graph(amicus.base.Lexicon, Structure):
         """
         if start == stop:
             raise ValueError(
-                'The start of an link cannot be the same as the stop')
+                'The start of an edge cannot be the same as the stop')
         else:
             if stop not in self.contents:
-                self.add_node(node = stop)
+                self.add(node = stop)
             if start not in self.contents:
-                self.add_node(node = start)
+                self.add(node = start)
             if stop not in self.contents[start]:
-                self.contents[start].append(self._stringify(stop))
-        return self
-
-    def add_node(self, node: Hashable) -> None:
-        """Adds a node to 'contents'.
-        
-        Args:
-            node (Hashable): node to add to the graph.
-            
-        Raises:
-            ValueError: if 'node' is already in 'contents'.
-        
-        """
-        self.contents[node] = []
+                self.contents[start].append(self._hashify(stop))
         return self
 
     def append(self, 
@@ -733,21 +435,21 @@ class Graph(amicus.base.Lexicon, Structure):
         if start:
             for starting in more_itertools.always_iterable(start):
                 if node not in [starting]:
-                    self.add_link(start = starting, stop = node)
+                    self.connect(start = starting, stop = node)
         else:
-            self.add_node(node = node)
+            self.add(node = node)
         return self  
 
-    def delete_link(self, start: Hashable, stop: Hashable) -> None:
-        """Deletes link from graph.
+    def disconnect(self, start: Hashable, stop: Hashable) -> None:
+        """Deletes edge from graph.
 
         Args:
-            start (Hashable): starting node for the link to delete.
-            stop (Hashable): ending node for the link to delete.
+            start (Hashable): starting node for the edge to delete.
+            stop (Hashable): ending node for the edge to delete.
         
         Raises:
             KeyError: if 'start' is not a node in the Graph.
-            ValueError: if 'stop' does not have an link with 'start'.
+            ValueError: if 'stop' does not have an edge with 'start'.
 
         """
         try:
@@ -758,7 +460,7 @@ class Graph(amicus.base.Lexicon, Structure):
             raise ValueError(f'{stop} is not connected to {start}')
         return self
        
-    def delete_node(self, node: Hashable) -> None:
+    def delete(self, node: Hashable) -> None:
         """Deletes node from graph.
         
         Args:
@@ -813,12 +515,12 @@ class Graph(amicus.base.Lexicon, Structure):
             start = self.endpoints
         if start:
             for starting in more_itertools.always_iterable(start):
-                self.add_link(start = starting, stop = nodes[0])
+                self.connect(start = starting, stop = nodes[0])
         else:
-            self.add_node(nodes[0])
-        links = more_itertools.windowed(nodes, 2)
-        for link_pair in links:
-            self.add_link(start = link_pair[0], stop = link_pair[1])
+            self.add(nodes[0])
+        edges = more_itertools.windowed(nodes, 2)
+        for edge_pair in edges:
+            self.connect(start = edge_pair[0], stop = edge_pair[1])
         return self  
   
     def find_paths(self, 
@@ -859,7 +561,7 @@ class Graph(amicus.base.Lexicon, Structure):
     def join(self, structure: Graph) -> None:
         """Adds 'structure' to this Graph.
 
-        Combining creates an link between every endpoint of this instance's
+        Combining creates an edge between every endpoint of this instance's
         Graph and the every root of 'graph'.
 
         Args:
@@ -876,7 +578,7 @@ class Graph(amicus.base.Lexicon, Structure):
                 self.contents.update(structure.contents)
                 for endpoint in current_endpoints:
                     for root in structure.roots:
-                        self.add_link(start = endpoint, stop = root)
+                        self.connect(start = endpoint, stop = root)
             else:
                 self.contents = structure.contents
         else:
@@ -884,7 +586,7 @@ class Graph(amicus.base.Lexicon, Structure):
         return self
 
     def replace_node(self, node: Hashable) -> None:
-        """Replaces a node that already exists but leaves its links intact.
+        """Replaces a node that already exists but leaves its edges intact.
 
         Args:
             node (Hashable): node to replace a current node with the same hash
@@ -896,11 +598,11 @@ class Graph(amicus.base.Lexicon, Structure):
         """
         if node not in self.contents:
             raise ValueError(
-                f'{self._stringify(node)} cannot replace a node that does not '
+                f'{self._hashify(node)} cannot replace a node that does not '
                 f'currently exist')   
         else:
-            links = self.contents[node]
-            self.contents[node] = links
+            edges = self.contents[node]
+            self.contents[node] = edges
         return self
            
     def search(self, 
@@ -943,6 +645,28 @@ class Graph(amicus.base.Lexicon, Structure):
         return self.excludify(subset = excludables, **kwargs)
 
     """ Private Methods """
+    
+    def _hashify(self, node: Any) -> str:
+        """[summary]
+
+        Args:
+            node (Any): [description]
+
+        Returns:
+            str: [description]
+            
+        """        
+        if isinstance(node, Hashable):
+            return node
+        else:
+            try:
+                return node.name
+            except AttributeError:
+                try:
+                    return amicus.tools.snakify(node.__name__)
+                except AttributeError:
+                    return amicus.tools.snakify(node.__class__.__name__)
+
 
     def _breadth_first_search(self, node: Hashable) -> List[Hashable]:
         """Returns a breadth first search path through the Graph.
@@ -978,8 +702,8 @@ class Graph(amicus.base.Lexicon, Structure):
         """  
         if node not in visited:
             visited.append(node)
-            for link in self[node]:
-                self._depth_first_search(node = link, visited = visited)
+            for edge in self[node]:
+                self._depth_first_search(node = edge, visited = visited)
         return visited
   
     def _find_all_paths(self, 
@@ -1008,9 +732,37 @@ class Graph(amicus.base.Lexicon, Structure):
                     else:
                         all_paths.extend(paths)
         return all_paths
-
+            
     """ Dunder Methods """
-    
+
+    def __add__(self, other: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Adding another structure uses the 'join' method. Read that method's 
+        docstring for further details about how the structures are added 
+        together.
+        
+        Args:
+            other (Structure): a second Structure to join with this one.
+            
+        """
+        self.join(structure = other)        
+        return self
+
+    def __iadd__(self, other: Structure) -> None:
+        """Adds 'other' Structure to this Structure.
+
+        Adding another structure uses the 'join' method. Read that method's 
+        docstring for further details about how the structures are added 
+        together.
+        
+        Args:
+            other (Structure): a second Structure to join with this one.
+            
+        """
+        self.join(structure = other)        
+        return self
+
     def __str__(self) -> str:
         """Returns prettier representation of the Graph.
 
@@ -1022,8 +774,8 @@ class Graph(amicus.base.Lexicon, Structure):
         new_line = '\n'
         representation = [f'{new_line}amicus {self.__class__.__name__}']
         representation.append('adjacency list:')
-        for node, links in self.contents.items():
-            representation.append(f'    {node}: {str(links)}')
+        for node, edges in self.contents.items():
+            representation.append(f'    {node}: {str(edges)}')
         return new_line.join(representation) 
 
 
