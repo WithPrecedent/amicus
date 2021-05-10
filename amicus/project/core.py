@@ -23,6 +23,17 @@ import amicus
 from . import configuration
 from . import workshop
 
+ 
+def settings_to_workbook(source: amicus.options.Settings) -> Workflow:
+    """Converts Settings to a Workflow."""
+    workflow = Workflow()
+    return workflow
+
+def workflow_to_cookbook(source: Workflow) -> Cookbook:
+    """Converts a Workflow to a Cookbook of Recipes."""
+    cookbook = Cookbook()
+    return cookbook
+
      
 @dataclasses.dataclass
 class Workflow(amicus.structures.Graph):
@@ -36,13 +47,19 @@ class Workflow(amicus.structures.Graph):
             Defaults to an empty list.
                   
     """  
-    contents: Dict[Hashable, List[Hashable]] = dataclasses.field(
+    contents: amicus.Structures.Adjacency = dataclasses.field(
         default_factory = dict)
-    default: Any = dataclasses.field(default_factory = list)
     components: MutableMapping[str, object] = (
         amicus.project.configuration.bases.component.library)
 
-    """ Public Class Methods """
+    """ Properties """
+    
+    @property
+    def cookbook(self) -> Cookbook:
+        """Returns the stored workflow as a Cookbook of Recipes."""
+        return workflow_to_cookbook(source = self)
+
+    """ Class Methods """
         
     @classmethod
     def create(cls, project: amicus.Project, **kwargs) -> Workflow:
@@ -87,7 +104,33 @@ class Workflow(amicus.structures.Graph):
             for edge_pair in edges:
                 self.add_edge(start = edge_pair[0], stop = edge_pair[1]) 
         return self    
-  
+
+    def extend(self, 
+        nodes: Sequence[Hashable],
+        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
+        """Adds 'nodes' to the stored data structure.
+
+        Args:
+            nodes (Sequence[Hashable]): names of items to add.
+            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
+                to. If there are multiple nodes in 'start', 'node' will be added 
+                to each of the starting points. If 'start' is None, 'endpoints'
+                will be used. Defaults to None.
+                
+        """
+        if any(isinstance(n, (list, tuple)) for n in nodes):
+            nodes = tuple(more_itertools.collapse(nodes))
+        if start is None:
+            start = self.endpoints
+        if start:
+            for starting in more_itertools.always_iterable(start):
+                self.connect(start = starting, stop = nodes[0])
+        else:
+            self.add(nodes[0])
+        edges = more_itertools.windowed(nodes, 2)
+        for edge_pair in edges:
+            self.connect(start = edge_pair[0], stop = edge_pair[1])
+        return self  
   
 @dataclasses.dataclass
 class Recipe(amicus.base.Lexicon):            

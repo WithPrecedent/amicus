@@ -6,23 +6,46 @@ License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 
 amicus structures are primarily designed to be the backbones of workflows. So,
 the provided subclasses assume that all edges in a composite structure are
-unweighted and directed. However, the architecture of Structure and Node can
-support weighted edges and undirected composite structures as well.
+unweighted and directed.
 
-Contents:
-    Node (Element, collections.abc.Hashable):
-    Structure (Keystone, ABC): base class for all amicus composite structures.
-    Graph (Lexicon, Structure): a lightweight directed acyclic graph (DAG).
+Types:
+    Adjacency (Type): annotation type for an adjacency list.
+    Matrix (Type): annotation type for an adjacency matrix.
+    Edge (Type): annotation type for a tuple of edge endpoints.
+    Edges (Type): annotation type for an edge list.
+    Pipeline (Type): annotation type for a pipeline.
+    Nodes (Type): annotation type for one or more nodes.
+    
+Functions:
+    is_adjacency_list (Callable): tests if an object is an adjacency list.
+    is_adjacency_matrix (Callable): tests if an object is an adjacency matrix.
+    is_edge_list (Callable): tests if an object is an edge list.
+    is_pipeline (Callable): tests if an object is a pipeline.
+    adjacency_to_edges (Callable): converts adjacency list to edge list.
+    adjacency_to_matrix (Callable): converts adjacency list to adjacency matrix.
+    adjacency_to_pipelines (Callable): converts adjacency list to pipelines.
+    edges_to_adjacency (Callable): converts edge list to an adjacency list.
+    matrix_to_adjacency (Callable): converts adjacency matrix to an adjacency 
+        list.
+    pipeline_to_adjacency (Callable): converts pipeline to an adjacency list.
+
+Classes:
+    Node (Element, Proxy, collections.abc.Hashable): Wrapper for non-hashable 
+        objections that a user wishes to store as nodes. It can be subclassed,
+        but a subclass must be a dataclass and call super().__post_init__ to 
+        ensure that the hash equivalence methods are added to subclasses.
+    Graph (Bunch): a lightweight directed acyclic graph (DAG) that serves as
+        the base class for amicus composite structures. Internally, the graph is
+        stored as an adjacency list. As a result, it should primarily be used
+        for workflows or other uses that do form large graphs. In those
+        instances, an adjacency matrix would be far more efficient.
 
 To Do:
-    Add Tree structure using an amicus Hybrid
-    Add Pipeline structure using an amicus Hybrid?
-    Add Network structure that is an undirected Graph with potentially weighted
-        edges.
+    Add an Edge class and seamless support for it in Graph to allow for weights,
+        direction, and other edge attributes.
     
 """
 from __future__ import annotations
-import abc
 import collections.abc
 import copy
 import dataclasses
@@ -36,53 +59,38 @@ import more_itertools
 import amicus
 
 
-Adjacency: Type = Dict[Hashable, List[Hashable]]
-Matrix: Type = Union[Tuple[List[List[int]], List[Hashable]], List[List[int]]]
+Adjacency: Type = Dict[Hashable, MutableSequence[Hashable]]
+Matrix: Type = Union[Tuple[MutableSequence[MutableSequence[int]], 
+                           MutableSequence[Hashable]], 
+                     MutableSequence[MutableSequence[int]]]
 Edge: Tuple[Hashable, Hashable]
-Edges: Type = List[Edge]
+Edges: Type = MutableSequence[Edge]
+Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
+Nodes: Type = Union[Hashable, Pipeline]
 
     
 def is_adjacency_list(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
-    
-    return (isinstance(item, Dict) 
-            and all(isinstance(v, List) for v in item.values()))
+    """Returns whether 'item' is an adjacency list."""
+    return (isinstance(item, MutableMapping) 
+            and all(isinstance(v, MutableSequence) for v in item.values()))
 
 def is_adjacency_matrix(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
+    """Returns whether 'item' is an adjacency matrix."""
     if isinstance(item, tuple):
         item = item[0]
-    return isinstance(item, List) and all(isinstance(i, List) for i in item)
+    return (isinstance(item, MutableSequence) 
+            and all(isinstance(i, MutableSequence) for i in item))
 
 def is_edge_list(item: Any) -> bool:
-    """[summary]
-
-    Args:
-        item (Any): [description]
-
-    Returns:
-        bool: [description]
-        
-    """
-    return (isinstance(item, List) 
+    """Returns whether 'item' is an edge list."""
+    return (isinstance(item, MutableSequence) 
             and all(isinstance(i, Tuple) for i in item)
             and all(len(i) == 2 for i in item))
+    
+def is_pipeline(item: Any) -> bool:
+    """Returns whether 'item' is a pipeline."""
+    return isinstance(item, (MutableSequence, Tuple, Set)
+                      and all(isinstance(i, Hashable) for i in item))
 
 def adjacency_to_edges(source: Adjacency) -> Edges:
     """Converts an adjacency list to an edge list."""
@@ -90,7 +98,7 @@ def adjacency_to_edges(source: Adjacency) -> Edges:
     for node, connections in source.items():
         for connection in connections:
             edges.append(tuple(node, connection))
-    return 
+    return edges
 
 def adjacency_to_matrix(source: Adjacency) -> Matrix:
     """Converts an adjacency list to an adjacency matrix."""
@@ -131,7 +139,14 @@ def matrix_to_adjacency(source: Matrix) -> Adjacency:
         adjacency[new_key] = new_values
     return adjacency
 
-
+def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
+    """Converts a pipeline to an adjacency list."""
+    adjacency = {}
+    edges = more_itertools.windowed(source, 2)
+    for edge_pair in edges:
+        adjacency[edge_pair[0]] = edge_pair[1]
+    return adjacency
+        
 @dataclasses.dataclass
 class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
     """Vertex wrapper to provide hashability to any object.
@@ -215,7 +230,7 @@ class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
 
 
 @dataclasses.dataclass
-class Graph(amicus.base.Lexicon):
+class Graph(amicus.base.Bunch):
     """Base class for connected amicus data structures.
     
     Graph stores a directed acyclic graph (DAG) as an adjacency list. Despite 
@@ -223,22 +238,20 @@ class Graph(amicus.base.Lexicon):
     store one is using a python dict. An amicus Graph inherits from a Lexicon 
     in order to allow use of its extra functionality over a plain dict.
     
-    Graph supports '+' and '+=' to be used to join two amicus Graph instances. 
+    Graph supports '+' and '+=' to be used to join two amicus Graph instances. A
+    properly formatted adjacency list could also be the added object.
     
-    Graph also supports autovivification where a list is created as a value for
-    a missing key. This means that a Graph need not inherit from defaultdict.
+    Graph internally supports autovivification where a list is created as a 
+    value for a missing key. This means that a Graph need not inherit from 
+    defaultdict.
     
     Args:
-        contents (Adjacency): an adjacency list where the 
-            keys are nodes and the values are nodes which the key is connected 
-            to. Defaults to an empty dict.
-        default (Any): default value to return when the 'get' method is used.
-            Defaults to an empty list.
+        contents (Adjacency): an adjacency list where the keys are nodes and the 
+            values are nodes which the key is connected to. Defaults to an empty 
+            dict.
                   
     """  
-    contents: Adjacency = dataclasses.field(
-        default_factory = dict)
-    default: Any = dataclasses.field(default_factory = list)
+    contents: Adjacency = dataclasses.field(default_factory = dict)
     
     """ Properties """
 
@@ -249,17 +262,17 @@ class Graph(amicus.base.Lexicon):
 
     @property
     def edges(self) -> Edges:
-        """Returns the stored graph as an adjacency matrix."""
+        """Returns the stored graph as an edge list."""
         return adjacency_to_edges(source = self.contents)
 
     @property
-    def endpoints(self) -> List[Hashable]:
-        """Returns endpoint nodes in the Graph."""
+    def endpoints(self) -> MutableSequence[Hashable]:
+        """Returns a list of endpoint nodes in the Graph."""
         return [k for k in self.contents.keys() if not self.contents[k]]
 
     @property
     def matrix(self) -> Matrix:
-        """Returns the stored graph as an edge list."""
+        """Returns the stored graph as an adjacency matrix."""
         return adjacency_to_matrix(source = self.contents)
                       
     @property
@@ -282,22 +295,22 @@ class Graph(amicus.base.Lexicon):
         return {self._hashify(n): n for n in self.contents.keys()}
 
     @property
-    def paths(self) -> List[List[Hashable]]:
+    def paths(self) -> MutableSequence[MutableSequence[Hashable]]:
         """Returns all paths through the Graph in a list of lists form.
         
         Returns:
-            List[List[Hashable]]: returns all paths from 'roots' to 'endpoints' 
+            MutableSequence[MutableSequence[Hashable]]: returns all paths from 'roots' to 'endpoints' 
                 in a list of lists of nodes.
                 
         """
         return self._find_all_paths(starts = self.roots, ends = self.endpoints)
        
     @property
-    def roots(self) -> List[Hashable]:
+    def roots(self) -> MutableSequence[Hashable]:
         """Returns root nodes in the Graph.
 
         Returns:
-            List[Hashable]: root nodes.
+            MutableSequence[Hashable]: root nodes.
             
         """
         stops = list(itertools.chain.from_iterable(self.contents.values()))
@@ -366,7 +379,7 @@ class Graph(amicus.base.Lexicon):
     
     @classmethod
     def from_matrix(cls, matrix: Matrix) -> Graph:
-        """Creates a Graph instance from an adjacency matrix
+        """Creates a Graph instance from an adjacency matrix.
 
         Args:
             matrix (Matrix): adjacency matrix used to create a Graph instance. 
@@ -379,21 +392,106 @@ class Graph(amicus.base.Lexicon):
         """
         return cls(contents = matrix_to_adjacency(source = matrix))
     
+    @classmethod
+    def from_pipeline(cls, pipeline: Pipeline) -> Graph:
+        """Creates a Graph instance from a Pipeline.
+
+        Args:
+            pipeline (Pipeline): serial pipeline used to create a Graph
+                instance.
+ 
+        Returns:
+            Graph: a Graph instance created based on 'pipeline'.
+                        
+        """
+        return cls(contents = pipeline_to_adjacency(source = pipeline))
+       
     """ Public Methods """
     
-    def add(self, node: Hashable) -> None:
-        """Adds nodes or edges to 'contents' depending on type.
+    def add(self, 
+            node: Hashable,
+            from_nodes: Nodes = None,
+            to_nodes: Nodes = None) -> None:
+        """Adds 'node' to 'contents' with no corresponding edges.
         
         Args:
-            item (Union[Hashable, tuple[Hashable]]): either a node or a tuple 
-                containing the names of nodes for an edge to be created.
+            node (Hashable): a node to add to the stored graph.
 
         """
-        self.contents[self._hashify(node)] = []
-        return self
+        if to_nodes is None:
+            self.contents[node] = []
+        elif to_nodes in self:
+            self.contents[node] = amicus.tools.listify(to_nodes)
+        else:
+            missing = [n for n in to_nodes if n not in self.contents]
+            raise KeyError(f'to_nodes {missing} are not in the Graph')
+        if from_nodes is not None:  
+            if (isinstance(from_nodes, Hashable) and from_nodes in self
+                    or (isinstance(from_nodes, (MutableSequence, Tuple, Set)) 
+                        and all(isinstance(n, Hashable) for n in from_nodes)
+                        and all(n in self.contents for n in from_nodes))):
+                start = from_nodes
+            elif (hasattr(self.__class__, from_nodes) 
+                    and isinstance(getattr(type(self), from_nodes), property)):
+                start = getattr(self, from_nodes)
+            else:
+                missing = [n for n in from_nodes if n not in self.contents]
+                raise KeyError(f'from_nodes {missing} are not in the Graph')
+            for starting in more_itertools.always_iterable(start):
+                if node not in [starting]:
+                    self.connect(start = starting, stop = node)                 
+        return self 
 
+    def append(self, 
+               source: Union[Graph, Adjacency, Edges, Matrix, Nodes]) -> None:
+        """Adds 'source' to this Graph.
+
+        Combining creates an edge between every endpoint of this instance's
+        Graph and the every root of 'source'.
+
+        Args:
+            source (Union[Graph, Adjacency, Edges, Matrix, Nodes]): another 
+                Graph to join with this one, an adjacency list, an edge list, an
+                adjacency matrix, or Nodes.
+            
+        Raises:
+            TypeError: if 'source' is neither a Graph, Adjacency, Edges, Matrix,
+                or Nodes type.
+            
+        """
+        if isinstance(source, Graph):
+            if self.contents:
+                current_endpoints = self.endpoints
+                self.contents.update(source.contents)
+                for endpoint in current_endpoints:
+                    for root in source.roots:
+                        self.connect(start = endpoint, stop = root)
+            else:
+                self.contents = source.contents
+        elif isinstance(source, Adjacency):
+            self.append(source = self.from_adjacency(adjacecny = source))
+        elif isinstance(source, Edges):
+            self.append(source = self.from_edges(edges = source))
+        elif isinstance(source, Matrix):
+            self.append(source = self.from_matrix(matrix = source))
+        elif isinstance(source, Nodes):
+            if isinstance(source, (MutableSequence, Tuple, Set)):
+                new_graph = Graph()
+                edges = more_itertools.windowed(source, 2)
+                for edge_pair in edges:
+                    new_graph.add(node = edge_pair[0], to_nodes = edge_pair[1])
+                self.append(source = new_graph)
+            else:
+                self.add(node = source)
+        else:
+            raise TypeError(
+                'source must be a Graph, Adjacency, Edges, Matrix, or Nodes '
+                'type')
+
+        return self
+  
     def connect(self, start: Hashable, stop: Hashable) -> None:
-        """Adds an edge to 'contents'.
+        """Adds an edge from 'start' to 'stop'.
 
         Args:
             start (Hashable): name of node for edge to start.
@@ -415,30 +513,23 @@ class Graph(amicus.base.Lexicon):
                 self.contents[start].append(self._hashify(stop))
         return self
 
-    def append(self, 
-        node: Hashable,
-        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
-        """Appends 'node' to the stored data structure.
-
-        Subclasses should ordinarily provide their own methods.
+    def delete(self, node: Hashable) -> None:
+        """Deletes node from graph.
         
         Args:
-            node (Hashable): item to add to 'contents'.
-            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
-                to. If there are multiple nodes in 'start', 'node' will be added 
-                to each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
+            node (Hashable): node to delete from 'contents'.
+        
+        Raises:
+            KeyError: if 'node' is not in 'contents'.
             
-        """ 
-        if start is None:
-            start = self.endpoints
-        if start:
-            for starting in more_itertools.always_iterable(start):
-                if node not in [starting]:
-                    self.connect(start = starting, stop = node)
-        else:
-            self.add(node = node)
-        return self  
+        """
+        try:
+            del self.contents[node]
+        except KeyError:
+            raise KeyError(f'{node} does not exist in the graph')
+        self.contents = {
+            k: v.remove(node) for k, v in self.contents.items() if node in v}
+        return self
 
     def disconnect(self, start: Hashable, stop: Hashable) -> None:
         """Deletes edge from graph.
@@ -459,193 +550,112 @@ class Graph(amicus.base.Lexicon):
         except ValueError:
             raise ValueError(f'{stop} is not connected to {start}')
         return self
-       
-    def delete(self, node: Hashable) -> None:
-        """Deletes node from graph.
+
+    def merge(self, source: Union[Graph, Adjacency, Edges, Matrix]) -> None:
+        """Adds 'source' to this Graph.
+
+        This method is roughly equivalent to a dict.update, just adding the
+        new keys and values to the existing graph. It converts the supported
+        formats to an adjacency list that is then added to the existing 
+        'contents'.
         
         Args:
-            node (Hashable): node to delete from 'contents'.
-        
+            source (Union[Graph, Adjacency, Edges, Matrix]): another Graph to 
+                add to this one, an adjacency list, an edge list, or an
+                adjacency matrix.
+            
         Raises:
-            KeyError: if 'node' is not in 'contents'.
+            TypeError: if 'source' is neither a Graph, Adjacency, Edges, or 
+                Matrix type.
             
         """
-        try:
-            del self.contents[node]
-        except KeyError:
-            raise KeyError(f'{node} does not exist in the graph')
-        self.contents = {
-            k: v.remove(node) for k, v in self.contents.items() if node in v}
+        if isinstance(source, Graph):
+            source = source.contents
+        elif isinstance(source, Adjacency):
+            pass
+        elif isinstance(source, Edges):
+            source = self.from_edges(edges = source).contents
+        elif isinstance(source, Matrix):
+            source = self.from_matrix(matrix = source).contents
+        else:
+            raise TypeError(
+                'source must be a Graph, Adjacency, Edges, or Matrix type to '
+                'update')
+        self.contents.update(source)
         return self
-       
-    def excludify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Graph:
-        """Returns a new instance without a subset of 'contents'.
+  
+    def subgraph(self, 
+                 include: Union[Any, Sequence[Any]] = None,
+                 exclude: Union[Any, Sequence[Any]] = None) -> Graph:
+        """Returns a new Graph without a subset of 'contents'.
+        
+        All edges will be removed that include any nodes that are not part of
+        the new subgraph.
+        
+        Any extra attributes that are part of a Graph (or a subclass) will be
+        maintained in the returned subgraph.
 
         Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should not be returned.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
+            include (Union[Any, Sequence[Any]]): nodes which should be included
+                with any applicable edges in the new subgraph.
+            exclude (Union[Any, Sequence[Any]]): nodes which should not be 
+                included with any applicable edges in the new subgraph.
 
         Returns:
             Graph: with only key/value pairs with keys not in 'subset'.
 
         """
-        new_graph = copy.deepcopy(self)
-        for node in more_itertools.always_iterable(subset):
-            new_graph.delete_node(node = node)
+        if include is None and exclude is None:
+            raise ValueError(
+                'subgraph requiest either include or exclude to not be None')
+        else:
+            if include:
+                excludables = [k for k in self.contents if k not in include]
+            else:
+                excludables = []
+            excludables.extend([i for i in self.contents if i not in exclude])
+            new_graph = copy.deepcopy(self)
+            for node in more_itertools.always_iterable(excludables):
+                new_graph.delete(node = node)
         return new_graph
 
-    def extend(self, 
-        nodes: Sequence[Union[Hashable, List]],
-        start: Union[Hashable, Sequence[Hashable]] = None) -> None:
-        """Adds 'nodes' to the stored data structure.
-
-        Args:
-            nodes (Sequence[Hashable]): names of items to add.
-            start (Union[Hashable, Sequence[Hashable]]): where to add new node 
-                to. If there are multiple nodes in 'start', 'node' will be added 
-                to each of the starting points. If 'start' is None, 'endpoints'
-                will be used. Defaults to None.
-                
-        """
-        if any(isinstance(n, (list, tuple)) for n in nodes):
-            nodes = tuple(more_itertools.collapse(nodes))
-        if start is None:
-            start = self.endpoints
-        if start:
-            for starting in more_itertools.always_iterable(start):
-                self.connect(start = starting, stop = nodes[0])
-        else:
-            self.add(nodes[0])
-        edges = more_itertools.windowed(nodes, 2)
-        for edge_pair in edges:
-            self.connect(start = edge_pair[0], stop = edge_pair[1])
-        return self  
-  
-    def find_paths(self, 
-        start: Hashable, 
-        end: Hashable, 
-        path: List[Hashable] = []) -> List[List[Hashable]]:
-        """Returns all paths in graph from 'start' to 'end'.
+    def walk(self, 
+             start: Hashable, 
+             stop: Hashable, 
+             path: MutableSequence[Hashable] = []) -> MutableSequence[MutableSequence[Hashable]]:
+        """Returns all paths in graph from 'start' to 'stop'.
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
         
         Args:
             start (Hashable): node to start paths from.
-            end (Hashable): node to end paths.
-            path (List[Hashable]): a path from 'start' to 'end'. Defaults to an 
+            stop (Hashable): node to stop paths.
+            path (MutableSequence[Hashable]): a path from 'start' to 'stop'. Defaults to an 
                 empty list. 
 
         Returns:
-            List[List[Hashable]]: a list of possible paths (each path is a list 
-                nodes) from 'start' to 'end'.
+            MutableSequence[MutableSequence[Hashable]]: a list of possible paths (each path is a list 
+                nodes) from 'start' to 'stop'.
             
         """
         path = path + [start]
-        if start == end:
+        if start == stop:
             return [path]
         if start not in self.contents:
             return []
         paths = []
         for node in self.contents[start]:
             if node not in path:
-                new_paths = self.find_paths(
+                new_paths = self.walk(
                     start = node, 
-                    end = end, 
+                    stop = stop, 
                     path = path)
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
 
-    def join(self, structure: Graph) -> None:
-        """Adds 'structure' to this Graph.
-
-        Combining creates an edge between every endpoint of this instance's
-        Graph and the every root of 'graph'.
-
-        Args:
-            structure (Graph): a second Graph to join with this one.
-            
-        Raises:
-            ValueError: if 'graph' has nodes that are also in 'contents'.
-            TypeError: if 'graph' is not a Graph type.
-            
-        """
-        if isinstance(structure, Graph):
-            if self.contents:
-                current_endpoints = self.endpoints
-                self.contents.update(structure.contents)
-                for endpoint in current_endpoints:
-                    for root in structure.roots:
-                        self.connect(start = endpoint, stop = root)
-            else:
-                self.contents = structure.contents
-        else:
-            raise TypeError('structure must be a Graph type to join')
-        return self
-
-    def replace_node(self, node: Hashable) -> None:
-        """Replaces a node that already exists but leaves its edges intact.
-
-        Args:
-            node (Hashable): node to replace a current node with the same hash
-                value.
-
-        Raises:
-            ValueError: if a node with the same hash value is not in 'contents'.
-            
-        """
-        if node not in self.contents:
-            raise ValueError(
-                f'{self._hashify(node)} cannot replace a node that does not '
-                f'currently exist')   
-        else:
-            edges = self.contents[node]
-            self.contents[node] = edges
-        return self
-           
-    def search(self, 
-        start: Hashable = None, 
-        depth_first: bool = True) -> List[Hashable]:
-        """Returns a path through the stored data structure.
-
-        Args:
-            start (Hashable): node to start the path from. If None, it is 
-                assigned to 'roots'. Defaults to None.
-            depth_first (bool): whether the search should be depth first (True)
-                or breadth first (False). Defaults to True.
-
-        Returns:
-            List[Hashable]: nodes in a path through the stored data structure.
-            
-        """        
-        if start is None:
-            start = self.roots[0]
-        if depth_first:
-            visited = self._depth_first_search(node = start, visited = [])
-        else:
-            visited = self._breadth_first_search(node = start)
-        return visited
-                   
-    def subsetify(self, subset: Union[Any, Sequence[Any]], **kwargs) -> Graph:
-        """Returns a new instance with a subset of 'contents'.
-
-        Args:
-            subset (Union[Any, Sequence[Any]]): key(s) for which key/value pairs 
-                from 'contents' should be returned.
-            kwargs: creates a consistent interface even when subclasses have
-                additional parameters.
-
-        Returns:
-            Graph: with only key/value pairs with keys in 'subset'.
-
-        """
-        excludables = [i for i in self.contents if i not in subset]
-        return self.excludify(subset = excludables, **kwargs)
-
     """ Private Methods """
-    
+
     def _hashify(self, node: Any) -> str:
         """[summary]
 
@@ -668,14 +678,14 @@ class Graph(amicus.base.Lexicon):
                     return amicus.tools.snakify(node.__class__.__name__)
 
 
-    def _breadth_first_search(self, node: Hashable) -> List[Hashable]:
+    def _breadth_first_search(self, node: Hashable) -> MutableSequence[Hashable]:
         """Returns a breadth first search path through the Graph.
 
         Args:
             node (Hashable): node to start the search from.
 
         Returns:
-            List[Hashable]: nodes in a path through the Graph.
+            MutableSequence[Hashable]: nodes in a path through the Graph.
             
         """        
         visited = set()
@@ -689,15 +699,15 @@ class Graph(amicus.base.Lexicon):
        
     def _depth_first_search(self, 
         node: Hashable, 
-        visited: List[Hashable]) -> List[Hashable]:
+        visited: MutableSequence[Hashable]) -> MutableSequence[Hashable]:
         """Returns a depth first search path through the Graph.
 
         Args:
             node (Hashable): node to start the search from.
-            visited (List[Hashable]): list of visited nodes.
+            visited (MutableSequence[Hashable]): list of visited nodes.
 
         Returns:
-            List[Hashable]: nodes in a path through the Graph.
+            MutableSequence[Hashable]: nodes in a path through the Graph.
             
         """  
         if node not in visited:
@@ -708,7 +718,7 @@ class Graph(amicus.base.Lexicon):
   
     def _find_all_paths(self, 
         starts: Union[Hashable, Sequence[Hashable]],
-        ends: Union[Hashable, Sequence[Hashable]]) -> List[List[Hashable]]:
+        ends: Union[Hashable, Sequence[Hashable]]) -> MutableSequence[MutableSequence[Hashable]]:
         """[summary]
 
         Args:
@@ -718,7 +728,7 @@ class Graph(amicus.base.Lexicon):
                 through the Graph.
 
         Returns:
-            List[List[Hashable]]: list of all paths through the Graph from all
+            MutableSequence[MutableSequence[Hashable]]: list of all paths through the Graph from all
                 'starts' to all 'ends'.
             
         """
@@ -735,34 +745,93 @@ class Graph(amicus.base.Lexicon):
             
     """ Dunder Methods """
 
-    def __add__(self, other: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
+    def __add__(self, other: Graph) -> None:
+        """Adds 'other' Graph to this Graph.
 
-        Adding another structure uses the 'join' method. Read that method's 
-        docstring for further details about how the structures are added 
+        Adding another graph uses the 'join' method. Read that method's 
+        docstring for further details about how the graphs are added 
         together.
         
         Args:
-            other (Structure): a second Structure to join with this one.
+            other (Graph): a second Graph to join with this one.
             
         """
-        self.join(structure = other)        
+        self.join(graph = other)        
         return self
 
-    def __iadd__(self, other: Structure) -> None:
-        """Adds 'other' Structure to this Structure.
+    def __iadd__(self, other: Graph) -> None:
+        """Adds 'other' Graph to this Graph.
 
-        Adding another structure uses the 'join' method. Read that method's 
-        docstring for further details about how the structures are added 
+        Adding another graph uses the 'join' method. Read that method's 
+        docstring for further details about how the graphs are added 
         together.
         
         Args:
-            other (Structure): a second Structure to join with this one.
+            other (Graph): a second Graph to join with this one.
             
         """
-        self.join(structure = other)        
+        self.join(graph = other)        
         return self
 
+    def __contains__(self, nodes: Nodes) -> bool:
+        """[summary]
+
+        Args:
+            nodes (Nodes): [description]
+
+        Returns:
+            bool: [description]
+            
+        """
+        if isinstance(nodes, (MutableSequence, Tuple, Set)):
+            return all(n in self.contents for n in nodes)
+        elif isinstance(nodes, Hashable):
+            return nodes in self.contents
+        else:
+            return False   
+        
+    def __getitem__(self, key: Hashable) -> Any:
+        """Returns value for 'key' in 'contents'.
+
+        Args:
+            key (Hashable): key in 'contents' for which a value is sought.
+
+        Returns:
+            Any: value stored in 'contents'.
+
+        """
+        return self.contents[key]
+
+    def __setitem__(self, key: Hashable, value: Any) -> None:
+        """Sets 'key' in 'contents' to 'value'.
+
+        Args:
+            key (Hashable): key to set in 'contents'.
+            value (Any): value to be paired with 'key' in 'contents'.
+
+        """
+        self.contents[key] = value
+        return self
+
+    def __delitem__(self, key: Hashable) -> None:
+        """Deletes 'key' in 'contents'.
+
+        Args:
+            key (Hashable): key in 'contents' to delete the key/value pair.
+
+        """
+        del self.contents[key]
+        return self
+
+    def __missing__(self) -> List:
+        """Returns an empty list when a key doesn't exist.
+
+        Returns:
+            List: an empty list.
+
+        """
+        return []
+    
     def __str__(self) -> str:
         """Returns prettier representation of the Graph.
 
@@ -772,214 +841,9 @@ class Graph(amicus.base.Lexicon):
             
         """
         new_line = '\n'
+        tab = '    '
         representation = [f'{new_line}amicus {self.__class__.__name__}']
         representation.append('adjacency list:')
         for node, edges in self.contents.items():
-            representation.append(f'    {node}: {str(edges)}')
+            representation.append(f'{tab}{node}: {str(edges)}')
         return new_line.join(representation) 
-
-
-# @dataclasses.dataclass
-# class Pipeline(amicus.base.Hybrid, Structure):
-#     """Stores a pipeline structure using an amicus Hybrid.
-    
-#     Unlike a Graph, items stored do not need to be hashable, even though the
-#     Pipeline, by virtue of inheriting from Hybrid, provides a dict interface.
-#     However, to offer this functionality, all items stored in Pipeline should
-#     have a 'name' attribute to provide pseudo-keys for the dict interface.
-    
-#     Args:
-#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
-#             dict is passed, the keys will be ignored and only the values will be 
-#             added to 'contents'. If a single item is passed, it will be placed 
-#             in a list. Defaults to an empty list.
-#         default (Any): default value to return when the 'get' method is used.
-#             Defaults to None.
-            
-#     """
-#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
-#     default: Any = None
-
-#     """ Properties """
-           
-#     @property
-#     def endpoints(self) -> List[Any]:
-#         """Returns endpoint nodes in the Pipeline.
-
-#         Returns:
-#             List[Any] nodes at the end of the stored data structure.
-            
-#         """
-#         if self.consistent_interface:
-#             return [self.contents[-1]]
-#         else:
-#             return self.contents[-1]
-           
-#     @property             
-#     def nodes(self) -> List[Any]:
-#         """Returns all nodes in the Graph.
-
-#         Returns:
-#             List[Any]: nodes in the stored data structure.
-            
-#         """
-#         return self.contents
-        
-#     @property
-#     def paths(self) -> List[List[Any]]:
-#         """Returns all paths through the stored data structure.
-            
-#         Returns:
-#             List[List[Any]]: returns all paths from 'roots' to 'endpoints' in a 
-#                 list of lists of nodes.
-                
-#         """
-#         if self.consistent_interface:
-#             return [self.contents]
-#         else:
-#             return self.contents
-           
-#     @property
-#     def roots(self) -> List[Any]:
-#         """Returns root nodes in Pipeline
-        
-#         Returns:
-#             List[Any]: names of root nodes in the stored data structure.
-            
-#         """
-#         if self.consistent_interface:
-#             return [self.contents[0]]
-#         else:
-#             return self.contents[0]
-
-#     """ Class Methods """
-    
-#     @classmethod
-#     def create(cls, **kwargs) -> Pipeline:
-#         """Creates an instance of a Graph subclass from kwargs.
-        
-#         Returns:
-#             Pipeline: a Pipline instance created using kwargs.
-            
-#         """
-#         if ('nodes' in kwargs 
-#                 and isinstance(kwargs['nodes'], Sequence) 
-#                 and (all(isinstance(n, str) for n in kwargs['nodes'])
-#                      or (all(hasattr(n, 'name') for n in kwargs['nodes'])))):
-#             return cls.from_nodes(**kwargs)
-#         else:
-#             return cls(**kwargs)
- 
-#     @classmethod
-#     def from_nodes(cls, nodes: Union[Any, Sequence[Any]]) -> Pipeline:
-#         """[summary]
-
-#         Args:
-#             nodes (Union[Any, Sequence[Any]]): [description]
-
-#         Returns:
-#             Pipeline: [description]
-            
-#         """        
-#         return cls(contents = amicus.tools.listify(nodes))    
-        
-#     """ Public Methods """
-    
-#     def add(self, nodes: Any, **kwargs) -> None:
-#         """Adds 'nodes' to the stored data structure.
-        
-#         Subclasses should ordinarily provide their own methods.
-        
-#         Args:
-#             nodes (Any): item(s) to add to 'contents'.
-            
-#         """
-#         raise NotImplementedError(
-#             f'{__name__} is not implemented for a {self.__class__.__name__} '
-#             f'structure')
-
-#     def append(self, 
-#         node: str,
-#         start: Union[str, Sequence[str]] = None, 
-#         **kwargs) -> None:
-#         """Appends 'node' to the stored data structure.
-
-#         Subclasses should ordinarily provide their own methods.
-        
-#         Args:
-#             node (str): item to add to 'contents'.
-#             start (Union[str, Sequence[str]]): where to add new node to. If
-#                 there are multiple nodes in 'start', 'node' will be added to
-#                 each of the starting points. If 'start' is None, 'endpoints'
-#                 will be used. Defaults to None.
-            
-#         """ 
-#         raise NotImplementedError(
-#             f'{__name__} is not implemented for a {self.__class__.__name__} '
-#             f'structure')
-
-#     def extend(self, 
-#         nodes: Sequence[str],
-#         start: Union[str, Sequence[str]] = None) -> None:
-#         """Adds 'nodes' to the stored data structure.
-
-#         Subclasses should ordinarily provide their own methods.
-
-#         Args:
-#             nodes (Sequence[str]): names of items to add.
-#             start (Union[str, Sequence[str]]): where to add new nodes to. If
-#                 there are multiple nodes in 'start', 'nodes' will be added to
-#                 each of the starting points. If 'start' is None, 'endpoints'
-#                 will be used. Defaults to None.
-                
-#         """
-#         raise NotImplementedError(
-#             f'{__name__} is not implemented for a {self.__class__.__name__} '
-#             f'structure')
-
-#     def join(self, structure: Structure) -> None:
-#         """Adds 'other' Structure to this Structure.
-
-#         Subclasses should ordinarily provide their own methods.
-        
-#         Args:
-#             structure (Structure): a second Structure to join with this one.
-            
-#         """
-#         raise NotImplementedError(
-#             f'{__name__} is not implemented for a {self.__class__.__name__} '
-#             f'structure')
-         
-#     def search(self, 
-#         start: Hashable = None, 
-#         depth_first: bool = True) -> List[Any]:
-#         """Returns a path through the stored data structure.
-
-#         Args:
-#             start (str): node to start the path from. If None, it is assigned to
-#                 'roots'. Defaults to None.
-#             depth_first (bool): whether the search should be depth first (True)
-#                 or breadth first (False). Defaults to True.
-
-#         Returns:
-#             List[Any]: nodes in a path through the stored data structure.
-            
-#         """        
-#         return self.contents
-
-
-# @dataclasses.dataclass
-# class Tree(amicus.base.Hybrid, Structure):
-#     """Stores a general tree structure using an amicus Hybrid.
-    
-#     Args:
-#         contents (Sequence[Any]): items with 'name' attributes to store. If a 
-#             dict is passed, the keys will be ignored and only the values will be 
-#             added to 'contents'. If a single item is passed, it will be placed 
-#             in a list. Defaults to an empty list.
-#         default (Any): default value to return when the 'get' method is used.
-            
-#     """
-#     contents: Sequence[Any] = dataclasses.field(default_factory = list)
-#     default: Any = None
-    
