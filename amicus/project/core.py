@@ -132,6 +132,7 @@ class Workflow(amicus.structures.Graph):
             self.connect(start = edge_pair[0], stop = edge_pair[1])
         return self  
   
+  
 @dataclasses.dataclass
 class Recipe(amicus.base.Lexicon):            
     """Stores results from a single path through a Workflow.

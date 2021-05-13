@@ -14,6 +14,7 @@ Types:
     Edge (Type): annotation type for a tuple of edge endpoints.
     Edges (Type): annotation type for an edge list.
     Pipeline (Type): annotation type for a pipeline.
+    Pipelines (Type): annotation type for pipelines.
     Nodes (Type): annotation type for one or more nodes.
     
 Functions:
@@ -23,7 +24,6 @@ Functions:
     is_pipeline (Callable): tests if an object is a pipeline.
     adjacency_to_edges (Callable): converts adjacency list to edge list.
     adjacency_to_matrix (Callable): converts adjacency list to adjacency matrix.
-    adjacency_to_pipelines (Callable): converts adjacency list to pipelines.
     edges_to_adjacency (Callable): converts edge list to an adjacency list.
     matrix_to_adjacency (Callable): converts adjacency matrix to an adjacency 
         list.
@@ -66,6 +66,7 @@ Matrix: Type = Union[Tuple[MutableSequence[MutableSequence[int]],
 Edge: Tuple[Hashable, Hashable]
 Edges: Type = MutableSequence[Edge]
 Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
+Pipelines: Type = MutableSequence[MutableSequence[Hashable]]
 Nodes: Type = Union[Hashable, Pipeline]
 
     
@@ -261,6 +262,32 @@ class Graph(amicus.base.Bunch):
         return self.contents
 
     @property
+    def breadths(self) -> Pipelines:
+        """Returns all paths through the Graph using breadth-first search.
+        
+        Returns:
+            Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
+                of lists of nodes.
+                
+        """
+        return self._find_all_paths(starts = self.roots, 
+                                    ends = self.endpoints,
+                                    depth_first = False)
+
+    @property
+    def depths(self) -> Pipelines:
+        """Returns all paths through the Graph using depth-first search.
+        
+        Returns:
+            Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
+                of lists of nodes.
+                
+        """
+        return self._find_all_paths(starts = self.roots, 
+                                    ends = self.endpoints,
+                                    depth_first = True)
+     
+    @property
     def edges(self) -> Edges:
         """Returns the stored graph as an edge list."""
         return adjacency_to_edges(source = self.contents)
@@ -293,18 +320,7 @@ class Graph(amicus.base.Bunch):
             
         """
         return {self._hashify(n): n for n in self.contents.keys()}
-
-    @property
-    def paths(self) -> MutableSequence[MutableSequence[Hashable]]:
-        """Returns all paths through the Graph in a list of lists form.
-        
-        Returns:
-            MutableSequence[MutableSequence[Hashable]]: returns all paths from 'roots' to 'endpoints' 
-                in a list of lists of nodes.
-                
-        """
-        return self._find_all_paths(starts = self.roots, ends = self.endpoints)
-       
+  
     @property
     def roots(self) -> MutableSequence[Hashable]:
         """Returns root nodes in the Graph.
@@ -416,6 +432,8 @@ class Graph(amicus.base.Bunch):
         
         Args:
             node (Hashable): a node to add to the stored graph.
+            from_nodes (Nodes): node(s) from which node should be connected.
+            to_nodes (Nodes): node(s) to which node should be connected.
 
         """
         if to_nodes is None:
@@ -487,7 +505,6 @@ class Graph(amicus.base.Bunch):
             raise TypeError(
                 'source must be a Graph, Adjacency, Edges, Matrix, or Nodes '
                 'type')
-
         return self
   
     def connect(self, start: Hashable, stop: Hashable) -> None:
@@ -622,7 +639,8 @@ class Graph(amicus.base.Bunch):
     def walk(self, 
              start: Hashable, 
              stop: Hashable, 
-             path: MutableSequence[Hashable] = []) -> MutableSequence[MutableSequence[Hashable]]:
+             path: Pipeline = None,
+             depth_first: bool = True) -> Pipelines:
         """Returns all paths in graph from 'start' to 'stop'.
 
         The code here is adapted from: https://www.python.org/doc/essays/graphs/
@@ -630,26 +648,33 @@ class Graph(amicus.base.Bunch):
         Args:
             start (Hashable): node to start paths from.
             stop (Hashable): node to stop paths.
-            path (MutableSequence[Hashable]): a path from 'start' to 'stop'. Defaults to an 
+            path (Pipeline): a path from 'start' to 'stop'. Defaults to an 
                 empty list. 
 
         Returns:
-            MutableSequence[MutableSequence[Hashable]]: a list of possible paths (each path is a list 
+            Pipelines: a list of possible paths (each path is a list 
                 nodes) from 'start' to 'stop'.
             
         """
+        if path is None:
+            path = []
         path = path + [start]
         if start == stop:
             return [path]
         if start not in self.contents:
             return []
+        if depth_first:
+            method = self._depth_first_search
+        else:
+            method = self._breadth_first_search
         paths = []
         for node in self.contents[start]:
             if node not in path:
                 new_paths = self.walk(
                     start = node, 
                     stop = stop, 
-                    path = path)
+                    path = path,
+                    depth_first = depth_first)
                 for new_path in new_paths:
                     paths.append(new_path)
         return paths
@@ -678,14 +703,14 @@ class Graph(amicus.base.Bunch):
                     return amicus.tools.snakify(node.__class__.__name__)
 
 
-    def _breadth_first_search(self, node: Hashable) -> MutableSequence[Hashable]:
+    def _breadth_first_search(self, node: Hashable) -> Pipeline:
         """Returns a breadth first search path through the Graph.
 
         Args:
             node (Hashable): node to start the search from.
 
         Returns:
-            MutableSequence[Hashable]: nodes in a path through the Graph.
+            Pipeline: nodes in a path through the Graph.
             
         """        
         visited = set()
@@ -699,7 +724,7 @@ class Graph(amicus.base.Bunch):
        
     def _depth_first_search(self, 
         node: Hashable, 
-        visited: MutableSequence[Hashable]) -> MutableSequence[Hashable]:
+        visited: MutableSequence[Hashable]) -> Pipeline:
         """Returns a depth first search path through the Graph.
 
         Args:
@@ -707,7 +732,7 @@ class Graph(amicus.base.Bunch):
             visited (MutableSequence[Hashable]): list of visited nodes.
 
         Returns:
-            MutableSequence[Hashable]: nodes in a path through the Graph.
+            Pipeline: nodes in a path through the Graph.
             
         """  
         if node not in visited:
@@ -718,7 +743,8 @@ class Graph(amicus.base.Bunch):
   
     def _find_all_paths(self, 
         starts: Union[Hashable, Sequence[Hashable]],
-        ends: Union[Hashable, Sequence[Hashable]]) -> MutableSequence[MutableSequence[Hashable]]:
+        stops: Union[Hashable, Sequence[Hashable]],
+        depth_first: bool = True) -> Pipelines:
         """[summary]
 
         Args:
@@ -728,14 +754,16 @@ class Graph(amicus.base.Bunch):
                 through the Graph.
 
         Returns:
-            MutableSequence[MutableSequence[Hashable]]: list of all paths through the Graph from all
+            Pipelines: list of all paths through the Graph from all
                 'starts' to all 'ends'.
             
         """
         all_paths = []
         for start in more_itertools.always_iterable(starts):
-            for end in more_itertools.always_iterable(ends):
-                paths = self.find_paths(start = start, end = end)
+            for end in more_itertools.always_iterable(stops):
+                paths = self.walk(start = start, 
+                                  stop = end, 
+                                  depth_first = depth_first)
                 if paths:
                     if all(isinstance(path, Hashable) for path in paths):
                         all_paths.append(paths)
