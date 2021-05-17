@@ -46,6 +46,7 @@ To Do:
     
 """
 from __future__ import annotations
+import collections
 import collections.abc
 import copy
 import dataclasses
@@ -147,6 +148,7 @@ def pipeline_to_adjacency(source: Pipeline) -> Adjacency:
     for edge_pair in edges:
         adjacency[edge_pair[0]] = edge_pair[1]
     return adjacency
+
         
 @dataclasses.dataclass
 class Node(amicus.quirks.Element, amicus.base.Proxy, collections.abc.Hashable):
@@ -702,6 +704,26 @@ class Graph(amicus.base.Bunch):
                 except AttributeError:
                     return amicus.tools.snakify(node.__class__.__name__)
 
+
+    def _all_paths_bfs(self, start, stop):
+        """
+
+        """
+        if start == stop:
+            return [start]
+        visited = {start}
+        queue = collections.deque([(start, [])])
+        while queue:
+            current, path = queue.popleft()
+            visited.add(current)
+            for connected in self[current]:
+                if connected == stop:
+                    return path + [current, connected]
+                if connected in visited:
+                    continue
+                queue.append((connected, path + [current]))
+                visited.add(connected)   
+        return []
 
     def _breadth_first_search(self, node: Hashable) -> Pipeline:
         """Returns a breadth first search path through the Graph.
