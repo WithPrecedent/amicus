@@ -70,7 +70,7 @@ Edges: Type = MutableSequence[Edge]
 Pipeline: Type = Union[MutableSequence[Hashable], Tuple[Hashable]]
 Pipelines: Type = MutableSequence[MutableSequence[Hashable]]
 Nodes: Type = Union[Hashable, Pipeline]
-
+_DefaultAdjacency: MutableMapping = collections.defaultdict(set)
     
 def is_adjacency_list(item: Any) -> bool:
     """Returns whether 'item' is an adjacency list."""
@@ -547,18 +547,20 @@ class Workflow(DirectedGraph):
     
     Workflow stores its graph as an adjacency list. Despite being called an 
     "adjacency list," the typical and most efficient way to create one in python
-    is using a dict. 
+    is using a dict. The keys of the dict are the nodes and the values are sets
+    of the hashable representations of other nodes.
 
-    Workflow internally supports autovivification where a list is created as a 
+    Workflow internally supports autovivification where a set is created as a 
     value for a missing key. 
     
     Args:
         contents (Adjacency): an adjacency list where the keys are nodes and the 
-            values are hash keys of the nodes which the key is connected to. 
-            Defaults to an empty dict.
+            values are sets of hash keys of the nodes which the keys are 
+            connected to. Defaults to an empty a defaultdict described in 
+            '_DefaultAdjacency'.
                   
     """  
-    contents: Adjacency = dataclasses.field(default_factory = dict)
+    contents: Adjacency = dataclasses.field(default_factory = _DefaultAdjacency)
     
     """ Properties """
 
@@ -568,39 +570,13 @@ class Workflow(DirectedGraph):
         return self.contents
 
     @property
-    def breadths(self) -> Pipelines:
-        """Returns all paths through the Graph using breadth-first search.
-        
-        Returns:
-            Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
-                of lists of nodes.
-                
-        """
-        return self._find_all_paths(starts = self.roots, 
-                                    ends = self.endpoints,
-                                    depth_first = False)
-
-    @property
-    def depths(self) -> Pipelines:
-        """Returns all paths through the Graph using depth-first search.
-        
-        Returns:
-            Pipelines: returns all paths from 'roots' to 'endpoints' in a list 
-                of lists of nodes.
-                
-        """
-        return self._find_all_paths(starts = self.roots, 
-                                    ends = self.endpoints,
-                                    depth_first = True)
-     
-    @property
     def edges(self) -> Edges:
         """Returns the stored graph as an edge list."""
         return adjacency_to_edges(source = self.contents)
 
     @property
-    def endpoints(self) -> MutableSequence[Hashable]:
-        """Returns a list of endpoint nodes in the stored graph.."""
+    def endpoints(self) -> List[Hashable]:
+        """Returns endpoint nodes in the stored graph in a list."""
         return [k for k in self.contents.keys() if not self.contents[k]]
 
     @property
@@ -609,23 +585,18 @@ class Workflow(DirectedGraph):
         return adjacency_to_matrix(source = self.contents)
                       
     @property
-    def nodes(self) -> MutableSequence[Hashable]:
-        """Returns all stored nodes.
-
-        Returns:
-            MutableSequence[Hashable]: all nodes in a list.
-            
-        """
+    def nodes(self) -> List[Hashable]:
+        """Returns all stored nodes in a list."""
         return list(self.contents.keys())
-  
-    @property
-    def roots(self) -> MutableSequence[Hashable]:
-        """Returns root nodes in the stored graph..
 
-        Returns:
-            MutableSequence[Hashable]: root nodes.
-            
-        """
+    @property
+    def paths(self) -> Pipelines:
+        """Returns all paths through the stored graph as Pipelines."""
+        return self._find_all_paths(starts = self.roots, ends = self.endpoints)
+       
+    @property
+    def roots(self) -> List[Hashable]:
+        """Returns root nodes in the stored graph in a list."""
         stops = list(itertools.chain.from_iterable(self.contents.values()))
         return [k for k in self.contents.keys() if k not in stops]
     
@@ -633,66 +604,22 @@ class Workflow(DirectedGraph):
  
     @classmethod
     def from_adjacency(cls, adjacency: Adjacency) -> Graph:
-        """Creates a Graph instance from an adjacency list.
-        
-        'adjacency' should be formatted with nodes as keys and values as lists
-        of names of nodes to which the node in the key is connected.
-
-        Args:
-            adjacency (Adjacency): adjacency list used to 
-                create a Graph instance.
-
-        Returns:
-            Graph: a Graph instance created based on 'adjacent'.
-              
-        """
+        """Creates a Graph instance from an adjacency list."""
         return cls(contents = adjacency)
     
     @classmethod
     def from_edges(cls, edges: Edges) -> Graph:
-        """Creates a Graph instance from an edge list.
-
-        'edges' should be a list of tuples, where the first item in the tuple
-        is the node and the second item is the node (or name of node) to which
-        the first item is connected.
-        
-        Args:
-            edges (Edges): Edge list used to create a Graph 
-                instance.
-                
-        Returns:
-            Graph: a Graph instance created based on 'edges'.
-
-        """
+        """Creates a Graph instance from an edge list."""
         return cls(contents = edges_to_adjacency(source = edges))
     
     @classmethod
     def from_matrix(cls, matrix: Matrix) -> Graph:
-        """Creates a Graph instance from an adjacency matrix.
-
-        Args:
-            matrix (Matrix): adjacency matrix used to create a Graph instance. 
-                The values in the matrix should be 1 (indicating an edge) and 0 
-                (indicating no edge).
- 
-        Returns:
-            Graph: a Graph instance created based on 'matrix'.
-                        
-        """
+        """Creates a Graph instance from an adjacency matrix."""
         return cls(contents = matrix_to_adjacency(source = matrix))
     
     @classmethod
     def from_pipeline(cls, pipeline: Pipeline) -> Graph:
-        """Creates a Graph instance from a Pipeline.
-
-        Args:
-            pipeline (Pipeline): serial pipeline used to create a Graph
-                instance.
- 
-        Returns:
-            Graph: a Graph instance created based on 'pipeline'.
-                        
-        """
+        """Creates a Graph instance from a Pipeline."""
         return cls(contents = pipeline_to_adjacency(source = pipeline))
        
     """ Public Methods """
@@ -719,12 +646,13 @@ class Workflow(DirectedGraph):
             self.contents = list(getattr(self, to_nodes))
         else:
             to_nodes = amicus.tools.listify(to_nodes)
+            to_nodes = [self._stringify(n) for n in to_nodes]
             missing = [n for n in to_nodes if n not in self.contents]
-            if not missing:
-                self.contents[node] = to_nodes
+            if missing:
+                raise KeyError(f'to_nodes {str(missing)} are not in the stored '
+                               f'graph.')
             else:
-                raise KeyError(
-                    f'to_nodes {missing} are not in the stored graph.')
+                self.contents[node] = to_nodes
         if from_nodes is not None:  
             if amicus.tools.is_property(item = from_nodes, instance = self):
                 start = list(getattr(self, from_nodes))
@@ -732,8 +660,8 @@ class Workflow(DirectedGraph):
                 from_nodes = amicus.tools.listify(from_nodes)
                 missing = [n for n in from_nodes if n not in self.contents]
                 if missing:
-                    raise KeyError(
-                        f'from_nodes {missing} are not in the stored graph.')
+                    raise KeyError(f'from_nodes {str(missing)} are not in the '
+                                   f'stored graph.')
                 else:
                     start = from_nodes
             for starting in start:
@@ -784,9 +712,8 @@ class Workflow(DirectedGraph):
                 current_endpoints = list(self.endpoints)
                 self.add(node = item, from_nodes = current_endpoints)
         else:
-            raise TypeError(
-                'item must be a Graph, Adjacency, Edges, Matrix, Pipeline, or '
-                'Hashable type')
+            raise TypeError('item must be a Graph, Adjacency, Edges, Matrix, '
+                            'Pipeline, or Hashable type')
         return self
   
     def connect(self, start: Hashable, stop: Hashable) -> None:
@@ -798,16 +725,17 @@ class Workflow(DirectedGraph):
             
         Raises:
             ValueError: if 'start' is the same as 'stop'.
+            KeyError: if 'start' or 'stop' isn't in the graph.
             
         """
         if start == stop:
-            raise ValueError(
-                'The start of an edge cannot be the same as the stop')
+            raise ValueError('The start of an edge cannot be the same as the '
+                             'stop in a Workflow because it is acyclic')
+        elif start not in self:
+            raise KeyError('start is not in the graph')
+        elif stop not in self:
+            raise KeyError('stop is not in the graph')
         else:
-            if stop not in self.contents:
-                self.add(node = stop)
-            if start not in self.contents:
-                self.add(node = start)
             if stop not in self.contents[start]:
                 self.contents[start].append(self._stringify(stop))
         return self
@@ -984,7 +912,6 @@ class Workflow(DirectedGraph):
                 except AttributeError:
                     return amicus.tools.snakify(node.__class__.__name__)
 
-
     def _all_paths_bfs(self, start, stop):
         """
 
@@ -1075,51 +1002,6 @@ class Workflow(DirectedGraph):
             
     """ Dunder Methods """
 
-    def __add__(self, other: Graph) -> None:
-        """Adds 'other' Graph to this Graph.
-
-        Adding another graph uses the 'join' method. Read that method's 
-        docstring for further details about how the graphs are added 
-        together.
-        
-        Args:
-            other (Graph): a second Graph to join with this one.
-            
-        """
-        self.join(graph = other)        
-        return self
-
-    def __iadd__(self, other: Graph) -> None:
-        """Adds 'other' Graph to this Graph.
-
-        Adding another graph uses the 'join' method. Read that method's 
-        docstring for further details about how the graphs are added 
-        together.
-        
-        Args:
-            other (Graph): a second Graph to join with this one.
-            
-        """
-        self.join(graph = other)        
-        return self
-
-    def __contains__(self, nodes: Nodes) -> bool:
-        """[summary]
-
-        Args:
-            nodes (Nodes): [description]
-
-        Returns:
-            bool: [description]
-            
-        """
-        if isinstance(nodes, (MutableSequence, Tuple, Set)):
-            return all(n in self.contents for n in nodes)
-        elif isinstance(nodes, Hashable):
-            return nodes in self.contents
-        else:
-            return False   
-        
     def __getitem__(self, key: Hashable) -> Any:
         """Returns value for 'key' in 'contents'.
 
@@ -1153,17 +1035,8 @@ class Workflow(DirectedGraph):
         del self.contents[key]
         return self
 
-    def __missing__(self) -> List:
-        """Returns an empty list when a key doesn't exist.
-
-        Returns:
-            List: an empty list.
-
-        """
-        return []
-    
     def __str__(self) -> str:
-        """Returns prettier representation of the Graph.
+        """Returns prettier representation of the stored graph.
 
         Returns:
             str: a formatted str of class information and the contained 
