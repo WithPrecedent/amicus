@@ -582,7 +582,7 @@ def drop_suffix(
     except AttributeError:
         return [item.rstrip(suffix) for item in iterable]
 
-def isiterable(item: Any) -> bool:
+def is_iterable(item: Any) -> bool:
     """Returns if 'item' is iterable but is NOT a str type.
 
     Args:
@@ -595,7 +595,7 @@ def isiterable(item: Any) -> bool:
     return (isinstance(item, collections.abc.Iterable) 
             and not isinstance(item, str))
 
-def isnested(dictionary: Mapping[Any, Any]) -> bool:
+def is_nested(dictionary: Mapping[Any, Any]) -> bool:
     """Returns if passed 'contents' is nested at least one-level.
 
     Args:
@@ -607,6 +607,21 @@ def isnested(dictionary: Mapping[Any, Any]) -> bool:
 
     """
     return any(isinstance(v, dict) for v in dictionary.values())
+
+def is_property(item: Any, instance: object) -> bool:
+    """Returns if 'item' is a property of 'instance'.
+
+    Args:
+        item (Any): item to test to see if it is a property of 'instance'.
+        instance (object): object to see if 'item' is a property of.
+
+    Returns:
+        bool: whether 'item' is a property of 'instance'.
+
+    """
+    return (isinstance(item, str) 
+                and hasattr(instance.__class__, item) 
+                and isinstance(getattr(type(instance), item), property))
 
 def propertify(
         instance: object,
